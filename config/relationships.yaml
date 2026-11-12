@@ -1,0 +1,123 @@
+# Relationship policy for Six Degrees of Knowledge.
+#
+# Ranking/search POLICY only — not facts (data/wikidata/) and not ontology semantics
+# (ontology/people_connections.ttl). Bump `version` whenever a value changes; path results
+# record the version that produced them.
+#
+# strength: semantic relevance of the relationship TYPE in (0, 1]. It is NOT confidence that
+#           a Wikidata claim is true. Values below are PROVISIONAL starting points (2026-11-12),
+#           to be validated against the full people graph and the demo pairs.
+# Every allowlisted property is traversable in both directions for connectivity; the original
+# Wikidata direction is preserved and shown (reverse hops use `inverse_label`).
+
+version: 1
+
+groups:
+  family:
+    label: Family
+    label_es: Familia
+    description: Direct family relationships recorded on a person.
+    enabled_by_default: true
+  mentorship:
+    label: Teacher / student
+    label_es: Maestro / alumno
+    description: Recorded academic or artistic teacher-student relationships.
+    enabled_by_default: true
+  institutional:
+    label: Shared institution
+    label_es: Institución compartida
+    description: >-
+      Person -> organization links. Two people linked through an organization share an
+      affiliation; this is an association, NOT evidence that they met.
+    enabled_by_default: true
+  position:
+    label: Position held (weak)
+    label_es: Cargo ocupado (débil)
+    description: >-
+      Person -> role links (e.g. a parliamentary seat). Very high-degree role nodes; weak
+      association only. Off by default; the presenter can enable it.
+    enabled_by_default: false
+
+properties:
+  P26:
+    label: spouse
+    label_es: cónyuge
+    inverse_label: spouse
+    inverse_label_es: cónyuge
+    group: family
+    strength: 0.95
+    symmetric: true
+  P22:
+    label: father
+    label_es: padre
+    inverse_label: child (father of)
+    inverse_label_es: hijo/a (padre de)
+    group: family
+    strength: 0.95
+  P25:
+    label: mother
+    label_es: madre
+    inverse_label: child (mother of)
+    inverse_label_es: hijo/a (madre de)
+    group: family
+    strength: 0.95
+  P3373:
+    label: sibling
+    label_es: hermano/a
+    inverse_label: sibling
+    inverse_label_es: hermano/a
+    group: family
+    strength: 0.85
+    symmetric: true
+  P1066:
+    label: student of
+    label_es: alumno/a de
+    inverse_label: teacher of
+    inverse_label_es: maestro/a de
+    group: mentorship
+    strength: 0.80
+  P108:
+    label: employer
+    label_es: empleador
+    inverse_label: employed
+    inverse_label_es: empleó a
+    group: institutional
+    strength: 0.35
+  P69:
+    label: educated at
+    label_es: educado/a en
+    inverse_label: alma mater of
+    inverse_label_es: alma máter de
+    group: institutional
+    strength: 0.30
+  P463:
+    label: member of
+    label_es: miembro de
+    inverse_label: has member
+    inverse_label_es: tiene como miembro a
+    group: institutional
+    strength: 0.25
+  P39:
+    label: position held
+    label_es: cargo ocupado
+    inverse_label: held by
+    inverse_label_es: ocupado por
+    group: position
+    strength: 0.10
+
+ranking:
+  # edge_cost = -ln(max(minimum_strength, strength)) + hop_penalty + hub_penalty(entered node)
+  hop_penalty: 0.20
+  minimum_strength: 0.05
+  # hub_penalty(node) = hub_penalty_weight * ln(1 + degree), applied when a path passes THROUGH a
+  # non-person node (endpoints are never penalized).
+  hub_penalty_weight: 0.10
+
+pathfinding:
+  max_hops: 6
+  # Non-person nodes with degree above this cannot be intermediate path nodes (null = no cap).
+  # PROVISIONAL: set from the measured degree distribution of the full people graph.
+  max_intermediate_degree: 5000
+  # Work caps for a single path computation; hitting one yields a partial ("explored_graph") result.
+  max_visited_nodes: 250000
+  max_expanded_states: 250000

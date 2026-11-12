@@ -21,6 +21,26 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 1 decision is made** (see `docs/wikidata-ingestion-decision.md`). The data source is an **offline people graph** built from the Wikidata truthy dump of 2026-11-04 and stored in SQLite at `data/wikidata/people_graph.sqlite`, which is gitignored. The pipeline is `scripts/download_wikidata_dump.sh` → `scripts/extract_people_slice.sh` → `scripts/build_people_graph.py`. The full build's measurements are still pending.
 
+**Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection, with 595 tests passing. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; `rank_frontier` (belongs with M3); and `ontology/people_connections.ttl`.
+
+### Milestone 2 engine (where things live)
+- `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
+- `src/graph/model.py`: `Node` and `Edge` (frozen). Edges keep their original direction. `edge_id = sha1(subject|pid|object|source)`.
+- `src/graph/store.py`: the `GraphView` protocol (`complete`, `snapshot`, `node()`, `incident(qid, pids)`) with two implementations:
+  - `InMemoryGraph`: explored subgraphs and tests; `complete=False` by default.
+  - `SqliteGraph`: the full people graph; read-only; `complete=True`.
+- `src/graph/paths.py`:
+  - `compute_shortest_path`: bidirectional BFS, then the cheapest path among all minimum-hop paths, with ties broken by edge-ID sequence.
+  - `compute_strongest_path`: **bidirectional, hop-aware Dijkstra** that keeps Pareto (hops, cost) labels per node and checks for meeting paths when a node is finalized *and* while exploring each edge (both are needed for an exact stop).
+  - `compare_paths`: runs both. It skips the weighted search when the BFS proves there is no path, and uses the shortest path's cost as an upper bound for the strongest.
+  - Hub rule: a non-person node whose degree exceeds the cap may be an endpoint but never an intermediate node. The hub penalty is charged once per intermediate non-person node.
+- `src/graph/turtle_projection.py`: `serialize_visible_turtle(nodes, edges, policy)` writes deterministic Turtle, one triple per line, and validates it with RDFLib. Sandbox edges use the `sbx:` namespace in their own section, never `wdt:`. **Spans are UTF-16 code units** (the browser's indexing).
+- `src/models.py`: `PathResult` (per-hop `CostBreakdown`, `scope`, `policy_version`, `snapshot`), `PathOutcome` (`found` / `no_path_within_bounds` / `budget_exhausted`) and `PathComparison`.
+- Tests:
+  - `tests/test_pathfinding_bruteforce.py` checks both searches against brute-force enumeration of simple paths on 400 random graphs, plus 150 graphs that brute force itself selected because the cheapest path is longer than the shortest. **If you change paths.py, these must still pass.**
+  - `tests/test_editor_parser_compat.py` runs the editor's own `parseTurtle` (pulled out of `live-editor.html`) in Node and checks that its spans match the backend's.
+- Speed on the 3% sample (SQLite): median 0.03 s per pair, worst 7.8 s. Most of the time goes to per-node SQL queries and `Edge`/sha1 creation. Before the demo, either measure on the full graph and add an in-memory adjacency (CSR) or caching, or precompute the demo pairs.
+
 ### Decisions that override `IMPLEMENTATION_PLAN.md`
 - **No live Wikidata calls at demo time.** The `KnowledgeProvider` reads the local SQLite people graph. Live WDQS/REST is an optional extra for unprepared pairs.
 - Because the graph is complete within the configured scope, path results can report `scope: "complete_configured_scope"`. The scope always includes the hub policy and the snapshot date, and the UI must state both. Results are still never "globally" optimal across all of Wikidata.
@@ -44,11 +64,12 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 ### Repo decisions (Milestone 0)
 
 - The repo is under git. The first commit is the untouched baseline. Commit only when the user asks.
-- Dependencies: `networkx`, `pydantic`, `httpx`, `pyyaml`, plus dev `pytest`. pytest is configured in `pyproject.toml` with `testpaths=["tests"]` and `pythonpath=["."]`, so tests import `src.*`.
+- Dependencies: `pydantic`, `httpx`, `pyyaml`, plus dev `pytest`. NetworkX was removed on purpose: the searches are custom and hop-aware, and the full graph is too large for NetworkX objects. pytest is configured in `pyproject.toml` with `testpaths=["tests"]` and `pythonpath=["."]`, so tests import `src.*`.
 - CodeMirror 5.65.16 is vendored in `graph-view/vendor/codemirror/`, and `live-editor.html` has no CDN references (a test enforces this). Move it to `src/ui/vendor/` in M5 and update `docs/third-party-licenses.md`.
 - `data/wikidata/` (the raw cache) is **gitignored**. Replay fixtures in `data/fixtures/` **must** be committed.
 - Legacy retail assets stay where they are until the workbench replaces them.
-- Still to create: `config/`, `data/fixtures/`, `data/sandbox/`, `ontology/people_connections.ttl`.
+- Still to create: `config/demo_cases.yaml`, `data/fixtures/`, `data/sandbox/`, `ontology/people_connections.ttl`.
+- `.gitattributes` forces LF line endings for `*.sh`, `*.nt` and `*.ttl`, because CRLF breaks the bash scripts.
 - Testing the editor in the browser: claude-in-chrome can't open `file://`. Serve the folder instead with `uv run python -m http.server 8765 --bind 127.0.0.1 --directory graph-view`.
 
 ## Commands
@@ -75,7 +96,7 @@ config/demo_cases.yaml      # ≥3 prevalidated pairs (QIDs + labels)
 ontology/people_connections.ttl  # small teaching ontology (mapping layer, not a Wikidata replacement)
 src/server.py  config.py  models.py (Pydantic DTOs)
 src/wikidata/   provider.py (KnowledgeProvider protocol), entity_search.py, sparql.py, entity_data.py, cache.py
-src/graph/      store.py (RDFLib + NetworkX MultiDiGraph), mapping.py, paths.py, turtle_projection.py
+src/graph/      model.py, store.py (GraphView: InMemoryGraph, SqliteGraph), paths.py, turtle_projection.py   [built]
 src/agent/      client.py, tools.py, investigator.py, prompts.py
 src/investigations/  service.py, state.py, events.py, replay.py
 src/ui/         index.html, css/, js/{api,graph-view,turtle-editor,investigation,path-comparison,main}.js, vendor/
@@ -97,7 +118,7 @@ Key contracts to implement exactly (details in the plan):
 ## Non-negotiable rules
 
 **Honesty and data semantics**
-- Results are "shortest/strongest **among explored relationships**". `scope` defaults to `"explored_graph"`. Never claim a global optimum.
+- Results are "shortest/strongest **among explored relationships**". `scope` defaults to `"explored_graph"`. Use `complete_configured_scope` only for a finished, untruncated search over a complete store (`SqliteGraph`). Never claim a global optimum.
 - A shared employer, school or organization is an **association**, not proof of contact. Model it as `person → org ← person` and keep the organization as a real node. Never collapse it to `person → person`.
 - A missing edge means unknown. A Wikidata assertion means "Wikidata records this", not verified fact.
 - Never fabricate people, edges, QIDs, PIDs, provenance, scores or demo pairs. A failed search produces an honest partial or no-path result.
@@ -105,7 +126,7 @@ Key contracts to implement exactly (details in the plan):
 
 **Graph and algorithms**
 - Node IDs are QIDs. Edge IDs are a deterministic hash of `(subject, predicate, object, statement_id/source)`, never array positions.
-- Use a NetworkX `MultiDiGraph` so parallel predicates survive. RDFLib is authoritative for RDF parsing and serialization.
+- Parallel predicates between the same two entities must survive as separate edges. `InMemoryGraph` and `SqliteGraph` both keep them. RDFLib is authoritative for RDF parsing and for validating serialized Turtle.
 - Strongest-path cost is `-log(max(min_strength, strength)) + hop_penalty (+ hub_penalty)`. It must be nonnegative. Enforce the hop limit with a hop-aware search, because plain Dijkstra can't. Return a per-edge score breakdown.
 - Break ties deterministically: by cost, then by stable ID.
 - Shortest and strongest are allowed to coincide. Never force them to differ.

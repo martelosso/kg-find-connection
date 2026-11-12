@@ -1,0 +1,25 @@
+<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q5> .
+<http://www.wikidata.org/entity/Q900002> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q5> .
+<http://www.wikidata.org/entity/Q900003> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q5> .
+<http://www.wikidata.org/entity/Q900004> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q5> .
+<http://www.wikidata.org/entity/Q910001> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q3918> .
+<http://www.wikidata.org/entity/Q910002> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q4164871> .
+<http://www.wikidata.org/entity/Q900001> <http://www.w3.org/2000/01/rdf-schema#label> "Test Person Álvaro"@en .
+<http://www.wikidata.org/entity/Q900001> <http://www.w3.org/2000/01/rdf-schema#label> "Persona de prueba Álvaro"@es .
+<http://www.wikidata.org/entity/Q900002> <http://www.w3.org/2000/01/rdf-schema#label> "Test Person \"B\""@en .
+<http://www.wikidata.org/entity/Q900003> <http://www.w3.org/2000/01/rdf-schema#label> "Test Person C"@en .
+<http://www.wikidata.org/entity/Q900004> <http://www.w3.org/2000/01/rdf-schema#label> "Persona de prueba D"@es .
+<http://www.wikidata.org/entity/Q910001> <http://www.w3.org/2000/01/rdf-schema#label> "Test University"@en .
+<http://www.wikidata.org/entity/Q910001> <http://www.w3.org/2000/01/rdf-schema#label> "Universidad de prueba"@es .
+<http://www.wikidata.org/entity/Q910002> <http://www.w3.org/2000/01/rdf-schema#label> "Test Seat"@en .
+<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P69> <http://www.wikidata.org/entity/Q910001> .
+<http://www.wikidata.org/entity/Q900002> <http://www.wikidata.org/prop/direct/P69> <http://www.wikidata.org/entity/Q910001> .
+<http://www.wikidata.org/entity/Q900002> <http://www.wikidata.org/prop/direct/P69> <http://www.wikidata.org/entity/Q910001> .
+<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P26> <http://www.wikidata.org/entity/Q900003> .
+<http://www.wikidata.org/entity/Q900003> <http://www.wikidata.org/prop/direct/P26> <http://www.wikidata.org/entity/Q900001> .
+<http://www.wikidata.org/entity/Q900003> <http://www.wikidata.org/prop/direct/P1066> <http://www.wikidata.org/entity/Q900002> .
+<http://www.wikidata.org/entity/Q900004> <http://www.wikidata.org/prop/direct/P39> <http://www.wikidata.org/entity/Q910002> .
+<http://www.wikidata.org/entity/Q900002> <http://www.wikidata.org/prop/direct/P39> <http://www.wikidata.org/entity/Q910002> .
+<http://www.wikidata.org/entity/Q900004> <http://www.wikidata.org/prop/direct/P26> <http://www.wikidata.org/entity/Q900004> .
+<http://www.wikidata.org/entity/Q910001> <http://www.wikidata.org/prop/direct/P463> <http://www.wikidata.org/entity/Q910002> .
+_:abc123 <http://www.w3.org/2002/07/owl#onProperty> <http://www.wikidata.org/prop/direct/P26> .
