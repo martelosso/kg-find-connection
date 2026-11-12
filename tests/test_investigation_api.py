@@ -31,7 +31,8 @@ def service(db_path, tmp_path):
     trace.write_text(json.dumps(trace_dict(live, "ada-bea", {})), encoding="utf-8")
     cases = DemoCases(version=1, cases=[DemoCase(id="ada-bea", title="Ada ↔ Bea", source_qid=A, source_label="Ada",
                                                  target_qid=B, target_label="Bea", trace="trace.json")])
-    svc = InvestigationService(provider, pol, search, demo_cases=cases, root=tmp_path)
+    svc = InvestigationService(provider, pol, search, demo_cases=cases, root=tmp_path,
+                               chat_factory=lambda: None, agent_available=lambda: False)
     yield svc
     provider.close()
 
@@ -136,7 +137,8 @@ def test_cancel_endpoint(api, service):
     ({"source_qid": "x", "target_qid": "Q2"}, 400, "invalid_request"),
     ({"source_qid": A, "target_qid": B, "groups": ["nonsense"]}, 400, "invalid_request"),
     ({"source_qid": A, "target_qid": B, "budgets": {"bogus": 1}}, 400, "invalid_request"),
-    ({"source_qid": A, "target_qid": B, "mode": "agent"}, 400, "unsupported_mode"),
+    ({"source_qid": A, "target_qid": B, "mode": "telepathy"}, 400, "unsupported_mode"),
+    ({"source_qid": A, "target_qid": B, "mode": "agent"}, 503, "agent_unavailable"),
     ({"mode": "replay", "case_id": "missing"}, 404, "unknown_case"),
     ({"source_qid": A, "target_qid": B, "surprise": 1}, 400, "invalid_request"),
 ])
@@ -147,7 +149,8 @@ def test_start_validation(api, payload, status, code):
 
 def test_unknown_investigation_and_missing_provider(api, app):
     assert api.get("/api/investigations/nope").status_code == 404
-    app.config["INVESTIGATIONS"] = InvestigationService(None, demo_cases=DemoCases(version=1))
+    app.config["INVESTIGATIONS"] = InvestigationService(None, demo_cases=DemoCases(version=1),
+                                                        chat_factory=lambda: None, agent_available=lambda: False)
     res = api.post("/api/investigations", json={"source_qid": A, "target_qid": B})
     assert res.status_code == 503 and res.get_json()["error"]["code"] == "provider_unavailable"
     assert api.get("/api/health").get_json()["provider"] is None

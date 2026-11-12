@@ -31,8 +31,12 @@ from src.wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider, bui
 def describe(state: InvestigationState) -> None:
     for e in state.events.events:
         p = e.payload
-        if e.type == "tool.started":
-            print(f"  [{p['step']:>2}] expand {p['label']} ({p['qid']}, {p['side']} side) — {p['reason']}")
+        if e.type == "agent.decision":
+            print(f"  agent: {p['summary']}")
+        elif e.type == "tool.started" and "qid" in p:
+            print(f"  [{p['step']:>2}] expand {p['label']} ({p['qid']}, {p['side']} side) — {p.get('reason', '')}")
+        elif e.type == "tool.started":
+            print(f"  [{p['step']:>2}] {p['tool']} {p['arguments']}")
         elif e.type == "graph.expanded":
             flag = "" if p["complete"] else "  (truncated)"
             print(f"       +{len(p['added_nodes'])} nodes, +{len(p['added_edges'])} edges{flag}")
@@ -64,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--db", type=Path, default=DEFAULT_GRAPH_PATH)
     ap.add_argument("--search")
     ap.add_argument("--groups", help="comma-separated relation groups (default: policy defaults)")
+    ap.add_argument("--agent", action="store_true", help="use the LLM agent (needs OPENROUTER_API_KEY)")
     ap.add_argument("--record", metavar="CASE_ID")
     ap.add_argument("--title", default="")
     ap.add_argument("--cases-dir", type=Path, default=CASES_DIR)
@@ -84,6 +89,25 @@ def main(argv: list[str] | None = None) -> int:
     def run(p):
         state = InvestigationState(args.source, args.target, groups, search.budgets, snapshot=p.snapshot)
         return run_deterministic(state, p, policy, search)
+
+    if args.agent:
+        from src.agent.client import chat_client_from_env
+        from src.agent.investigator import run_agent
+
+        chat = chat_client_from_env()
+        if chat is None:
+            print("No LLM API key (OPENROUTER_API_KEY or DEEPSEEK_API_KEY) is set: the agent is unavailable (run without --agent for the "
+                  "deterministic exploration mode).", file=sys.stderr)
+            return 3
+        state = InvestigationState(args.source, args.target, groups, search.budgets, strategy="agent",
+                                   snapshot=provider.snapshot)
+        run_agent(state, provider, policy, search, chat)
+        describe(state)
+        answer = state.events.events[-1].payload.get("answer") or {}
+        print(f"answer ({answer.get('summary_source')}): {answer.get('summary')}")
+        if args.record:
+            print("--record is only supported for deterministic runs", file=sys.stderr)
+        return 0
 
     state = run(provider)
     describe(state)

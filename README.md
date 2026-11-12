@@ -70,13 +70,15 @@ These need the people graph `data/wikidata/people_graph.sqlite` (see `docs/wikid
 uv run python scripts/investigate.py --search "Marie Curie"          # find QIDs
 uv run python scripts/investigate.py Q7186 Q37463                    # deterministic run: timeline + paths
 uv run python scripts/investigate.py Q7186 Q37463 --record my-case   # write fixture + replay trace
+uv run python scripts/investigate.py Q7186 Q37463 --agent            # LLM agent (needs OPENROUTER_API_KEY)
 uv run python scripts/benchmark_investigations.py --pairs 30         # recall vs. the complete graph
 ```
 
 The Flask server exposes the investigation API under `/api/…`:
 
 - `GET /api/health` and `GET /api/people/search?q=`
-- `POST /api/investigations` with `{"source_qid", "target_qid"}`, or with `{"mode": "replay", "case_id"}`
+- `POST /api/investigations` with `{"source_qid", "target_qid", "mode"}`, where `mode` is `"deterministic"` (the default) or `"agent"`; or with `{"mode": "replay", "case_id"}`
+- Without `OPENROUTER_API_KEY`, agent mode returns `503 agent_unavailable`. Use the deterministic mode, which is labelled as such in every event.
 - `GET /api/investigations/<id>/events` (Server-Sent Events), plus `/graph`, `/paths` and `/turtle`
 
 Replay needs only the committed files in `data/fixtures/`, not the people graph.

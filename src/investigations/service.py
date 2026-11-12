@@ -12,11 +12,13 @@ import os
 import threading
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..agent.client import ChatClient, chat_client_from_env, llm_settings
+from ..agent.investigator import run_agent
 from ..config import ROOT, RelationshipPolicy, SearchConfig, load_policy, load_search_config
 from ..graph.model import is_qid
 from ..wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider
@@ -71,7 +73,7 @@ class StartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source_qid: str | None = None
     target_qid: str | None = None
-    mode: str = "deterministic"  # "deterministic" | "replay" ("agent" arrives in M4)
+    mode: str = "deterministic"  # "deterministic" | "agent" | "replay"
     case_id: str | None = None  # required for replay
     groups: list[str] | None = None
     budgets: dict[str, float] | None = None
@@ -94,7 +96,11 @@ class InvestigationService:
         search: SearchConfig | None = None,
         demo_cases: DemoCases | None = None,
         root: Path = ROOT,
+        chat_factory: Callable[[], ChatClient | None] = chat_client_from_env,
+        agent_available: Callable[[], bool] = lambda: llm_settings() is not None,
     ) -> None:
+        self._chat_factory = chat_factory
+        self._agent_available = agent_available
         self.provider = provider
         self.policy = policy or load_policy()
         self.search = search or load_search_config()
@@ -128,14 +134,24 @@ class InvestigationService:
             return self._launch(state, lambda: replay_into(state, trace, delay_seconds=req.replay_delay_seconds),
                                 background)
 
-        if req.mode != "deterministic":
-            raise ServiceError(400, "unsupported_mode", f"mode {req.mode!r} is not available yet")
+        if req.mode not in ("deterministic", "agent"):
+            raise ServiceError(400, "unsupported_mode", f"unknown mode {req.mode!r}")
         if not (req.source_qid and req.target_qid and is_qid(req.source_qid) and is_qid(req.target_qid)):
             raise ServiceError(400, "invalid_request", "source_qid and target_qid must be QIDs")
         if self.provider is None:
             raise ServiceError(503, "provider_unavailable",
                                "no people graph or case fixtures are installed; use replay mode")
         provider = self.provider
+        if req.mode == "agent":
+            chat = self._chat_factory()
+            if chat is None:
+                raise ServiceError(503, "agent_unavailable",
+                                   "No LLM API key is set (OPENROUTER_API_KEY or DEEPSEEK_API_KEY), so the AI agent is unavailable. "
+                                   "Use mode 'deterministic' (labelled deterministic exploration) or a replay.")
+            state = InvestigationState(req.source_qid, req.target_qid, groups, budgets, strategy="agent",
+                                       snapshot=provider.snapshot)
+            return self._launch(state, lambda: run_agent(state, provider, self.policy, self.search, chat),
+                                background)
         state = InvestigationState(req.source_qid, req.target_qid, groups, budgets, snapshot=provider.snapshot)
         return self._launch(state, lambda: run_deterministic(state, provider, self.policy, self.search), background)
 
@@ -168,6 +184,14 @@ class InvestigationService:
         state.cancel()
         return state
 
+    def _agent_status(self) -> dict[str, Any]:
+        if self._agent_available():
+            settings = llm_settings()
+            return {"available": True, "provider": settings.provider if settings else None,
+                    "model": settings.model if settings else None}
+        return {"available": False, "reason": "no LLM API key is set (OPENROUTER_API_KEY or DEEPSEEK_API_KEY)",
+                "fallback": "deterministic exploration mode (no AI), clearly labelled"}
+
     def health(self) -> dict[str, Any]:
         p = self.provider
         return {
@@ -175,6 +199,5 @@ class InvestigationService:
             "provider": None if p is None else {"name": p.name, "snapshot": p.snapshot},
             "replay_cases": [c.id for c in self.demo_cases.cases if c.trace],
             "policy_version": self.policy.version,
-            "agent": {"available": False, "reason": "agent mode arrives in Milestone 4",
-                      "api_key_configured": bool(os.environ.get("OPENROUTER_API_KEY"))},
+            "agent": self._agent_status(),
         }

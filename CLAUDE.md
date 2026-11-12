@@ -23,7 +23,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; and `ontology/people_connections.ttl`.
 
-**Milestone 3 machinery is done** (639 tests passing): offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
+**Milestone 4 agent is done** (656 tests passing). It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
 
 ### Milestone 2 engine (where things live)
 - `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
@@ -60,6 +60,36 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 - Scripts:
   - `scripts/investigate.py [--search NAME | SRC TGT [--record ID]]`: prints the timeline and paths. `--record` writes the fixture and trace, and refuses unless a re-run on the fixture alone reproduces identical events.
   - `scripts/benchmark_investigations.py`: recall of the bounded investigation against exact search on the full graph. On the 3% sample, random connected pairs were found only ~3/25 times at default budgets (4–6-hop institutional paths). Expected for random pairs; re-measure on the full graph.
+
+### Milestone 4 agent (where things live)
+- `src/investigations/steps.py`: building blocks shared by both strategies: `begin`, `expand_step` (tool.started → graph.expanded → tool.completed → paths.updated), `update_paths`, `budget_stop`, `finish`, `fail`. `baseline.py` is now a thin loop over them.
+- `src/agent/client.py`: `ChatClient` protocol (`complete(messages, tools) -> AssistantTurn`), plus `OpenRouterChatClient`. That client reuses `build_client` from `ontology_agent.py`, with a 30 s timeout, 2 retries and temperature 0. `chat_client_from_env()` returns **None** when `OPENROUTER_API_KEY` is missing; there is never a fake fallback.
+- `src/agent/tools.py`: Pydantic args (`extra="forbid"`) and JSON schemas for `resolve_person`, `get_neighbors`, `get_search_status`, `compute_paths`, `inspect_path` and `finish`. `Toolbox.call` enforces the allowlists in code:
+  - only explored QIDs, only enabled groups, no hubs over the cap;
+  - `limit` capped by the budget, and repeated full expansions refused;
+  - each call counted against `max_agent_tool_calls`.
+  Errors return `{"ok": false, "error": {code, message}}` and never add edges. Labels are truncated, and the prompt says tool output is data.
+- `src/agent/prompts.py`: a system prompt under 4 KB covering relation groups (enabled/disabled), rules, budgets and the stop policy. No ontology or Turtle in it.
+- `src/agent/investigator.py`: `run_agent`. Each turn's text becomes `agent.decision`. Stop reasons:
+  - `agent_finished` (the `finish` tool or a plain reply), which completes;
+  - `max_agent_tool_calls`, `max_turns`, `no_progress`, `agent_error`, or a budget/cancel, which end partial.
+  The final `answer` comes from `verify_summary`: the model's summary is kept only if every QID it mentions is on a returned path. Otherwise it is replaced by `backend_summary` with `summary_source: "backend"` and `unverified_mentions`. Names without QIDs can't be checked, so the UI must show the backend `comparison` as the result and the summary only as commentary.
+- Agent knobs live in `config/search.yaml` under `agent:`. The service takes `chat_factory`/`agent_available` (tests inject fakes). `POST /api/investigations {"mode": "agent"}` returns 503 `agent_unavailable` without a key, and `/api/health` reports the deterministic fallback. CLI: `scripts/investigate.py SRC TGT --agent`.
+
+### Agent evaluation (2026-11-12, DeepSeek `deepseek-chat`, 3% sample)
+- Providers are OpenAI-compatible. `LLM_PROVIDER` is `openrouter` or `deepseek`; otherwise the first key set among `OPENROUTER_API_KEY` and `DEEPSEEK_API_KEY` wins. `DEEPSEEK_MODEL` defaults to `deepseek-chat`.
+- Test set: 8 pairs (2–5 hops, one where the strongest path is longer than the shortest, one with no path), each compared with the exact result on the complete sample graph. Runs take 5–20 s. Nothing was fabricated, and no QID outside the paths appeared in any summary.
+- Lessons now built into the code:
+  1. **The agent cannot judge by itself whether a stronger path exists.** In the first round it stopped at a 2-hop shared-school path even though teacher/student leads were visible.
+     - Fix: once a path exists, tool results include backend-computed `improvement_leads` and `stronger_path_possible`, using the bound `source_cost(a) + min_edge + target_cost(b) < strongest`. `rank_frontier` candidates now carry `source_cost` and `target_cost`.
+     - The bound must be tight. A looser one (`route + min_edge`) made the agent chase leads until it hit the budget.
+  2. **The agent needs `remaining` budget in every expansion result**, because one institution adds about 100 nodes.
+  3. **A budget stop gets one tool-free wrap-up turn**, so partial runs still carry a verified agent summary.
+  4. **The prompt asks the agent to describe both paths when they differ.**
+- Still open:
+  - DeepSeek is not deterministic even at temperature 0: the same pair found a path in one round and not the next. Demo safety relies on prepared pairs plus replays.
+  - The summary check catches QIDs only. Summaries sometimes name explored people who are not on any path; they are real, but the rule says not to.
+  - With 18 tool calls the agent finds paths less often than the deterministic search with 25 requests, though its explored graphs are much smaller (15–40 nodes against 100–400). Tune this on the full graph.
 
 ### Decisions that override `IMPLEMENTATION_PLAN.md`
 - **No live Wikidata calls at demo time.** The `KnowledgeProvider` reads the local SQLite people graph. Live WDQS/REST is an optional extra for unprepared pairs.
@@ -117,7 +147,7 @@ ontology/people_connections.ttl  # small teaching ontology (mapping layer, not a
 src/server.py  config.py  models.py (Pydantic DTOs)
 src/wikidata/   provider.py (KnowledgeProvider protocol), offline.py (SQLite + fixtures)   [built]
 src/graph/      model.py, store.py (GraphView: InMemoryGraph, SqliteGraph), paths.py, turtle_projection.py   [built]
-src/agent/      client.py, tools.py, investigator.py, prompts.py
+src/agent/      client.py, tools.py, investigator.py, prompts.py   [built]
 src/investigations/  service.py, state.py, events.py, baseline.py, replay.py   [built]
 src/ui/         index.html, css/, js/{api,graph-view,turtle-editor,investigation,path-comparison,main}.js, vendor/
 data/wikidata/  data/fixtures/{cases,event_traces}/  data/sandbox/

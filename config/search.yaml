@@ -21,3 +21,16 @@ frontier:
   degree_weight: 0.15
   # After the first path appears, keep expanding this many more nodes to look for better paths.
   expansions_after_first_path: 4
+
+agent:
+  # Hard stop on model turns (each turn may contain several tool calls; tool calls are also
+  # capped by budgets.max_agent_tool_calls).
+  max_turns: 24
+  # Stop after this many consecutive get_neighbors calls that add no new edge.
+  no_progress_limit: 4
+  # How many newly added nodes a get_neighbors result lists back to the model.
+  max_result_nodes: 25
+  # Frontier suggestions included in get_search_status.
+  status_frontier_size: 8
+  # Maximum length of the agent's final plain-language summary.
+  max_summary_chars: 700

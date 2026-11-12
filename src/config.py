@@ -118,10 +118,19 @@ class FrontierPolicy(_Frozen):
     expansions_after_first_path: int = Field(ge=0)
 
 
+class AgentPolicy(_Frozen):
+    max_turns: int = Field(ge=1)
+    no_progress_limit: int = Field(ge=1)
+    max_result_nodes: int = Field(ge=1)
+    status_frontier_size: int = Field(ge=1)
+    max_summary_chars: int = Field(ge=50)
+
+
 class SearchConfig(_Frozen):
     version: int
     budgets: SearchBudgets
     frontier: FrontierPolicy
+    agent: AgentPolicy
 
 
 def load_search_config(path: Path | str = DEFAULT_SEARCH_PATH) -> SearchConfig:

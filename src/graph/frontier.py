@@ -35,6 +35,9 @@ class ExpansionCandidate(BaseModel):
     score: float
     via_edge_id: str | None  # last edge on the cheapest explored route to this node
     reason: str
+    # Cheapest explored route cost from each endpoint (None = not reachable from that side yet).
+    source_cost: float | None = None
+    target_cost: float | None = None
 
 
 def _qkey(qid: str) -> int:
@@ -69,6 +72,7 @@ def rank_frontier(
         return c
 
     best: dict[str, tuple[float, int, int, str | None]] = {}  # qid -> (cost, hops, side, via edge)
+    side_costs: dict[str, list[float | None]] = {}
     for side, start in enumerate((source_qid, target_qid)):
         other_end = target_qid if side == 0 else source_qid
         dist: dict[str, tuple[float, int]] = {start: (0.0, 0)}
@@ -78,6 +82,7 @@ def rank_frontier(
             cost, hops, _, v = heapq.heappop(heap)
             if dist.get(v, (math.inf, 0)) < (cost, hops):
                 continue
+            side_costs.setdefault(v, [None, None])[side] = cost
             prev = best.get(v)
             if prev is None or (cost, hops, side) < prev[:3]:
                 best[v] = (cost, hops, side, via[v])
@@ -107,6 +112,7 @@ def rank_frontier(
         reason = (f"{label}: {hops} hop{'s' if hops != 1 else ''} from the {end}, "
                   f"route cost {cost:.2f}, degree {degree}")
         out.append(ExpansionCandidate(qid=qid, side=side, hops=hops, path_cost=cost, degree=degree,  # type: ignore[arg-type]
-                                      score=score, via_edge_id=via_edge, reason=reason))
+                                      score=score, via_edge_id=via_edge, reason=reason,
+                                      source_cost=side_costs[qid][0], target_cost=side_costs[qid][1]))
     out.sort(key=lambda c: (c.score, c.hops, _qkey(c.qid)))
     return out

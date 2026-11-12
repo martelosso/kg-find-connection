@@ -47,6 +47,7 @@ class InvestigationState:
     graph: InMemoryGraph = field(init=False)
     expansions: list[ExpansionRecord] = field(default_factory=list)
     provider_requests: int = 0
+    tool_calls: int = 0  # agent tool calls (all tools)
     comparison: PathComparison | None = None
     stop_reason: str | None = None
     created_at: str = field(default_factory=utc_now)
@@ -81,6 +82,7 @@ class InvestigationState:
             "groups": sorted(self.groups),
             "budgets": self.budgets.model_dump(),
             "provider_requests": self.provider_requests,
+            "tool_calls": self.tool_calls,
             "explored_nodes": len(self.graph.nodes),
             "explored_edges": len(self.graph.edges),
             "expanded_nodes": len(self.expansions),
