@@ -34,3 +34,8 @@ agent:
   status_frontier_size: 8
   # Maximum length of the agent's final plain-language summary.
   max_summary_chars: 700
+
+ui:
+  # Graph nodes drawn at once. Beyond this, leaf nodes that are not on a path, not expanded and
+  # not endpoints are hidden (the presenter can still show all). Plan §12.
+  max_visible_nodes: 250

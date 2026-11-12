@@ -24,13 +24,15 @@ from ..graph.model import is_qid
 from ..wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider
 from ..wikidata.provider import KnowledgeProvider
 from .baseline import run_deterministic
+from ..graph.turtle_projection import TurtleProjection, serialize_visible_turtle
 from .replay import load_trace, replay_into
+from .sandbox import OverlayError, parse_overlay, sandbox_comparison
 from .state import InvestigationState
 
 DEFAULT_GRAPH_PATH = ROOT / "data" / "wikidata" / "people_graph.sqlite"
 CASES_DIR = ROOT / "data" / "fixtures" / "cases"
 TRACES_DIR = ROOT / "data" / "fixtures" / "event_traces"
-DEMO_CASES_PATH = ROOT / "config" / "demo_cases.yaml"
+DEMO_CASES_PATH = Path(os.environ.get("DEMO_CASES_PATH") or ROOT / "config" / "demo_cases.yaml")
 
 
 def provider_from_env() -> KnowledgeProvider | None:
@@ -192,6 +194,56 @@ class InvestigationService:
         return {"available": False, "reason": "no LLM API key is set (OPENROUTER_API_KEY or DEEPSEEK_API_KEY)",
                 "fallback": "deterministic exploration mode (no AI), clearly labelled"}
 
+    # ---- turtle & sandbox ----------------------------------------------------------------------
+
+    def turtle(self, investigation_id: str, edge_ids: list[str] | None = None,
+               include_sandbox: bool = True) -> TurtleProjection:
+        state = self.get(investigation_id)
+        edges = state.graph.edges
+        if edge_ids is not None:
+            wanted = set(edge_ids)
+            edges = [e for e in edges if e.edge_id in wanted]
+        sandbox = list(state.sandbox_edges) if include_sandbox else []
+        qids = {q for e in edges + sandbox for q in (e.subject, e.object)}
+        if edge_ids is None:
+            qids |= {n.qid for n in state.graph.nodes}
+        qids |= {state.source_qid, state.target_qid}
+        nodes = [n for n in state.graph.nodes if n.qid in qids]
+        return serialize_visible_turtle(nodes, edges + sandbox, self.policy, snapshot=state.snapshot)
+
+    def set_overlay(self, investigation_id: str, text: str, shown_edge_ids: list[str] | None = None) -> dict[str, Any]:
+        state = self.get(investigation_id)
+        if state.status in ("pending", "running"):
+            raise ServiceError(409, "investigation_running",
+                               "wait for the investigation to finish before editing the sandbox")
+        try:
+            edges, warnings = parse_overlay(text, state, self.policy,
+                                            set(shown_edge_ids) if shown_edge_ids is not None else None)
+        except OverlayError as exc:
+            raise ServiceError(400, "invalid_turtle", str(exc)) from exc
+        state.sandbox_edges = edges
+        state.sandbox_comparison = sandbox_comparison(state, edges, self.policy) if edges else None
+        return self.overlay(investigation_id, warnings)
+
+    def clear_overlay(self, investigation_id: str) -> dict[str, Any]:
+        state = self.get(investigation_id)
+        state.sandbox_edges, state.sandbox_comparison = [], None
+        return self.overlay(investigation_id)
+
+    def overlay(self, investigation_id: str, warnings: list[str] | None = None) -> dict[str, Any]:
+        from .steps import edge_labels
+
+        state = self.get(investigation_id)
+        cmp = state.sandbox_comparison
+        return {
+            "sandbox_edges": [{"id": e.edge_id, "subject": e.subject, "predicate": e.pid, "object": e.object,
+                               "source": e.source, "origin": e.origin, "property_url": e.property_url,
+                               **edge_labels(self.policy, e.pid)} for e in state.sandbox_edges],
+            "warnings": warnings or [],
+            "comparison": cmp.model_dump(mode="json") if cmp else None,
+            "note": "Sandbox edges are presenter hypotheses, not Wikidata statements.",
+        }
+
     def health(self) -> dict[str, Any]:
         p = self.provider
         return {
@@ -199,5 +251,6 @@ class InvestigationService:
             "provider": None if p is None else {"name": p.name, "snapshot": p.snapshot},
             "replay_cases": [c.id for c in self.demo_cases.cases if c.trace],
             "policy_version": self.policy.version,
+            "ui": self.search.ui.model_dump(),
             "agent": self._agent_status(),
         }

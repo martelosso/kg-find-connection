@@ -23,7 +23,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; and `ontology/people_connections.ttl`.
 
-**Milestone 4 agent is done** (656 tests passing). It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
+**Milestone 5 workbench is done** (674 tests passing). **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
 
 ### Milestone 2 engine (where things live)
 - `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
@@ -91,16 +91,38 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
   - The summary check catches QIDs only. Summaries sometimes name explored people who are not on any path; they are real, but the rule says not to.
   - With 18 tool calls the agent finds paths less often than the deterministic search with 25 requests, though its explored graphs are much smaller (15–40 nodes against 100–400). Tune this on the full graph.
 
-### Live preview (precursor of M5)
-- `src/ui/preview.html` is served at `/preview`; `/vendor/vis-network.min.js` serves the vendored copy from `graph-view/`. It is one vanilla-JS file with no build step.
-- How it works:
-  - It keeps one `vis.Network` for the whole page and **only adds** to its DataSets as SSE events arrive. New edges flash green.
-  - The timeline groups tool calls under each `agent.decision`; clicking a step highlights the edges it fetched.
-  - Path cards (shortest/strongest) have highlight buttons and Wikidata links. Clicking an edge marks its exact statement in the backend Turtle using the UTF-16 spans.
-  - LIVE/REPLAY and deterministic/agent badges come from `investigation.started`.
-  - Deep link: `/preview?source=Q..&target=Q..&mode=agent`.
-- All Wikidata text is inserted with `textContent`, never `innerHTML` (a test enforces this).
-- Not yet: Turtle editing and the sandbox overlay, editor→graph selection, a visible-node cap, and refactoring `live-editor.html` into `src/ui/` modules. These are M5 work.
+### Milestone 5 workbench (where things live)
+- Routes:
+  - `/` serves `src/ui/index.html` (the workbench). `/legacy` serves the old retail chat (`src/ui/legacy/retail.html`). `/preview` redirects to `/`, keeping its query string.
+  - Static files come from `src/ui/`: `/js/*`, `/css/*`, and `/vendor/*` (CodeMirror 5.65.16 and vis-network, **moved** from `graph-view/`; `live-editor.html` now points at `../src/ui/vendor/`).
+  - `server.py` forces the `text/javascript` MIME type, because Windows can serve `.js` as `text/plain`, which breaks ES modules.
+- ES modules in `src/ui/js/`, no build step. `investigation.js`, `mapping.js` and `turtle-parser.js` are DOM-free and Node-tested in `tests/test_ui_modules.py`.
+  - `investigation.js`: `InvestigationModel.apply(event)` folds the §7 events into nodes, edges, timeline rows (tool rows nest under `agent.decision`), comparison and final; duplicate event IDs are ignored.
+  - `turtle-parser.js`: the editor's `parseTurtle` and CodeMirror mode, extracted **verbatim**. A test checks it still equals the copy in `live-editor.html`.
+  - `mapping.js`: `buildIndex(text, edges)` matches parsed statements to edges by (s, p, o, origin) and labels to nodes. `selectionToGraph` and `graphToSpans` refuse stale text: the stale-offset guard.
+  - `graph-view.js`: one `vis.Network` for the page's lifetime, with DataSet add/update only.
+    - Path styling is done with `restyle*`, never a rebuild.
+    - Visible-node cap from `config/search.yaml` `ui.max_visible_nodes` (250). Endpoints, path nodes, expanded nodes, sandbox endpoints and connectors are kept; leaves are hidden first, and "Show all" lifts the cap.
+    - Sandbox edges are always pink and dashed, even on a path.
+  - `turtle-editor.js`: CodeMirror plus the selection sync. It reindexes 350 ms after each edit and uses a timer rather than rAF, because rAF pauses in background tabs.
+  - `timeline.js`, `path-comparison.js` (Shortest / Strongest / With-sandbox tabs, hops with labels, PIDs, costs and Wikidata links, scope note, agent or backend answer), `people-picker.js`, `api.js` (fetch + EventSource, closed on terminal), `dom.js` (text-only DOM; a test forbids `innerHTML`), and `main.js` (wiring; `window.__workbench` for debugging and E2E).
+- Turtle: `POST /api/investigations/{id}/turtle {edge_ids}` returns the visible part. The editor reloads it during a run unless the presenter has edits; then it shows an "edited" pill and a reload button.
+- Sandbox (`src/investigations/sandbox.py`, `GET/POST/DELETE …/overlay`):
+  - Allowed only after a run finishes. RDFLib parses the editor text.
+  - Only `sbx:<PID>` edges between explored entities, with enabled allowlisted PIDs, are accepted (at most 25).
+  - Edits to `wdt:` lines are ignored with read-only warnings. `shown_edge_ids` avoids false "removed" warnings when only the visible part was shown.
+  - Paths "with sandbox" are computed on a copy of the explored graph. The real comparison and graph never change.
+- Checked in Chrome on 2026-11-12 (sample DB, DeepSeek), with every M5 acceptance item verified through the real handlers:
+  - a recorded replay plays through (REPLAY badge with the recording time);
+  - a timeline step highlights its edges;
+  - clicking a graph edge marks its exact statement;
+  - an editor selection highlights the edge, and a label line highlights its node;
+  - path tabs toggle without rebuilding the network;
+  - after an edit, selections are ignored until re-parse (the stale-offset guard);
+  - the sandbox apply/clear cycle works;
+  - a live agent run works end to end.
+- Dev replay without real demo cases: set `DEMO_CASES_PATH` to a YAML that points at a scratch trace. Never commit sample-graph cases as demo pairs.
+- Still open (M6): real demo cases, a presenter runbook, an offline cold-start test, label overlap in dense graphs, and a refit after the physics settles.
 
 ### Decisions that override `IMPLEMENTATION_PLAN.md`
 - **No live Wikidata calls at demo time.** The `KnowledgeProvider` reads the local SQLite people graph. Live WDQS/REST is an optional extra for unprepared pairs.
@@ -114,11 +136,11 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 | Path | What it is | Plan for it |
 |---|---|---|
 | `graph-view/live-editor.html` (845 lines) | CodeMirror 5 and vis-network editor with a hand-written Turtle parser (`parseTurtle`, `buildGraph`, `render`, `onEditorSelect`, `onGraphSelect`, `setGraphHighlight`) and two-way graph↔source highlighting | **Foundation of the new UI.** Refactor it into `src/ui/` modules and keep its behaviour. Don't rewrite it in a framework. |
-| `graph-view/vis-network.min.js` | Vendored graph library | Reuse it and keep its license notice. |
+| `src/ui/vendor/vis-network.min.js` | Vendored graph library (moved from `graph-view/` in M5) | Keep its license notice. |
 | `graph-view/visualize.html` | Older visualizer | Legacy. Don't evolve it. |
 | `src/server.py` | Flask app with `/`, `/api/ontology`, `/api/ask` (retail) | Reuse the Flask base, replace the routes, and serve the new workbench at `/`. |
 | `src/ontology_agent.py` | OpenRouter client (`build_client`, `DEFAULT_MODEL` from `OPENROUTER_MODEL`), tool loop, `sparql_query` tool, module-global RDFLib cache | Reuse the client and the tool-loop *pattern* only. The retail prompt, the global graph and free-form SPARQL do not belong in the new domain. |
-| `src/ui/index.html` | Retail chat UI | Legacy. Salvage ideas only. |
+| `src/ui/legacy/retail.html` | Retail chat UI, served at `/legacy` | Legacy. Salvage ideas only. |
 | `ontology/ontology.owl.ttl`, `data/mock_data.ttl` | Retail ontology and data | Keep as legacy examples (optionally move them to `examples/retail/` once references are updated). |
 | `ontology/your_own_ontology.owl.ttl` | Scratch file | **Don't touch it.** |
 
@@ -126,7 +148,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 - The repo is under git. The first commit is the untouched baseline. Commit only when the user asks.
 - Dependencies: `pydantic`, `httpx`, `pyyaml`, plus dev `pytest`. NetworkX was removed on purpose: the searches are custom and hop-aware, and the full graph is too large for NetworkX objects. pytest is configured in `pyproject.toml` with `testpaths=["tests"]` and `pythonpath=["."]`, so tests import `src.*`.
-- CodeMirror 5.65.16 is vendored in `graph-view/vendor/codemirror/`, and `live-editor.html` has no CDN references (a test enforces this). Move it to `src/ui/vendor/` in M5 and update `docs/third-party-licenses.md`.
+- CodeMirror 5.65.16 and vis-network are vendored in `src/ui/vendor/` (moved there in M5; see `docs/third-party-licenses.md`). Neither the workbench nor `live-editor.html` references a CDN, and tests enforce this.
 - `data/wikidata/` (the raw cache) is **gitignored**. Replay fixtures in `data/fixtures/` **must** be committed.
 - Legacy retail assets stay where they are until the workbench replaces them.
 - Still to create: real entries in `config/demo_cases.yaml` with their `data/fixtures/` files, `data/sandbox/`, and `ontology/people_connections.ttl`.
@@ -160,7 +182,7 @@ src/wikidata/   provider.py (KnowledgeProvider protocol), offline.py (SQLite + f
 src/graph/      model.py, store.py (GraphView: InMemoryGraph, SqliteGraph), paths.py, turtle_projection.py   [built]
 src/agent/      client.py, tools.py, investigator.py, prompts.py   [built]
 src/investigations/  service.py, state.py, events.py, baseline.py, replay.py   [built]
-src/ui/         index.html, css/, js/{api,graph-view,turtle-editor,investigation,path-comparison,main}.js, vendor/
+src/ui/         index.html, css/, js/{api,graph-view,turtle-editor,investigation,mapping,path-comparison,timeline,people-picker,main}.js, vendor/   [built]
 data/wikidata/  data/fixtures/{cases,event_traces}/  data/sandbox/
 docs/wikidata-ingestion-decision.md   docs/workshop-runbook.md
 tests/

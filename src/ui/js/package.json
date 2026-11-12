@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "Browser ES modules for the workbench (no build step). This file only tells Node (tests) that .js files here are ES modules."
+}

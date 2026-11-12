@@ -126,11 +126,16 @@ class AgentPolicy(_Frozen):
     max_summary_chars: int = Field(ge=50)
 
 
+class UiPolicy(_Frozen):
+    max_visible_nodes: int = Field(ge=10)
+
+
 class SearchConfig(_Frozen):
     version: int
     budgets: SearchBudgets
     frontier: FrontierPolicy
     agent: AgentPolicy
+    ui: UiPolicy
 
 
 def load_search_config(path: Path | str = DEFAULT_SEARCH_PATH) -> SearchConfig:

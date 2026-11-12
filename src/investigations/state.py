@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from ..config import SearchBudgets
+from ..graph.model import Edge
 from ..graph.store import InMemoryGraph
 from ..models import PathComparison
 from .events import EventLog, utc_now
@@ -49,6 +50,8 @@ class InvestigationState:
     provider_requests: int = 0
     tool_calls: int = 0  # agent tool calls (all tools)
     comparison: PathComparison | None = None
+    sandbox_edges: list[Edge] = field(default_factory=list)  # presenter overlay, never Wikidata
+    sandbox_comparison: PathComparison | None = None
     stop_reason: str | None = None
     created_at: str = field(default_factory=utc_now)
     cancel_event: threading.Event = field(default_factory=threading.Event)
@@ -88,4 +91,5 @@ class InvestigationState:
             "expanded_nodes": len(self.expansions),
             "created_at": self.created_at,
             "event_count": len(self.events.events),
+            "sandbox_edges": len(self.sandbox_edges),
         }

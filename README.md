@@ -13,11 +13,11 @@ This repository is being extended into **Six Degrees of Knowledge**, an agentic 
 
 | Path | What it is |
 |---|---|
-| [`graph-view/live-editor.html`](graph-view/live-editor.html) | Live Turtle editor (CodeMirror 5) with a vis-network graph and two-way highlighting between graph and source. It works offline because its libraries are vendored. It will become the basis of the new workbench UI. |
+| [`graph-view/live-editor.html`](graph-view/live-editor.html) | Standalone live Turtle editor (CodeMirror 5) with a vis-network graph and two-way highlighting. It works offline, using the libraries vendored in `src/ui/vendor/`. The workbench is built on its parser, theme and highlighting. |
 | [`graph-view/visualize.html`](graph-view/visualize.html) | Older standalone Turtle graph visualizer (legacy). |
 | [`ontology/ontology.owl.ttl`](ontology/ontology.owl.ttl), [`data/mock_data.ttl`](data/mock_data.ttl) | Hand-written supermarket/retail ontology and instance data (legacy). |
 | [`src/ontology_agent.py`](src/ontology_agent.py) | Retail assistant that queries the graph with SPARQL through an LLM on OpenRouter, from the terminal (legacy). |
-| [`src/server.py`](src/server.py) + [`src/ui/index.html`](src/ui/index.html) | Flask web UI for the retail assistant (legacy). It will be replaced by the explorer workbench. |
+| [`src/server.py`](src/server.py) + [`src/ui/`](src/ui/) | Flask app: the Six Degrees workbench at `/` (`src/ui/index.html`, `js/`, `css/`, `vendor/`), the investigation API under `/api/`, and the legacy retail assistant at `/legacy`. |
 
 ## Setup
 
@@ -74,7 +74,7 @@ uv run python scripts/investigate.py Q7186 Q37463 --agent            # LLM agent
 uv run python scripts/benchmark_investigations.py --pairs 30         # recall vs. the complete graph
 ```
 
-**Live preview:** run `uv run python -m src.server` and open http://localhost:5000/preview. Pick two people, choose deterministic or AI agent, and watch the graph grow. It has a timeline, path cards with highlighting, and Turtle linked to graph edges. The legacy retail assistant stays at `/`.
+**Workbench:** run `uv run python -m src.server` and open http://localhost:5000/. Pick two people, choose deterministic or AI agent (or a recorded replay), and watch the graph grow. It has a timeline, Shortest/Strongest tabs, a Turtle source that highlights in both directions, and a sandbox for hypothetical edges. The legacy retail assistant moved to `/legacy`.
 
 The Flask server exposes the investigation API under `/api/…`:
 
@@ -100,16 +100,14 @@ Third-party frontend libraries and their licenses are listed in [`docs/third-par
 │   └── third-party-licenses.md
 ├── graph-view/
 │   ├── live-editor.html
-│   ├── visualize.html
-│   ├── vis-network.min.js
-│   └── vendor/codemirror/    # vendored CodeMirror 5.65.16 + LICENSE
+│   └── visualize.html        # legacy viewer (loads ../src/ui/vendor/vis-network.min.js)
 ├── ontology/
 │   ├── ontology.owl.ttl      # legacy retail ontology
 │   └── your_own_ontology.owl.ttl
 ├── src/
 │   ├── ontology_agent.py
 │   ├── server.py
-│   └── ui/index.html
+│   └── ui/                   # workbench: index.html, js/ (ES modules), css/, vendor/, legacy/retail.html
 ├── tests/
 ├── pyproject.toml
 └── uv.lock

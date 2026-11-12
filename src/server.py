@@ -13,7 +13,9 @@ from pathlib import Path
 
 import json
 
-from flask import Flask, Response, current_app, jsonify, request, send_from_directory, stream_with_context
+import mimetypes
+
+from flask import Flask, Response, current_app, jsonify, redirect, request, send_from_directory, stream_with_context
 from openai import OpenAI
 
 from .investigations.service import InvestigationService, ServiceError, provider_from_env
@@ -26,7 +28,9 @@ from .ontology_agent import (
 )
 
 UI_DIR = Path(__file__).parent / "ui"
-GRAPH_VIEW_DIR = Path(__file__).parent.parent / "graph-view"  # vendored vis-network lives here until M5
+# ES modules need a JavaScript MIME type; the Windows registry sometimes maps .js to text/plain.
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/css", ".css")
 
 app = Flask(__name__, static_folder=str(UI_DIR), static_url_path="")
 _system_prompt = build_system_prompt()
@@ -35,18 +39,21 @@ _client: OpenAI | None = None
 
 @app.get("/")
 def index():
+    """Six Degrees of Knowledge workbench."""
     return send_from_directory(UI_DIR, "index.html")
+
+
+@app.get("/legacy")
+def legacy_retail():
+    """Original retail (Smarket) assistant UI, kept until it is retired."""
+    return send_from_directory(UI_DIR / "legacy", "retail.html")
 
 
 @app.get("/preview")
 def preview():
-    """Live investigation preview (Six Degrees). Precursor of the Milestone 5 workbench."""
-    return send_from_directory(UI_DIR, "preview.html")
-
-
-@app.get("/vendor/vis-network.min.js")
-def vendor_vis_network():
-    return send_from_directory(GRAPH_VIEW_DIR, "vis-network.min.js", mimetype="text/javascript")
+    """The M4 live preview grew into the workbench."""
+    qs = request.query_string.decode()
+    return redirect("/" + ("?" + qs if qs else ""))
 
 
 @app.get("/api/ontology")
@@ -180,25 +187,43 @@ def api_paths(inv_id: str):
     return jsonify({"status": state.status, "comparison": cmp.model_dump(mode="json") if cmp else None})
 
 
-@app.get("/api/investigations/<inv_id>/turtle")
+@app.route("/api/investigations/<inv_id>/turtle", methods=["GET", "POST"])
 def api_turtle(inv_id: str):
-    """Compact Turtle of the explored graph. ``?scope=selected&edge_ids=a,b`` limits it."""
-    from .graph.turtle_projection import serialize_visible_turtle
+    """Compact Turtle of the explored graph (+ sandbox section).
 
-    svc = _service()
-    state = svc.get(inv_id)
-    edges = state.graph.edges
-    if request.args.get("scope") == "selected":
-        wanted = set(filter(None, request.args.get("edge_ids", "").split(",")))
-        edges = [e for e in edges if e.edge_id in wanted]
-        qids = {q for e in edges for q in (e.subject, e.object)}
-        nodes = [n for n in state.graph.nodes if n.qid in qids]
-    else:
-        nodes = state.graph.nodes
-    proj = serialize_visible_turtle(nodes, edges, svc.policy, snapshot=state.snapshot)
+    GET: all explored edges, or ``?scope=selected&edge_ids=a,b``. POST ``{"edge_ids": [...]}`` for
+    long selections (e.g. the visible subgraph). ``?format=text`` returns text/turtle.
+    """
+    edge_ids = None
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        if body.get("edge_ids") is not None:
+            if not isinstance(body["edge_ids"], list) or len(body["edge_ids"]) > 20_000:
+                return jsonify({"error": {"code": "invalid_request", "message": "edge_ids must be a list"}}), 400
+            edge_ids = [str(x) for x in body["edge_ids"]]
+    elif request.args.get("scope") == "selected":
+        edge_ids = list(filter(None, request.args.get("edge_ids", "").split(",")))
+    proj = _service().turtle(inv_id, edge_ids)
     if request.args.get("format") == "text":
         return proj.text, 200, {"Content-Type": "text/turtle; charset=utf-8"}
     return jsonify(proj.model_dump())
+
+
+@app.route("/api/investigations/<inv_id>/overlay", methods=["GET", "POST", "DELETE"])
+def api_overlay(inv_id: str):
+    """Sandbox overlay. POST ``{"text": "<turtle>"}``: sbx: statements become hypothetical edges."""
+    svc = _service()
+    if request.method == "GET":
+        return jsonify(svc.overlay(inv_id))
+    if request.method == "DELETE":
+        return jsonify(svc.clear_overlay(inv_id))
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body.get("text"), str):
+        return jsonify({"error": {"code": "invalid_request", "message": "text (Turtle) is required"}}), 400
+    shown = body.get("shown_edge_ids")
+    if shown is not None and not isinstance(shown, list):
+        return jsonify({"error": {"code": "invalid_request", "message": "shown_edge_ids must be a list"}}), 400
+    return jsonify(svc.set_overlay(inv_id, body["text"], [str(x) for x in shown] if shown is not None else None))
 
 
 def main() -> None:
