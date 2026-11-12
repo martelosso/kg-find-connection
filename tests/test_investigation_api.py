@@ -159,3 +159,36 @@ def test_unknown_investigation_and_missing_provider(api, app):
 def test_legacy_routes_still_work(api):
     assert api.get("/").status_code == 200
     assert api.get("/api/ontology").status_code == 200
+
+
+def test_replay_works_with_no_people_graph_and_no_api_key(app, service, tmp_path):
+    """Worst case on workshop day: no people graph, no LLM key, no network. Replays must still run."""
+    bare = InvestigationService(None, demo_cases=service.demo_cases, root=service.root,
+                                chat_factory=lambda: None, agent_available=lambda: False)
+    app.config["INVESTIGATIONS"] = bare
+    c = app.test_client()
+    health = c.get("/api/health").get_json()
+    assert health["provider"] is None and health["agent"]["available"] is False
+    assert health["replay_cases"] == ["ada-bea"]
+    res = c.post("/api/investigations", json={"mode": "replay", "case_id": "ada-bea", "replay_delay_seconds": 0})
+    assert res.status_code == 202
+    inv = res.get_json()["investigation_id"]
+    assert wait_done(c, inv)["status"] == "completed"
+    paths = c.get(f"/api/investigations/{inv}/paths").get_json()
+    assert paths["comparison"]["shortest"]["result"]["hop_count"] == 2
+    ttl = c.get(f"/api/investigations/{inv}/turtle").get_json()
+    assert ttl["triple_count"] > 0
+    assert c.post("/api/investigations", json={"source_qid": A, "target_qid": B}).status_code == 503
+    assert c.post("/api/investigations", json={"source_qid": A, "target_qid": B, "mode": "agent"}).status_code == 503
+    assert c.get("/api/people/search?q=ad").status_code == 503
+
+
+def test_sse_resumes_after_a_dropped_connection(api):
+    """EventSource reconnects with Last-Event-ID; the server must continue exactly after it."""
+    inv = api.post("/api/investigations", json={"source_qid": A, "target_qid": B}).get_json()["investigation_id"]
+    wait_done(api, inv)
+    full = parse_sse(api.get(f"/api/investigations/{inv}/events").get_data(as_text=True))
+    for cut in (1, len(full) // 2, len(full) - 1):
+        rest = parse_sse(api.get(f"/api/investigations/{inv}/events", headers={"Last-Event-ID": str(cut)}).get_data(as_text=True))
+        assert [i for i, _, _ in rest] == list(range(cut + 1, len(full) + 1))
+    assert parse_sse(api.get(f"/api/investigations/{inv}/events?after=junk").get_data(as_text=True))[0][0] == 1

@@ -76,6 +76,8 @@ uv run python scripts/benchmark_investigations.py --pairs 30         # recall vs
 
 **Workbench:** run `uv run python -m src.server` and open http://localhost:5000/. Pick two people, choose deterministic or AI agent (or a recorded replay), and watch the graph grow. It has a timeline, Shortest/Strongest tabs, a Turtle source that highlights in both directions, and a sandbox for hypothetical edges. The legacy retail assistant moved to `/legacy`.
 
+**Before a workshop:** run `uv run python -m src.preflight --online` and follow [`docs/workshop-runbook.md`](docs/workshop-runbook.md) (setup, the click-by-click demo flow, and what to do when something fails).
+
 The Flask server exposes the investigation API under `/api/…`:
 
 - `GET /api/health` and `GET /api/people/search?q=`

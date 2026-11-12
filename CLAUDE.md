@@ -23,7 +23,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; and `ontology/people_connections.ttl`.
 
-**Milestone 5 workbench is done** (674 tests passing). **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
+**Milestone 6 is in progress** (681 tests passing): preflight, recording and runbook are done; the real demo cases wait for the full graph. **Milestone 5 workbench is done**. **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
 
 ### Milestone 2 engine (where things live)
 - `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
@@ -123,6 +123,34 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
   - a live agent run works end to end.
 - Dev replay without real demo cases: set `DEMO_CASES_PATH` to a YAML that points at a scratch trace. Never commit sample-graph cases as demo pairs.
 - Still open (M6): real demo cases, a presenter runbook, an offline cold-start test, label overlap in dense graphs, and a refit after the physics settles.
+
+### Milestone 6 reliability (where things live)
+- `src/preflight.py` (`uv run python -m src.preflight [--online]`): READY or NOT READY. It checks:
+  - config;
+  - every demo case's trace: it rebuilds the graph and recomputes the paths, and the endpoints and snapshot must match the case;
+  - the people graph and its search indexes;
+  - that workbench assets are local;
+  - the LLM key (an OpenRouter variable holding a non-`sk-or-` key fails; `--online` makes one tiny call);
+  - port 5000.
+  `run_checks(cases_path=…)` is tested in `tests/test_preflight.py`.
+- `scripts/investigate.py --record ID [--agent]` checks before writing anything:
+  - deterministic runs: the fixture alone must reproduce identical events;
+  - agent runs: the trace must rebuild the same graph and paths, and the backend must recompute them identically;
+  - runs without a path are refused.
+- `scripts/find_demo_pairs.py`: ranks candidate pairs from well-connected humans that have en+es labels and family/mentorship links, or from `--seeds`. It uses exact paths on the complete graph plus a budgeted live run, and scores live-findability, strongest ≠ shortest, interpersonal hops and labelled nodes. It **suggests only**.
+- UI hardening:
+  - above 60 nodes only important nodes keep text labels;
+  - the endpoints are pinned on x (left and right);
+  - `fitWhenSettled` runs 250 physics iterations before fitting;
+  - a failed start no longer clears the previous result;
+  - the health poll shows "Server offline" or "Server online" every 15 s.
+- Failure-mode tests:
+  - replay with no people graph and no key;
+  - SSE resume from any `Last-Event-ID`;
+  - agent API errors end as partial (in `test_agent.py`).
+  A real server outage was checked in Chrome: the result is kept, the error is clear, and the page recovers on its own.
+- `docs/workshop-runbook.md`: setup, the day-before checks, the click-by-click flow, a failure table and the honesty rules.
+- **Remaining for M6:** build the full people graph, record at least 3 real demo cases (`config/demo_cases.yaml` is still empty), tune budgets and the hub cap on the full graph, and rehearse fully offline.
 
 ### Decisions that override `IMPLEMENTATION_PLAN.md`
 - **No live Wikidata calls at demo time.** The `KnowledgeProvider` reads the local SQLite people graph. Live WDQS/REST is an optional extra for unprepared pairs.

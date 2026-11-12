@@ -5,9 +5,11 @@
     uv run python scripts/investigate.py Q7186 Q37463 --record curie-family --title "..."
 
 ``--record`` writes data/fixtures/cases/<id>.json (the neighbourhoods the run used) and
-data/fixtures/event_traces/<id>.json (the run's events), then RE-RUNS the investigation against
-the fixture alone and fails unless it reproduces the identical event sequence. It prints the
-demo_cases.yaml entry to add; it never edits that file and never invents a pair.
+data/fixtures/event_traces/<id>.json (the run's events). Verification before writing:
+deterministic runs are RE-RUN against the fixture alone and must reproduce identical events;
+agent runs (``--agent --record``) must rebuild the same graph and paths from the trace. Runs
+without a path are not recorded. It prints the demo_cases.yaml entry to add; it never edits that
+file and never invents a pair.
 """
 
 from __future__ import annotations
@@ -22,7 +24,9 @@ sys.path.insert(0, str(ROOT))
 
 from src.config import load_policy, load_search_config  # noqa: E402
 from src.investigations.baseline import run_deterministic  # noqa: E402
-from src.investigations.replay import normalized_events, trace_dict  # noqa: E402
+from src.graph.paths import compare_paths  # noqa: E402
+from src.investigations.events import Event  # noqa: E402
+from src.investigations.replay import normalized_events, reconstruct, trace_dict  # noqa: E402
 from src.investigations.service import CASES_DIR, DEFAULT_GRAPH_PATH, TRACES_DIR  # noqa: E402
 from src.investigations.state import InvestigationState  # noqa: E402
 from src.wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider, build_case_fixture  # noqa: E402
@@ -96,8 +100,8 @@ def main(argv: list[str] | None = None) -> int:
 
         chat = chat_client_from_env()
         if chat is None:
-            print("No LLM API key (OPENROUTER_API_KEY or DEEPSEEK_API_KEY) is set: the agent is unavailable (run without --agent for the "
-                  "deterministic exploration mode).", file=sys.stderr)
+            print("No LLM API key (OPENROUTER_API_KEY or DEEPSEEK_API_KEY) is set: the agent is unavailable "
+                  "(run without --agent for the deterministic exploration mode).", file=sys.stderr)
             return 3
         state = InvestigationState(args.source, args.target, groups, search.budgets, strategy="agent",
                                    snapshot=provider.snapshot)
@@ -105,44 +109,74 @@ def main(argv: list[str] | None = None) -> int:
         describe(state)
         answer = state.events.events[-1].payload.get("answer") or {}
         print(f"answer ({answer.get('summary_source')}): {answer.get('summary')}")
-        if args.record:
-            print("--record is only supported for deterministic runs", file=sys.stderr)
-        return 0
-
-    state = run(provider)
-    describe(state)
+    else:
+        state = run(provider)
+        describe(state)
     if not args.record:
         return 0
+    return record(args, state, provider, policy, search, run)
+
+
+def record(args, state, provider, policy, search, run) -> int:
     if state.status == "failed":
         print("not recording a failed investigation", file=sys.stderr)
         return 1
-
+    if not (state.comparison and state.comparison.shortest.result):
+        print("not recording: no path was found (demo cases must show a real connection)", file=sys.stderr)
+        return 1
     expanded = [r.qid for r in state.expansions if r.error is None]
     cap = max(500, search.budgets.max_edges_per_expansion)
     fixture = build_case_fixture(provider, args.record, expanded + [args.source, args.target],
                                  policy.properties.keys(), cap=cap)
-    replayed = run(FixtureProvider([fixture]))
-    if normalized_events(replayed.events.events) != normalized_events(state.events.events):
-        print("fixture does NOT reproduce the run; not writing files", file=sys.stderr)
-        return 2
+    trace = trace_dict(state, args.record, {"provider": provider.name, "snapshot": provider.snapshot,
+                                            "strategy": state.strategy, "model": state.events.events[0].payload.get("model"),
+                                            "policy_version": policy.version, "search_version": search.version})
+    # Verification. Deterministic runs must be reproduced exactly from the fixture alone. LLM runs
+    # cannot be re-run identically, so their trace must rebuild the same graph and paths, and the
+    # backend must recompute the same paths from that graph.
+    if state.strategy == "deterministic":
+        replayed = run(FixtureProvider([fixture]))
+        if normalized_events(replayed.events.events) != normalized_events(state.events.events):
+            print("fixture does NOT reproduce the run; not writing files", file=sys.stderr)
+            return 2
+        how = "fixture reproduces the run exactly"
+    else:
+        events = [Event.model_validate(e) for e in trace["events"]]
+        graph, cmp = reconstruct(events)
+        recomputed = compare_paths(graph, args.source, args.target, policy, state.groups)
+        if cmp != state.comparison or recomputed != state.comparison:
+            print("trace does NOT rebuild the same paths; not writing files", file=sys.stderr)
+            return 2
+        how = "trace rebuilds the same graph and paths"
 
     args.cases_dir.mkdir(parents=True, exist_ok=True)
     args.traces_dir.mkdir(parents=True, exist_ok=True)
     fx_path = args.cases_dir / f"{args.record}.json"
     tr_path = args.traces_dir / f"{args.record}.json"
     fx_path.write_text(json.dumps(fixture, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    trace = trace_dict(state, args.record, {"provider": provider.name, "snapshot": provider.snapshot,
-                                            "policy_version": policy.version, "search_version": search.version})
     tr_path.write_text(json.dumps(trace, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"\nwrote {fx_path} and {tr_path} (fixture reproduces the run)")
+    print(f"\nwrote {fx_path} and {tr_path} ({how})")
     s, t = state.graph.node(args.source), state.graph.node(args.target)
+    strategy = "AI agent" if state.strategy == "agent" else "deterministic exploration"
+    title = args.title or f"{s.label()} ↔ {t.label()}"
+    entry = [
+        f"  - id: {args.record}",
+        f"    title: {json.dumps(title, ensure_ascii=False)}",
+        f"    source_qid: {args.source}",
+        f"    source_label: {json.dumps(s.label(), ensure_ascii=False)}",
+        f"    target_qid: {args.target}",
+        f"    target_label: {json.dumps(t.label(), ensure_ascii=False)}",
+    ]
+    if state.groups != policy.default_groups:
+        entry.append(f"    groups: {sorted(state.groups)}")
+    entry += [
+        f"    fixture: data/fixtures/cases/{args.record}.json",
+        f"    trace: data/fixtures/event_traces/{args.record}.json",
+        f"    notes: {json.dumps(f'Recorded {strategy} run.', ensure_ascii=False)}",
+        f"    verified_on: {json.dumps(str(provider.snapshot))}",
+    ]
     print("\nAdd to config/demo_cases.yaml after checking the paths above:\n")
-    print(f"  - id: {args.record}\n    title: {json.dumps(args.title or f'{s.label()} ↔ {t.label()}', ensure_ascii=False)}"
-          f"\n    source_qid: {args.source}\n    source_label: {json.dumps(s.label(), ensure_ascii=False)}"
-          f"\n    target_qid: {args.target}\n    target_label: {json.dumps(t.label(), ensure_ascii=False)}"
-          f"\n    fixture: data/fixtures/cases/{args.record}.json"
-          f"\n    trace: data/fixtures/event_traces/{args.record}.json"
-          f"\n    verified_on: \"{provider.snapshot}\"")
+    print("\n".join(entry))
     return 0
 
 

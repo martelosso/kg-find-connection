@@ -9,6 +9,7 @@ const css = (name) => getComputedStyle(document.documentElement).getPropertyValu
 export class GraphView {
   constructor(container, { maxVisible = 250, onSelect } = {}) {
     this.maxVisible = maxVisible;
+    this.labelThreshold = 60;  // above this many nodes, only important nodes keep a text label
     this.showAll = false;
     this.colors = {
       source: css("--c-source"), target: css("--c-target"), person: css("--c-person"),
@@ -52,8 +53,9 @@ export class GraphView {
   setEndpoints(source, target) {
     this.endpoints = { source, target };
     // Start the two people apart so the graph grows from both ends.
-    for (const [id, x] of [[source, -320], [target, 320]]) {
-      if (this.nodesDS.get(id)) this.nodesDS.update({ id, x, y: 0, ...this._nodeStyle(this.nodes.get(id)) });
+    // Pinned horizontally (free vertically) so the graph grows between them and they never swap sides.
+    for (const [id, x] of [[source, -360], [target, 360]]) {
+      if (this.nodesDS.get(id)) this.nodesDS.update({ id, x, y: 0, fixed: { x: true, y: false }, ...this._nodeStyle(this.nodes.get(id)) });
     }
   }
 
@@ -67,7 +69,10 @@ export class GraphView {
     const role = this._role(n), big = role === "source" || role === "target";
     const c = this.colors[role];
     const lit = !this.focus || this.focus.nodes.has(n.id) || this.pathNodes.has(n.id) || big;
+    const important = big || this.pathNodes.has(n.id) || this.expanded.has(n.id) || this.focus?.nodes.has(n.id);
+    const showLabel = important || this.nodes.size <= this.labelThreshold;
     return {
+      label: showLabel ? (n.label_en || n.label_es || n.id) : "",
       color: { background: c, border: big ? css("--text") : "#ffffff", highlight: { background: c, border: this.colors.select },
                hover: { background: c, border: this.colors.select } },
       shape: n.kind === "person" || big ? "dot" : "square",
@@ -100,11 +105,15 @@ export class GraphView {
     for (const n of list) {
       if (this.nodes.has(n.id)) continue;
       this.nodes.set(n.id, n);
-      add.push({ id: n.id, label: n.label_en || n.label_es || n.id,
+      add.push({ id: n.id,
                  title: `${n.label_en || n.label_es || n.id} (${n.id})\n${n.kind} · ${n.degree} links in the snapshot`,
                  ...this._nodeStyle(n) });
     }
-    if (add.length) this.nodesDS.add(add);
+    if (add.length) {
+      const crossed = this.nodes.size > this.labelThreshold && this.nodes.size - add.length <= this.labelThreshold;
+      this.nodesDS.add(add);
+      if (crossed) this.nodesDS.update([...this.nodes.values()].map((n) => ({ id: n.id, label: this._nodeStyle(n).label })));
+    }
     return add.length;
   }
 
@@ -129,7 +138,11 @@ export class GraphView {
     this.edgesDS.remove(ids);
   }
 
-  markExpanded(qid) { this.expanded.add(qid); }
+  markExpanded(qid) {
+    this.expanded.add(qid);
+    const n = this.nodes.get(qid);
+    if (n) this.nodesDS.update({ id: qid, label: this._nodeStyle(n).label });
+  }
 
   setPaths(comparison, sandboxComparison = null) {
     const ids = (o) => new Set(o?.result ? o.result.hops.map((h) => h.edge_id) : []);
@@ -197,6 +210,18 @@ export class GraphView {
   select({ nodes = [], edges = [] }) {
     this.network.setSelection({ nodes: nodes.filter((id) => this.nodesDS.get(id)), edges: edges.filter((id) => this.edgesDS.get(id)) },
                               { unselectAll: true, highlightEdges: false });
+  }
+
+  /**
+   * Settle the layout with a bounded number of physics iterations, then fit. Big graphs never fully
+   * stop moving on their own, so a plain timeout would fit a graph that keeps drifting off-screen.
+   */
+  fitWhenSettled(nodeIds, iterations = 250) {
+    let done = false;
+    const go = () => { if (!done) { done = true; this.fitTo(nodeIds); } };
+    this.network.once("stabilizationIterationsDone", go);
+    this.network.stabilize(iterations);
+    setTimeout(go, 4000);  // safety net
   }
 
   fitTo(nodeIds) {

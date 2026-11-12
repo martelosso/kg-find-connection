@@ -112,10 +112,12 @@ async function start(replayCase) {
     if (!groups.length) { setStatus("error", "Enable at least one relationship group."); return; }
     body = { source_qid: pickSource.value.qid, target_qid: pickTarget.value.qid, mode: $("#mode").value, groups };
   }
-  resetAll();
   setStatus("busy", replayCase ? "Loading replay…" : "Starting…");
   try {
     const inv = await api.start(body);
+    // Only clear the screen once the server has accepted the new run: a failed start (server down,
+    // agent unavailable, bad input) must leave the previous result visible for the presenter.
+    resetAll();
     model.id = inv.investigation_id;
     setRunning(true);
     es = streamEvents(inv.investigation_id, onEvent, () => { if (model.status === "running") setStatus("error", "Event stream lost; the server may be offline."); });
@@ -181,7 +183,7 @@ function finish() {
       `${model.status === "completed" ? "Completed" : "Partial result"}: ${found ? "connection found" : "no connection found"} `
       + `(${String(f.stop_reason).replaceAll("_", " ")}) · among explored relationships only`);
   }
-  if (model.comparison?.shortest?.result) graph.fitTo(model.pathNodeIds());
+  graph.fitWhenSettled(model.comparison?.shortest?.result ? model.pathNodeIds() : null);
   loadTurtle();
 }
 
