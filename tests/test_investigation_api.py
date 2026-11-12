@@ -159,3 +159,14 @@ def test_unknown_investigation_and_missing_provider(api, app):
 def test_legacy_routes_still_work(api):
     assert api.get("/").status_code == 200
     assert api.get("/api/ontology").status_code == 200
+
+
+def test_preview_page_is_served_with_local_assets_only(api):
+    page = api.get("/preview")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert '<script src="/vendor/vis-network.min.js">' in html
+    assert "http://" not in html.split("<script>")[0] and "cdn" not in html.lower()
+    assert "innerHTML" not in html  # Wikidata labels must be inserted as text
+    js = api.get("/vendor/vis-network.min.js")
+    assert js.status_code == 200 and js.mimetype == "text/javascript"

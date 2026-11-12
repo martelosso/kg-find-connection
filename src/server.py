@@ -26,6 +26,7 @@ from .ontology_agent import (
 )
 
 UI_DIR = Path(__file__).parent / "ui"
+GRAPH_VIEW_DIR = Path(__file__).parent.parent / "graph-view"  # vendored vis-network lives here until M5
 
 app = Flask(__name__, static_folder=str(UI_DIR), static_url_path="")
 _system_prompt = build_system_prompt()
@@ -35,6 +36,17 @@ _client: OpenAI | None = None
 @app.get("/")
 def index():
     return send_from_directory(UI_DIR, "index.html")
+
+
+@app.get("/preview")
+def preview():
+    """Live investigation preview (Six Degrees). Precursor of the Milestone 5 workbench."""
+    return send_from_directory(UI_DIR, "preview.html")
+
+
+@app.get("/vendor/vis-network.min.js")
+def vendor_vis_network():
+    return send_from_directory(GRAPH_VIEW_DIR, "vis-network.min.js", mimetype="text/javascript")
 
 
 @app.get("/api/ontology")

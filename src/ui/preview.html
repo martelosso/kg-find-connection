@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Six Degrees — Live Preview</title>
+<script src="/vendor/vis-network.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e3e1da;
+    --accent: #2f5bd3; --source: #0f8a5f; --target: #c2410c; --person: #4b5563; --org: #7c3aed;
+    --position: #a16207; --short: #2f5bd3; --strong: #d97706; --new: #16a34a; --bad: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg);
+         display: grid; grid-template-rows: auto auto 1fr; }
+  header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px;
+           background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; white-space: nowrap; }
+  .picker { position: relative; }
+  .picker input { width: 220px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; font: inherit; }
+  .picker .chosen { font-size: 12px; color: var(--muted); margin-top: 2px; min-height: 16px; }
+  .picker ul { position: absolute; z-index: 10; top: 36px; left: 0; width: 320px; margin: 0; padding: 4px 0;
+               list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+               box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 320px; overflow: auto; }
+  .picker li { padding: 6px 10px; cursor: pointer; }
+  .picker li:hover, .picker li.active { background: #eef2ff; }
+  .picker li small { color: var(--muted); }
+  select, button { font: inherit; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .groups { display: flex; gap: 8px; font-size: 13px; }
+  .groups label { white-space: nowrap; }
+  #statusbar { display: flex; gap: 14px; align-items: center; padding: 6px 14px; font-size: 13px;
+               background: #fbfaf7; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .badge { padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+  .badge.live { background: #dcfce7; color: #166534; }
+  .badge.replay { background: #fef3c7; color: #92400e; }
+  .badge.idle { background: #e5e7eb; color: #374151; }
+  .badge.agent { background: #e0e7ff; color: #3730a3; }
+  .badge.det { background: #f3f4f6; color: #374151; }
+  #status-text { color: var(--muted); }
+  main { display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
+  #graph { min-height: 0; background: var(--bg); position: relative; }
+  #network { position: absolute; inset: 0; }
+  #legend { position: absolute; left: 10px; bottom: 10px; background: rgba(255,255,255,.9); border: 1px solid var(--line);
+            border-radius: 8px; padding: 6px 10px; font-size: 12px; display: flex; gap: 10px; }
+  #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; border: 0; border-radius: 0; padding: 10px; cursor: pointer; background: transparent; }
+  .tabs button.on { border-bottom: 2px solid var(--accent); font-weight: 600; }
+  .pane { overflow: auto; padding: 10px 12px; display: none; min-height: 0; }
+  .pane.on { display: block; }
+  .tl { list-style: none; margin: 0; padding: 0; }
+  .tl li { padding: 7px 8px; border-radius: 6px; margin-bottom: 4px; cursor: default; }
+  .tl li.clickable { cursor: pointer; }
+  .tl li.clickable:hover { background: #f3f4f6; }
+  .tl li.sel { background: #eef2ff; }
+  .tl .decision { border-left: 3px solid var(--accent); background: #f8faff; font-style: italic; }
+  .tl .tool { margin-left: 12px; font-size: 13px; }
+  .tl .err { color: var(--bad); }
+  .tl .paths { border-left: 3px solid var(--strong); background: #fffbeb; }
+  .tl .final { border-left: 3px solid var(--ink); font-weight: 600; background: #f9fafb; }
+  .muted { color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .card h3 { margin: 0 0 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .card h3 .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  .hop { padding: 4px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .hop:last-child { border-bottom: 0; }
+  .hop .rel { color: var(--muted); }
+  .hop a { color: inherit; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .answer { background: #f8faff; border: 1px solid #dbe4ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .answer.backend { background: #f9fafb; border-color: var(--line); }
+  pre#ttl { font: 12px/1.5 ui-monospace, Consolas, monospace; margin: 0; white-space: pre-wrap; word-break: break-all; }
+  pre#ttl mark { background: #fde68a; }
+  #details { font-size: 13px; }
+  .empty { color: var(--muted); padding: 20px 4px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; } aside { border-left: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Six Degrees · live preview</h1>
+  <div class="picker" id="pick-source"><input placeholder="From: type a name or QID" autocomplete="off"><div class="chosen"></div><ul hidden></ul></div>
+  <div class="picker" id="pick-target"><input placeholder="To: type a name or QID" autocomplete="off"><div class="chosen"></div><ul hidden></ul></div>
+  <select id="mode" title="Exploration strategy">
+    <option value="deterministic">Deterministic (no AI)</option>
+    <option value="agent">AI agent</option>
+  </select>
+  <select id="replay" title="Replay a recorded demo case"><option value="">Replay: none</option></select>
+  <div class="groups" id="groups"></div>
+  <button class="primary" id="go">Explore</button>
+  <button id="cancel" disabled>Cancel</button>
+</header>
+<div id="statusbar">
+  <span class="badge idle" id="mode-badge">IDLE</span>
+  <span class="badge det" id="strategy-badge" hidden></span>
+  <span id="status-text">Pick two people and press Explore.</span>
+  <span class="muted" id="counts"></span>
+  <span class="muted" id="health"></span>
+</div>
+<main>
+  <section id="graph">
+    <div id="network"></div>
+    <div id="legend">
+      <span><i style="background:var(--source)"></i>source</span>
+      <span><i style="background:var(--target)"></i>target</span>
+      <span><i style="background:var(--person)"></i>person</span>
+      <span><i style="background:var(--org)"></i>organization</span>
+      <span><i style="background:var(--short)"></i>shortest</span>
+      <span><i style="background:var(--strong)"></i>strongest</span>
+    </div>
+  </section>
+  <aside>
+    <div class="tabs">
+      <button class="on" data-pane="timeline">Timeline</button>
+      <button data-pane="paths">Paths</button>
+      <button data-pane="turtle">Turtle</button>
+      <button data-pane="details">Details</button>
+    </div>
+    <div class="pane on" id="pane-timeline"><ul class="tl" id="timeline"><li class="empty">No investigation yet.</li></ul></div>
+    <div class="pane" id="pane-paths"><div id="paths"><div class="empty">Paths appear here as soon as the explored graph connects the two people.</div></div></div>
+    <div class="pane" id="pane-turtle"><div class="muted" style="margin-bottom:6px">Compact Turtle generated by the backend for the explored graph. Click an edge in the graph to locate its statement.</div><pre id="ttl"></pre></div>
+    <div class="pane" id="pane-details"><div id="details"><div class="empty">Click a node or edge in the graph.</div></div></div>
+  </aside>
+</main>
+
+<script>
+"use strict";
+// ---- tiny DOM helpers (all data is inserted as TEXT, never HTML: labels come from Wikidata) ----
+const $ = (sel) => document.querySelector(sel);
+function el(tag, attrs = {}, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k === "on") for (const [ev, fn] of Object.entries(v)) n.addEventListener(ev, fn);
+    else if (v !== undefined && v !== null) n.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c !== null && c !== undefined) n.append(c instanceof Node ? c : String(c));
+  return n;
+}
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const COLORS = {
+  source: css("--source"), target: css("--target"), person: css("--person"), organization: css("--org"),
+  position: css("--position"), other: "#9ca3af", short: css("--short"), strong: css("--strong"), fresh: css("--new"),
+};
+const GROUPS = [["family", "Family", true], ["mentorship", "Teacher/student", true],
+                ["institutional", "Institutions", true], ["position", "Positions (weak)", false]];
+const TERMINAL = new Set(["investigation.completed", "investigation.partial", "investigation.failed"]);
+const EVENT_TYPES = ["investigation.started", "identity.resolved", "agent.decision", "tool.started", "tool.completed",
+                     "graph.expanded", "paths.updated", ...TERMINAL];
+
+// ---- graph (one vis.Network for the page's lifetime; events only ADD to its DataSets) ----
+const nodesDS = new vis.DataSet();
+const edgesDS = new vis.DataSet();
+const network = new vis.Network($("#network"), { nodes: nodesDS, edges: edgesDS }, {
+  nodes: { shape: "dot", size: 10, font: { size: 13, color: "#1d1d1f", strokeWidth: 3, strokeColor: "#f6f5f1" } },
+  edges: { arrows: { to: { enabled: true, scaleFactor: .5 } }, color: { color: "#b8b6ae", highlight: "#2f5bd3" },
+           font: { size: 10, color: "#6b6b70", strokeWidth: 2, strokeColor: "#f6f5f1", align: "middle" },
+           smooth: { type: "continuous" }, width: 1.2 },
+  physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -60, springLength: 110 },
+             stabilization: { enabled: false }, maxVelocity: 30 },
+  interaction: { hover: true, tooltipDelay: 150 },
+});
+const state = { inv: null, es: null, source: null, target: null, edges: new Map(), nodes: new Map(),
+                comparison: null, highlight: null, ttl: null, lastDecision: null, steps: new Map() };
+
+function nodeStyle(n) {
+  const role = n.id === state.source?.qid ? "source" : n.id === state.target?.qid ? "target" : n.kind;
+  const big = role === "source" || role === "target";
+  return { color: { background: COLORS[role] || COLORS.other, border: "#ffffff",
+                    highlight: { background: COLORS[role] || COLORS.other, border: "#1d1d1f" } },
+           size: big ? 22 : n.kind === "person" ? 10 : 8 + Math.min(10, Math.log1p(n.degree || 0)),
+           shape: n.kind === "person" || big ? "dot" : "square",
+           font: { size: big ? 16 : 13, bold: big } };
+}
+function nodeLabel(n) { return n.label_en || n.label_es || n.id; }
+
+function addNodes(list) {
+  const add = [];
+  for (const n of list) {
+    if (state.nodes.has(n.id)) continue;
+    state.nodes.set(n.id, n);
+    add.push({ id: n.id, label: nodeLabel(n), title: `${nodeLabel(n)} (${n.id})\n${n.kind}, degree ${n.degree}`, ...nodeStyle(n) });
+  }
+  if (add.length) nodesDS.add(add);
+}
+function addEdges(list, fresh) {
+  const add = [];
+  for (const e of list) {
+    if (state.edges.has(e.id)) continue;
+    state.edges.set(e.id, e);
+    add.push({ id: e.id, from: e.subject, to: e.object, label: e.label || e.predicate,
+               title: `${e.label} (${e.predicate})`, color: fresh ? { color: COLORS.fresh } : undefined, width: fresh ? 2.5 : 1.2 });
+  }
+  if (add.length) {
+    edgesDS.add(add);
+    if (fresh) setTimeout(() => repaintEdges(add.map(a => a.id)), 1600);  // fade the "new" emphasis
+  }
+}
+
+// Path highlighting: colour path edges, dim the rest. mode: "shortest" | "strongest" | "both" | null
+function pathEdgeIds(mode) {
+  const c = state.comparison; if (!c) return { short: new Set(), strong: new Set() };
+  const ids = (o) => new Set(o?.result ? o.result.hops.map(h => h.edge_id) : []);
+  return { short: mode === "strongest" ? new Set() : ids(c.shortest), strong: mode === "shortest" ? new Set() : ids(c.strongest) };
+}
+function repaintEdges(onlyIds) {
+  const { short, strong } = pathEdgeIds(state.highlight?.kind === "path" ? state.highlight.mode : "both");
+  const stepIds = state.highlight?.kind === "step" ? new Set(state.highlight.ids) : null;
+  const dimOthers = state.highlight !== null;
+  const ids = onlyIds || [...state.edges.keys()];
+  edgesDS.update(ids.map(id => {
+    let color = "#b8b6ae", width = 1.2;
+    if (strong.has(id)) { color = COLORS.strong; width = 4; }
+    if (short.has(id)) { color = COLORS.short; width = strong.has(id) ? 5 : 4; }
+    if (stepIds && stepIds.has(id)) { color = COLORS.fresh; width = 3.5; }
+    const lit = short.has(id) || strong.has(id) || (stepIds && stepIds.has(id));
+    if (dimOthers && !lit) color = "rgba(184,182,174,.35)";
+    return { id, color: { color, highlight: color }, width };
+  }));
+}
+
+// ---- people pickers ----
+function picker(root, onPick) {
+  const input = root.querySelector("input"), list = root.querySelector("ul"), chosen = root.querySelector(".chosen");
+  let timer = null, items = [], active = -1;
+  const close = () => { list.hidden = true; active = -1; };
+  const render = () => {
+    list.replaceChildren(...items.map((m, i) => el("li", { class: i === active ? "active" : "", on: { mousedown: () => choose(m) } },
+      m.label_en || m.label_es || m.qid, " ", el("small", {}, `${m.qid} · ${m.degree} links`))));
+    list.hidden = items.length === 0;
+  };
+  const choose = (m) => { onPick(m); input.value = m.label_en || m.label_es || m.qid; chosen.textContent = `${m.qid} · ${m.degree} links`; close(); };
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { items = []; render(); return; }
+    timer = setTimeout(async () => {
+      const r = await fetch(`/api/people/search?q=${encodeURIComponent(q)}&limit=8`);
+      const body = await r.json();
+      items = r.ok ? body.matches : []; active = -1; render();
+    }, 180);
+  });
+  input.addEventListener("keydown", (ev) => {
+    if (list.hidden) return;
+    if (ev.key === "ArrowDown") { active = Math.min(items.length - 1, active + 1); render(); ev.preventDefault(); }
+    if (ev.key === "ArrowUp") { active = Math.max(0, active - 1); render(); ev.preventDefault(); }
+    if (ev.key === "Enter" && active >= 0) { choose(items[active]); ev.preventDefault(); }
+    if (ev.key === "Escape") close();
+  });
+  input.addEventListener("blur", () => setTimeout(close, 150));
+  return { set(m) { choose(m); } };
+}
+const pickSource = picker($("#pick-source"), (m) => state.source = m);
+const pickTarget = picker($("#pick-target"), (m) => state.target = m);
+$("#groups").append(...GROUPS.map(([id, label, on]) =>
+  el("label", {}, el("input", { type: "checkbox", value: id, ...(on ? { checked: "" } : {}) }), " ", label)));
+
+// ---- tabs ----
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.pane)));
+function showTab(name) {
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.pane === name));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === `pane-${name}`));
+  if (name === "turtle") loadTurtle();
+}
+
+// ---- health / demo cases ----
+(async () => {
+  try {
+    const h = await (await fetch("/api/health")).json();
+    const agent = h.agent.available ? `AI agent: ${h.agent.provider} / ${h.agent.model}` : "AI agent unavailable (no API key)";
+    const prov = h.provider ? `data: ${h.provider.name}${h.provider.snapshot ? " @ " + h.provider.snapshot : ""}` : "no people graph installed";
+    $("#health").textContent = `${prov} · ${agent}`;
+    if (!h.agent.available) $("#mode option[value=agent]").disabled = true;
+    const cases = await (await fetch("/api/demo-cases")).json();
+    for (const c of cases.cases.filter(c => c.trace))
+      $("#replay").append(el("option", { value: c.id }, `Replay: ${c.title}`));
+  } catch (e) { $("#health").textContent = "backend unreachable"; }
+})();
+
+// ---- run an investigation ----
+$("#go").addEventListener("click", start);
+$("#cancel").addEventListener("click", async () => {
+  if (state.inv) await fetch(`/api/investigations/${state.inv}/cancel`, { method: "POST" });
+});
+
+function resetView() {
+  state.es?.close();
+  Object.assign(state, { inv: null, es: null, edges: new Map(), nodes: new Map(), comparison: null, highlight: null,
+                         ttl: null, lastDecision: null, steps: new Map() });
+  nodesDS.clear(); edgesDS.clear();
+  $("#timeline").replaceChildren(); $("#paths").replaceChildren(el("div", { class: "empty" }, "No path yet."));
+  $("#ttl").replaceChildren(); $("#details").replaceChildren(el("div", { class: "empty" }, "Click a node or edge in the graph."));
+}
+
+async function start() {
+  const replay = $("#replay").value;
+  let body;
+  if (replay) body = { mode: "replay", case_id: replay, replay_delay_seconds: 0.8 };
+  else {
+    if (!state.source || !state.target) { setStatus("Pick both people first."); return; }
+    const groups = [...document.querySelectorAll("#groups input:checked")].map(i => i.value);
+    body = { source_qid: state.source.qid, target_qid: state.target.qid, mode: $("#mode").value, groups };
+  }
+  const keep = { source: state.source, target: state.target };
+  resetView(); Object.assign(state, keep);
+  const r = await fetch("/api/investigations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await r.json();
+  if (!r.ok) { setStatus(`Could not start: ${res.error?.message || r.status}`, true); return; }
+  state.inv = res.investigation_id;
+  $("#go").disabled = true; $("#cancel").disabled = false;
+  setStatus("Starting…");
+  const es = new EventSource(`/api/investigations/${state.inv}/events`);
+  state.es = es;
+  for (const t of EVENT_TYPES) es.addEventListener(t, (msg) => onEvent(JSON.parse(msg.data)));
+  es.onerror = () => { if (es.readyState === EventSource.CLOSED) setStatus("Event stream closed.", true); };
+}
+
+function setStatus(text, bad) { const s = $("#status-text"); s.textContent = text; s.style.color = bad ? "var(--bad)" : ""; }
+function setBadges(p) {
+  const mb = $("#mode-badge"), sb = $("#strategy-badge");
+  const replay = p.run_mode === "replay";
+  mb.className = `badge ${replay ? "replay" : "live"}`;
+  mb.textContent = replay ? `REPLAY · recorded ${String(p.recorded_at || "").slice(0, 16).replace("T", " ")}` : "LIVE";
+  sb.hidden = false;
+  sb.className = `badge ${p.strategy === "agent" ? "agent" : "det"}`;
+  sb.textContent = p.strategy === "agent" ? `AI agent${p.model ? " · " + p.model : ""}` : "Deterministic exploration (no AI)";
+}
+function updateCounts(extra = "") {
+  $("#counts").textContent = `${state.nodes.size} nodes · ${state.edges.size} edges${extra}`;
+}
+
+function tl(cls, text, opts = {}) {
+  const li = el("li", { class: `${cls}${opts.ids ? " clickable" : ""}` }, ...[].concat(text));
+  if (opts.ids) li.addEventListener("click", () => {
+    document.querySelectorAll(".tl li.sel").forEach(x => x.classList.remove("sel"));
+    const same = state.highlight?.kind === "step" && state.highlight.li === li;
+    state.highlight = same ? null : { kind: "step", ids: opts.ids, li };
+    if (!same) li.classList.add("sel");
+    repaintEdges();
+    if (!same && opts.ids.length) network.fit({ nodes: [...new Set(opts.ids.flatMap(id => { const e = state.edges.get(id); return e ? [e.subject, e.object] : []; }))], animation: true });
+  });
+  $("#timeline").append(li);
+  li.scrollIntoView({ block: "nearest" });
+  return li;
+}
+
+function onEvent(ev) {
+  const p = ev.payload;
+  switch (ev.type) {
+    case "investigation.started":
+      setBadges(p);
+      setStatus(p.run_mode === "replay" ? `Replaying recorded case “${p.replay_of}”` : "Exploring…");
+      tl("final", `Started · groups: ${p.groups.join(", ")} · max ${p.max_hops} hops`);
+      break;
+    case "identity.resolved":
+      state.source = { qid: p.source.id, ...p.source }; state.target = { qid: p.target.id, ...p.target };
+      addNodes(p.added_nodes);
+      tl("tool", `Resolved ${nodeLabel(p.source)} (${p.source.id}) and ${nodeLabel(p.target)} (${p.target.id})`);
+      break;
+    case "agent.decision":
+      state.lastDecision = tl("decision", `🧠 ${p.summary}`);
+      break;
+    case "tool.started": {
+      const label = p.qid ? `${p.tool} → ${p.label} (${p.side} side)` : `${p.tool}`;
+      const li = tl("tool", `▸ ${label}`);
+      if (p.reason && !state.lastDecision) li.append(el("div", { class: "muted" }, p.reason));
+      state.steps.set(p.step, li);
+      break;
+    }
+    case "graph.expanded": {
+      addNodes(p.added_nodes); addEdges(p.added_edges, true);
+      const li = state.steps.get(p.step);
+      if (li) {
+        li.append(el("div", { class: "muted" }, `+${p.added_nodes.length} nodes, +${p.added_edges.length} edges${p.complete ? "" : " (truncated)"} — click to highlight`));
+        li.classList.add("clickable");
+        const ids = p.highlight_edge_ids;
+        li.addEventListener("click", () => { tlSelect(li, ids); });
+      }
+      updateCounts();
+      state.ttl = null;
+      break;
+    }
+    case "tool.completed":
+      if (!p.ok) { const li = state.steps.get(p.step); (li || tl("tool", "")).append(el("div", { class: "err" }, `✗ ${p.error.code}: ${p.error.message}`)); }
+      break;
+    case "paths.updated":
+      state.comparison = p.comparison;
+      renderPaths();
+      tl("paths", pathLine(p.comparison), { ids: allPathIds() });
+      if (!state.highlight) repaintEdges();
+      break;
+    default:
+      if (TERMINAL.has(ev.type)) finishRun(ev);
+  }
+}
+function tlSelect(li, ids) {
+  document.querySelectorAll(".tl li.sel").forEach(x => x.classList.remove("sel"));
+  const same = state.highlight?.kind === "step" && state.highlight.li === li;
+  state.highlight = same ? null : { kind: "step", ids, li };
+  if (!same) li.classList.add("sel");
+  repaintEdges();
+}
+function allPathIds() {
+  const c = state.comparison; if (!c) return [];
+  return [...new Set([c.shortest.result, c.strongest.result].filter(Boolean).flatMap(r => r.hops.map(h => h.edge_id)))];
+}
+function pathLine(c) {
+  const s = c.shortest.result, w = c.strongest.result;
+  if (!s) return "Paths: none yet";
+  return c.same_path ? `★ Path found: ${s.hop_count} hops (shortest = strongest)`
+                     : `★ Paths: shortest ${s.hop_count} hops · strongest ${w.hop_count} hops (cost ${w.total_cost.toFixed(2)} vs ${s.total_cost.toFixed(2)})`;
+}
+
+function finishRun(ev) {
+  const p = ev.payload;
+  state.es?.close();
+  $("#go").disabled = false; $("#cancel").disabled = true;
+  if (ev.type === "investigation.failed") {
+    setStatus(`Failed: ${p.error.message}`, true);
+    tl("final err", `✗ Failed: ${p.error.code}`);
+    return;
+  }
+  if (p.comparison) { state.comparison = p.comparison; renderPaths(); }
+  const kind = ev.type === "investigation.completed" ? "Completed" : "Partial result";
+  const outcome = p.outcome === "path_found" ? "connection found" : "no connection found";
+  setStatus(`${kind}: ${outcome} (${p.stop_reason.replaceAll("_", " ")}) — among explored relationships only`, ev.type !== "investigation.completed");
+  tl("final", `${kind}: ${outcome} · stop: ${p.stop_reason}`);
+  updateCounts(p.stats ? ` · ${p.stats.provider_requests} requests` : "");
+  if (p.answer) renderAnswer(p.answer);
+  if (state.comparison?.shortest.result) highlightPath("both");
+}
+
+// ---- paths panel ----
+function renderPaths() {
+  const c = state.comparison, box = $("#paths");
+  const keepAnswer = box.querySelector(".answer");
+  box.replaceChildren();
+  if (keepAnswer) box.append(keepAnswer);
+  if (!c?.shortest.result) { box.append(el("div", { class: "empty" }, "No path yet.")); return; }
+  box.append(el("div", { style: "display:flex;gap:6px;margin-bottom:10px" },
+    el("button", { on: { click: () => highlightPath("shortest") } }, "Show shortest"),
+    el("button", { on: { click: () => highlightPath("strongest") } }, "Show strongest"),
+    el("button", { on: { click: () => highlightPath("both") } }, "Both"),
+    el("button", { on: { click: () => { state.highlight = null; repaintEdges(); } } }, "Clear")));
+  box.append(pathCard("Shortest", "fewest relationships", c.shortest.result, COLORS.short));
+  if (c.same_path) box.append(el("div", { class: "note", style: "margin:-6px 0 12px" }, "The strongest path is the same path."));
+  else if (c.strongest.result) box.append(pathCard("Strongest", "lowest weighted cost", c.strongest.result, COLORS.strong));
+  box.append(el("div", { class: "note" },
+    `Scope: ${c.scope === "explored_graph" ? "among explored relationships only" : "complete within the configured snapshot"}. `,
+    "Shared institutions are associations, not proof that people met. Wikidata statements are what Wikidata records, not verified facts."));
+}
+function pathCard(title, sub, r, color) {
+  const labels = Object.fromEntries(r.nodes.map(n => [n.qid, n]));
+  const name = (q) => labels[q]?.label_en || labels[q]?.label_es || q;
+  return el("div", { class: "card" },
+    el("h3", {}, el("span", {}, el("span", { class: "sw", style: `background:${color}` }), `${title} `, el("span", { class: "muted" }, `· ${sub}`)),
+      el("span", { class: "muted" }, `${r.hop_count} hops · cost ${r.total_cost.toFixed(2)}`)),
+    r.hops.map(h => el("div", { class: "hop" },
+      el("a", { href: `https://www.wikidata.org/wiki/${h.from_qid}`, target: "_blank", rel: "noopener" }, name(h.from_qid)),
+      " ", el("a", { class: "rel", href: h.property_url, target: "_blank", rel: "noopener" }, `—${h.label}→`), " ",
+      el("a", { href: `https://www.wikidata.org/wiki/${h.to_qid}`, target: "_blank", rel: "noopener" }, name(h.to_qid)),
+      el("span", { class: "muted" }, `  (${h.relation_group}, cost ${h.cost.total.toFixed(2)})`))));
+}
+function renderAnswer(a) {
+  const box = el("div", { class: `answer ${a.summary_source === "agent" ? "" : "backend"}` },
+    el("div", { class: "muted", style: "font-size:12px;margin-bottom:4px" },
+      a.summary_source === "agent" ? "Agent summary (verified: mentions only path entities)" : "Summary generated from verified backend results"),
+    a.summary);
+  if (a.unverified_mentions?.length) box.append(el("div", { class: "note" }, `Agent summary rejected: it mentioned ${a.unverified_mentions.join(", ")}, which are not on any returned path.`));
+  $("#paths").prepend(box);
+  showTab("paths");
+}
+function highlightPath(mode) {
+  state.highlight = { kind: "path", mode };
+  repaintEdges();
+  const c = state.comparison;
+  const rs = [mode !== "strongest" && c.shortest.result, mode !== "shortest" && c.strongest.result].filter(Boolean);
+  network.fit({ nodes: [...new Set(rs.flatMap(r => r.nodes.map(n => n.qid)))], animation: true });
+}
+
+// ---- turtle pane: backend Turtle with UTF-16 spans (JS strings index UTF-16 too) ----
+async function loadTurtle(focusEdge) {
+  if (!state.inv) return;
+  if (!state.ttl) {
+    const r = await fetch(`/api/investigations/${state.inv}/turtle`);
+    if (!r.ok) return;
+    state.ttl = await r.json();
+  }
+  const { text, edge_spans } = state.ttl;
+  const span = focusEdge && edge_spans[focusEdge];
+  const pre = $("#ttl");
+  if (!span) { pre.replaceChildren(text); return; }
+  const mark = el("mark", {}, text.slice(span.start, span.end));
+  pre.replaceChildren(text.slice(0, span.start), mark, text.slice(span.end));
+  mark.scrollIntoView({ block: "center" });
+}
+
+// ---- graph selection → details + turtle ----
+network.on("click", (params) => {
+  const det = $("#details");
+  if (params.edges.length && !params.nodes.length) {
+    const e = state.edges.get(params.edges[0]); if (!e) return;
+    const s = state.nodes.get(e.subject), o = state.nodes.get(e.object);
+    det.replaceChildren(
+      el("div", { class: "card" }, el("h3", {}, "Relationship"),
+        el("div", {}, s ? nodeLabel(s) : e.subject, " ", el("b", {}, `—${e.label}→`), " ", o ? nodeLabel(o) : e.object),
+        el("div", { class: "note" }, `Property `, el("a", { href: e.property_url, target: "_blank", rel: "noopener" }, e.predicate),
+          ` · group ${e.group} · source ${e.source}`),
+        el("div", { class: "note" }, `Edge id ${e.id}`)));
+    showTab("turtle"); loadTurtle(e.id);
+  } else if (params.nodes.length) {
+    const n = state.nodes.get(params.nodes[0]); if (!n) return;
+    const incident = [...state.edges.values()].filter(e => e.subject === n.id || e.object === n.id);
+    det.replaceChildren(el("div", { class: "card" },
+      el("h3", {}, nodeLabel(n)),
+      el("div", {}, el("a", { href: n.url, target: "_blank", rel: "noopener" }, n.id), ` · ${n.kind} · ${n.degree} links in the snapshot`),
+      n.label_es && n.label_es !== n.label_en ? el("div", { class: "note" }, `es: ${n.label_es}`) : null,
+      el("div", { class: "note" }, `${incident.length} of its relationships are in the explored graph.`)));
+    showTab("details");
+  }
+});
+
+// Optional deep link: /preview?source=Q..&target=Q..&mode=agent
+(async () => {
+  const q = new URLSearchParams(location.search);
+  for (const [key, pick] of [["source", pickSource], ["target", pickTarget]]) {
+    const qid = q.get(key); if (!qid) continue;
+    const r = await fetch(`/api/people/search?q=${encodeURIComponent(qid)}`);
+    const m = r.ok ? (await r.json()).matches[0] : null;
+    if (m) pick.set(m);
+  }
+  if (q.get("mode")) $("#mode").value = q.get("mode");
+})();
+</script>
+</body>
+</html>

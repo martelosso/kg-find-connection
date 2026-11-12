@@ -74,6 +74,8 @@ uv run python scripts/investigate.py Q7186 Q37463 --agent            # LLM agent
 uv run python scripts/benchmark_investigations.py --pairs 30         # recall vs. the complete graph
 ```
 
+**Live preview:** run `uv run python -m src.server` and open http://localhost:5000/preview. Pick two people, choose deterministic or AI agent, and watch the graph grow. It has a timeline, path cards with highlighting, and Turtle linked to graph edges. The legacy retail assistant stays at `/`.
+
 The Flask server exposes the investigation API under `/api/…`:
 
 - `GET /api/health` and `GET /api/people/search?q=`

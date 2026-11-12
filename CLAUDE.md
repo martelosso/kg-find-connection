@@ -91,6 +91,17 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
   - The summary check catches QIDs only. Summaries sometimes name explored people who are not on any path; they are real, but the rule says not to.
   - With 18 tool calls the agent finds paths less often than the deterministic search with 25 requests, though its explored graphs are much smaller (15–40 nodes against 100–400). Tune this on the full graph.
 
+### Live preview (precursor of M5)
+- `src/ui/preview.html` is served at `/preview`; `/vendor/vis-network.min.js` serves the vendored copy from `graph-view/`. It is one vanilla-JS file with no build step.
+- How it works:
+  - It keeps one `vis.Network` for the whole page and **only adds** to its DataSets as SSE events arrive. New edges flash green.
+  - The timeline groups tool calls under each `agent.decision`; clicking a step highlights the edges it fetched.
+  - Path cards (shortest/strongest) have highlight buttons and Wikidata links. Clicking an edge marks its exact statement in the backend Turtle using the UTF-16 spans.
+  - LIVE/REPLAY and deterministic/agent badges come from `investigation.started`.
+  - Deep link: `/preview?source=Q..&target=Q..&mode=agent`.
+- All Wikidata text is inserted with `textContent`, never `innerHTML` (a test enforces this).
+- Not yet: Turtle editing and the sandbox overlay, editor→graph selection, a visible-node cap, and refactoring `live-editor.html` into `src/ui/` modules. These are M5 work.
+
 ### Decisions that override `IMPLEMENTATION_PLAN.md`
 - **No live Wikidata calls at demo time.** The `KnowledgeProvider` reads the local SQLite people graph. Live WDQS/REST is an optional extra for unprepared pairs.
 - Because the graph is complete within the configured scope, path results can report `scope: "complete_configured_scope"`. The scope always includes the hub policy and the snapshot date, and the UI must state both. Results are still never "globally" optimal across all of Wikidata.
