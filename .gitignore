@@ -221,3 +221,6 @@ __marimo__/
 .env
 # macOS
 .DS_Store
+
+# Raw Wikidata cache (regenerable). Curated fixtures in data/fixtures/ ARE committed.
+data/wikidata/

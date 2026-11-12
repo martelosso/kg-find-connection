@@ -17,7 +17,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 ## Current state of the repo (as of 2026-11-12)
 
-The repo is still the original retail workshop. **No Six Degrees code exists yet.** Work starts at Milestone 0.
+**Milestone 0 is done** (git baseline, dependencies, the pytest suite in `tests/test_baseline.py`, `.env.example`, offline CodeMirror). No Six Degrees domain code exists yet. **Next is Milestone 1** (Wikidata ingestion spike). M2 and M3 can start on synthetic data in parallel.
 
 | Path | What it is | Plan for it |
 |---|---|---|
@@ -30,15 +30,15 @@ The repo is still the original retail workshop. **No Six Degrees code exists yet
 | `ontology/ontology.owl.ttl`, `data/mock_data.ttl` | Retail ontology and data | Keep as legacy examples (optionally move them to `examples/retail/` once references are updated). |
 | `ontology/your_own_ontology.owl.ttl` | Scratch file | **Don't touch it.** |
 
-### Gaps to close before or during Milestone 0
+### Repo decisions (Milestone 0)
 
-- **Not a git repository.** Run `git init` (and make a baseline commit) before making changes, so regressions can be diffed. Ask the user first.
-- **No tests, no `tests/` directory, and no pytest.**
-- **Missing dependencies.** Add them with `uv add`: `networkx`, `pydantic`, `httpx`, `pyyaml` (the plan needs it for `config/*.yaml`), and `pytest` as a dev dependency (`uv add --dev pytest`).
-- **No `.env.example`.** Create one with `OPENROUTER_API_KEY=` and `OPENROUTER_MODEL=`, plus `WIKIDATA_USER_AGENT=` for the Wikimedia-compliant User-Agent.
-- **CodeMirror loads from the cdnjs CDN** (5.65.16) in `live-editor.html`. The workshop must run offline, so vendor it into `src/ui/vendor/` together with its license.
-- These don't exist yet: `config/`, `docs/`, `tests/`, `data/wikidata/`, `data/fixtures/`, `data/sandbox/`, `ontology/people_connections.ttl`.
-- `.gitignore` already ignores `.env`. Decide and document whether `data/wikidata/` caches are committed. Replay fixtures in `data/fixtures/` **must** be committed.
+- The repo is under git. The first commit is the untouched baseline. Commit only when the user asks.
+- Dependencies: `networkx`, `pydantic`, `httpx`, `pyyaml`, plus dev `pytest`. pytest is configured in `pyproject.toml` with `testpaths=["tests"]` and `pythonpath=["."]`, so tests import `src.*`.
+- CodeMirror 5.65.16 is vendored in `graph-view/vendor/codemirror/`, and `live-editor.html` has no CDN references (a test enforces this). Move it to `src/ui/vendor/` in M5 and update `docs/third-party-licenses.md`.
+- `data/wikidata/` (the raw cache) is **gitignored**. Replay fixtures in `data/fixtures/` **must** be committed.
+- Legacy retail assets stay where they are until the workbench replaces them.
+- Still to create: `config/`, `data/fixtures/`, `data/sandbox/`, `ontology/people_connections.ttl`, `docs/wikidata-ingestion-decision.md`.
+- Testing the editor in the browser: claude-in-chrome can't open `file://`. Serve the folder instead with `uv run python -m http.server 8765 --bind 127.0.0.1 --directory graph-view`.
 
 ## Commands
 
@@ -47,7 +47,7 @@ Environment: Python 3.13 (`.python-version`) with `uv` (installed). The platform
 ```bash
 uv sync                                   # install deps
 uv run python -m src.server               # Flask app on http://localhost:5000
-uv run pytest                             # run tests (once pytest is added)
+uv run pytest                             # run tests (no network calls)
 uv run pytest tests/test_pathfinding.py -k shortest   # single test
 uv add <pkg>   /   uv add --dev <pkg>     # add dependencies (never pip install)
 ```

@@ -1,72 +1,93 @@
 # knowledge-graph-workshop
 
-A playground for learning how knowledge graphs and ontologies work, and for exploring an ontology with a graph visualizer and an LLM-powered assistant.
+A playground for learning how knowledge graphs and ontologies work. It includes a graph visualizer, a live Turtle editor and an LLM-powered assistant.
+
+## Status
+
+This repository is being extended into **Six Degrees of Knowledge**, an agentic explorer that connects two notable people through Wikidata relationships. See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for the specification and [`CLAUDE.md`](CLAUDE.md) for contributor guidance.
+
+- **Milestone 0 (baseline) is complete:** dependencies, test suite, an offline live editor and `.env.example`.
+- The retail/supermarket assets below are **legacy examples**. They still work, but new features are not built on them.
 
 ## Project contents
 
-- [`ontology/ontology.owl.ttl`](ontology/ontology.owl.ttl) is the hand-written OWL/RDF ontology for a supermarket and retail domain.
-- [`graph-view/visualize.html`](graph-view/visualize.html) is a standalone browser-based Turtle graph visualizer. It uses [`graph-view/vis-network.min.js`](graph-view/vis-network.min.js) and includes a small Turtle parser. Open the HTML file in a browser and load a `.ttl` file with its file picker.
-- [`src/ontology_agent.py`](src/ontology_agent.py) reads the ontology and sends it with questions to an LLM through OpenRouter. It supports one-shot questions and an interactive terminal session.
-- [`src/server.py`](src/server.py) serves a small Flask web interface for asking questions about the ontology. Its page is [`src/ui/index.html`](src/ui/index.html).
+| Path | What it is |
+|---|---|
+| [`graph-view/live-editor.html`](graph-view/live-editor.html) | Live Turtle editor (CodeMirror 5) with a vis-network graph and two-way highlighting between graph and source. It works offline because its libraries are vendored. It will become the basis of the new workbench UI. |
+| [`graph-view/visualize.html`](graph-view/visualize.html) | Older standalone Turtle graph visualizer (legacy). |
+| [`ontology/ontology.owl.ttl`](ontology/ontology.owl.ttl), [`data/mock_data.ttl`](data/mock_data.ttl) | Hand-written supermarket/retail ontology and instance data (legacy). |
+| [`src/ontology_agent.py`](src/ontology_agent.py) | Retail assistant that queries the graph with SPARQL through an LLM on OpenRouter, from the terminal (legacy). |
+| [`src/server.py`](src/server.py) + [`src/ui/index.html`](src/ui/index.html) | Flask web UI for the retail assistant (legacy). It will be replaced by the explorer workbench. |
 
 ## Setup
 
 Requires Python 3.13 or later and [uv](https://docs.astral.sh/uv/).
 
-Install the project dependencies:
-
 ```bash
 uv sync
+cp .env.example .env    # then fill in the values
 ```
 
-The assistant requires an OpenRouter API key. Create a `.env` file in the repository root (it is gitignored) with:
+`.env` is gitignored. It holds:
 
-```env
-OPENROUTER_API_KEY=your_key_here
-```
+- `OPENROUTER_API_KEY`: needed for the LLM assistant.
+- `OPENROUTER_MODEL`: optional model override.
+- `WIKIDATA_USER_AGENT`: needed later for live Wikidata requests. Use the format `name/version (contact)`.
 
 Do not commit or share your API key.
 
-## Run the assistant
-
-Ask one question from the terminal:
+## Entry points
 
 ```bash
+# Retail assistant, one question from the terminal (needs OPENROUTER_API_KEY)
 uv run python -m src.ontology_agent "What classes exist for pricing?"
-```
 
-Start an interactive terminal session:
-
-```bash
+# Retail assistant, interactive terminal session
 uv run python -m src.ontology_agent
-```
 
-Start the web interface, then open <http://localhost:5000>:
-
-```bash
+# Flask web UI, then open http://localhost:5000
 uv run python -m src.server
 ```
 
-## Visualize the ontology
+**Live editor:** open `graph-view/live-editor.html` directly in a browser. Use **Open .ttl** to load a file such as `ontology/ontology.owl.ttl`. No network is required.
 
-Open `graph-view/visualize.html` directly in a browser and load `ontology/ontology.owl.ttl` using the page's file picker.
+**Legacy visualizer:** open `graph-view/visualize.html` and load a `.ttl` file with its file picker.
+
+## Development
+
+```bash
+uv run pytest            # run all tests (no network calls)
+uv run pytest -k ontology
+uv add <package>         # add a runtime dependency
+uv add --dev <package>   # add a dev dependency
+```
+
+Third-party frontend libraries and their licenses are listed in [`docs/third-party-licenses.md`](docs/third-party-licenses.md).
 
 ## Project layout
 
 ```text
 .
+├── CLAUDE.md                 # contributor/agent guidance
+├── IMPLEMENTATION_PLAN.md    # Six Degrees of Knowledge specification
+├── .env.example
+├── data/
+│   └── mock_data.ttl         # legacy retail data
+├── docs/
+│   └── third-party-licenses.md
 ├── graph-view/
+│   ├── live-editor.html
+│   ├── visualize.html
 │   ├── vis-network.min.js
-│   └── visualize.html
+│   └── vendor/codemirror/    # vendored CodeMirror 5.65.16 + LICENSE
 ├── ontology/
-│   └── ontology.owl.ttl
+│   ├── ontology.owl.ttl      # legacy retail ontology
+│   └── your_own_ontology.owl.ttl
 ├── src/
-│   ├── __init__.py
 │   ├── ontology_agent.py
 │   ├── server.py
-│   └── ui/
-│       └── index.html
-├── .env                 # local API key; not committed
+│   └── ui/index.html
+├── tests/
 ├── pyproject.toml
-└── README.md
+└── uv.lock
 ```

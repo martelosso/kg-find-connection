@@ -1,12 +1,25 @@
 [project]
 name = "knowledge-graph-workshop"
 version = "0.1.0"
-description = "Add your description here"
+description = "Knowledge-graph workshop: Six Degrees of Knowledge, an agentic Wikidata connection explorer"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "dotenv>=0.9.9",
     "flask>=3.1.3",
+    "httpx>=0.28.1",
+    "networkx>=3.7",
     "openai>=3.37.0",
+    "pydantic>=2.14.1",
+    "pyyaml>=6.0.3",
     "rdflib>=7.6.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
