@@ -176,6 +176,9 @@ def finalize(db: sqlite3.Connection) -> None:
               SELECT DISTINCT t.s AS qid, t.o AS class_qid
               FROM raw_type t JOIN entity e ON e.qid = t.s""", ()),
         ("entity type index", "CREATE INDEX entity_type_qid ON entity_type(qid)", ()),
+        ("label search indexes",
+         "CREATE INDEX entity_label_en ON entity(label_en COLLATE NOCASE) WHERE is_human; "
+         "CREATE INDEX entity_label_es ON entity(label_es COLLATE NOCASE) WHERE is_human", ()),
         ("drop raw", "DROP TABLE raw_type; DROP TABLE raw_edge; DROP TABLE raw_label; DROP TABLE node; DROP TABLE human", ()),
     ]
     for name, sql, params in steps:

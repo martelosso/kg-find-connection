@@ -1,4 +1,4 @@
-"""Load and validate the versioned relationship policy (config/relationships.yaml)."""
+"""Load and validate versioned configuration: relationship policy and search budgets."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY_PATH = ROOT / "config" / "relationships.yaml"
+DEFAULT_SEARCH_PATH = ROOT / "config" / "search.yaml"
 
 
 class _Frozen(BaseModel):
@@ -88,3 +89,41 @@ class RelationshipPolicy(_Frozen):
 def load_policy(path: Path | str = DEFAULT_POLICY_PATH) -> RelationshipPolicy:
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     return RelationshipPolicy.model_validate(data)
+
+
+# ---- search budgets (config/search.yaml) ----------------------------------------------------
+
+
+class SearchBudgets(_Frozen):
+    max_explored_nodes: int = Field(ge=2)
+    max_explored_edges: int = Field(ge=1)
+    max_edges_per_expansion: int = Field(ge=1)
+    max_provider_requests: int = Field(ge=1)
+    max_agent_tool_calls: int = Field(ge=1)
+    wall_time_seconds: float = Field(gt=0)
+
+    def lowered(self, overrides: dict | None) -> "SearchBudgets":
+        """Apply per-investigation overrides, which may only LOWER configured values."""
+        if not overrides:
+            return self
+        unknown = set(overrides) - set(type(self).model_fields)
+        if unknown:
+            raise ValueError(f"unknown budget fields: {sorted(unknown)}")
+        merged = {k: min(getattr(self, k), v) for k, v in overrides.items()}
+        return type(self).model_validate({**self.model_dump(), **merged})
+
+
+class FrontierPolicy(_Frozen):
+    degree_weight: float = Field(ge=0)
+    expansions_after_first_path: int = Field(ge=0)
+
+
+class SearchConfig(_Frozen):
+    version: int
+    budgets: SearchBudgets
+    frontier: FrontierPolicy
+
+
+def load_search_config(path: Path | str = DEFAULT_SEARCH_PATH) -> SearchConfig:
+    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    return SearchConfig.model_validate(data)

@@ -62,6 +62,25 @@ uv add <package>         # add a runtime dependency
 uv add --dev <package>   # add a dev dependency
 ```
 
+### Six Degrees investigation (offline, no LLM)
+
+These need the people graph `data/wikidata/people_graph.sqlite` (see `docs/wikidata-ingestion-decision.md`), or set `PEOPLE_GRAPH_PATH` to point at another build.
+
+```bash
+uv run python scripts/investigate.py --search "Marie Curie"          # find QIDs
+uv run python scripts/investigate.py Q7186 Q37463                    # deterministic run: timeline + paths
+uv run python scripts/investigate.py Q7186 Q37463 --record my-case   # write fixture + replay trace
+uv run python scripts/benchmark_investigations.py --pairs 30         # recall vs. the complete graph
+```
+
+The Flask server exposes the investigation API under `/api/…`:
+
+- `GET /api/health` and `GET /api/people/search?q=`
+- `POST /api/investigations` with `{"source_qid", "target_qid"}`, or with `{"mode": "replay", "case_id"}`
+- `GET /api/investigations/<id>/events` (Server-Sent Events), plus `/graph`, `/paths` and `/turtle`
+
+Replay needs only the committed files in `data/fixtures/`, not the people graph.
+
 Third-party frontend libraries and their licenses are listed in [`docs/third-party-licenses.md`](docs/third-party-licenses.md).
 
 ## Project layout

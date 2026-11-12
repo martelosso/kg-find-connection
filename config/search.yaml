@@ -1,0 +1,23 @@
+# Investigation budgets and frontier heuristics (IMPLEMENTATION_PLAN.md §12).
+#
+# These are PROPOSED safeguards, not measured optima. Hitting any cap ends the investigation with
+# a PARTIAL result that states the reason. The hop limit lives in relationships.yaml
+# (pathfinding.max_hops) because the path engine enforces it.
+# An investigation request may LOWER these values, never raise them.
+
+version: 1
+
+budgets:
+  max_explored_nodes: 400
+  max_explored_edges: 1500
+  max_edges_per_expansion: 100
+  max_provider_requests: 25
+  max_agent_tool_calls: 18
+  wall_time_seconds: 90
+
+frontier:
+  # rank_frontier score = weighted path cost from the node's side endpoint
+  #                       + degree_weight * ln(1 + degree)   (prefers cheap, specific expansions)
+  degree_weight: 0.15
+  # After the first path appears, keep expanding this many more nodes to look for better paths.
+  expansions_after_first_path: 4

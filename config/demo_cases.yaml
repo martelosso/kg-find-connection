@@ -1,0 +1,9 @@
+# Prevalidated demo pairs (IMPLEMENTATION_PLAN.md §2 "Presenter safeguards").
+#
+# Every case must be a REAL pair of Wikidata humans, validated against the people-graph snapshot
+# named in `verified_on`, with its case fixture and event trace recorded by
+# scripts/record_demo_case.py. Never add a pair by hand without running that script.
+# Cases are added once the full 2026-11-04 people graph is built (Milestone 1 full build).
+
+version: 1
+cases: []

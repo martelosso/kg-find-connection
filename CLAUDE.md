@@ -21,7 +21,9 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 1 decision is made** (see `docs/wikidata-ingestion-decision.md`). The data source is an **offline people graph** built from the Wikidata truthy dump of 2026-11-04 and stored in SQLite at `data/wikidata/people_graph.sqlite`, which is gitignored. The pipeline is `scripts/download_wikidata_dump.sh` → `scripts/extract_people_slice.sh` → `scripts/build_people_graph.py`. The full build's measurements are still pending.
 
-**Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection, with 595 tests passing. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; `rank_frontier` (belongs with M3); and `ontology/people_connections.ttl`.
+**Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; and `ontology/people_connections.ttl`.
+
+**Milestone 3 machinery is done** (639 tests passing): offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
 
 ### Milestone 2 engine (where things live)
 - `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
@@ -40,6 +42,24 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
   - `tests/test_pathfinding_bruteforce.py` checks both searches against brute-force enumeration of simple paths on 400 random graphs, plus 150 graphs that brute force itself selected because the cheapest path is longer than the shortest. **If you change paths.py, these must still pass.**
   - `tests/test_editor_parser_compat.py` runs the editor's own `parseTurtle` (pulled out of `live-editor.html`) in Node and checks that its spans match the backend's.
 - Speed on the 3% sample (SQLite): median 0.03 s per pair, worst 7.8 s. Most of the time goes to per-node SQL queries and `Edge`/sha1 creation. Before the demo, either measure on the full graph and add an in-memory adjacency (CSR) or caching, or precompute the demo pairs.
+
+### Milestone 3 investigation (where things live)
+- `config/search.yaml` + `SearchBudgets`/`SearchConfig` in `src/config.py`: the §12 budgets and frontier heuristics. A request may only **lower** budgets (`SearchBudgets.lowered`).
+- `src/wikidata/provider.py`: the `KnowledgeProvider` protocol, DTOs (`PersonMatch`, `EntityRecord`, `EdgeRecord`, `ExpansionBatch` with per-QID `coverage`, `truncated`, `complete`, `source_urls`) and `ProviderError` codes. `NeighbourhoodProvider.expand` holds the shared, **policy-free deterministic truncation order**: the caller's `pid_priority`, then person neighbours before non-persons, persons by descending degree, non-persons by ascending degree (huge hubs get cut first), then edge ID. Multi-QID requests are round-robin.
+- `src/wikidata/offline.py`:
+  - `SqlitePeopleGraphProvider` reads the people graph. `search_people` does a case-insensitive prefix match on en/es labels (uses the `entity_label_en/es` partial indexes that `build_people_graph.py` now creates), or takes a QID.
+  - `FixtureProvider` reads committed case fixtures (`data/fixtures/cases/*.json`, written by `build_case_fixture`). Each stored list is a prefix of the provider order (cap 500), so it answers **exactly** like SQLite for recorded QIDs with `max_edges <= cap`, and otherwise raises `fixture_gap`. It never guesses.
+- `src/graph/frontier.py`: `rank_frontier`. Candidates are explored, unexpanded nodes assigned to the cheaper side. Score = route cost + `degree_weight·ln(1+degree)`. It skips hubs above the cap, nodes at the hop limit, and nodes whose edges are all already known (degree-1 relatives would otherwise waste requests).
+- `src/investigations/`:
+  - `events.py`: the `Event` envelope and a thread-safe `EventLog` (ids 1..n; `wait_after` drives SSE).
+  - `state.py`: `InvestigationState`, one per run, with its own `InMemoryGraph`, expansion records and a cancel flag.
+  - `baseline.py`: `run_deterministic` balances the two sides, applies batches within node/edge caps, recomputes `compare_paths` after each expansion, emits `paths.updated` when path IDs change, and stops on `path_found` (N extra expansions after the first path), `frontier_exhausted`, or a budget/cancel (→ `investigation.partial`). Every terminal event is `scope: explored_graph`.
+  - `replay.py`: traces (`data/fixtures/event_traces/*.json`), `reconstruct`, `replay_into` (marks `run_mode: "replay"`, `replay_of`, `recorded_at`), and `normalized_events` for run-equality checks.
+  - `service.py`: the registry plus background threads, `provider_from_env` (`PEOPLE_GRAPH_PATH` → SQLite → case fixtures → none) and `config/demo_cases.yaml` loading.
+- `src/server.py`: `/api/health`, `/api/people/search`, `/api/demo-cases`, `POST /api/investigations` (`mode`: `deterministic` or `replay`; `agent` returns 400 until M4), `GET …/{id}`, `…/events` (SSE; resume with `Last-Event-ID` or `?after=`), `…/cancel`, `…/graph`, `…/paths`, `…/turtle` (`?scope=selected&edge_ids=`, `?format=text`). Tests inject a service through `app.config["INVESTIGATIONS"]`. The legacy retail routes still work.
+- Scripts:
+  - `scripts/investigate.py [--search NAME | SRC TGT [--record ID]]`: prints the timeline and paths. `--record` writes the fixture and trace, and refuses unless a re-run on the fixture alone reproduces identical events.
+  - `scripts/benchmark_investigations.py`: recall of the bounded investigation against exact search on the full graph. On the 3% sample, random connected pairs were found only ~3/25 times at default budgets (4–6-hop institutional paths). Expected for random pairs; re-measure on the full graph.
 
 ### Decisions that override `IMPLEMENTATION_PLAN.md`
 - **No live Wikidata calls at demo time.** The `KnowledgeProvider` reads the local SQLite people graph. Live WDQS/REST is an optional extra for unprepared pairs.
@@ -68,7 +88,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 - CodeMirror 5.65.16 is vendored in `graph-view/vendor/codemirror/`, and `live-editor.html` has no CDN references (a test enforces this). Move it to `src/ui/vendor/` in M5 and update `docs/third-party-licenses.md`.
 - `data/wikidata/` (the raw cache) is **gitignored**. Replay fixtures in `data/fixtures/` **must** be committed.
 - Legacy retail assets stay where they are until the workbench replaces them.
-- Still to create: `config/demo_cases.yaml`, `data/fixtures/`, `data/sandbox/`, `ontology/people_connections.ttl`.
+- Still to create: real entries in `config/demo_cases.yaml` with their `data/fixtures/` files, `data/sandbox/`, and `ontology/people_connections.ttl`.
 - `.gitattributes` forces LF line endings for `*.sh`, `*.nt` and `*.ttl`, because CRLF breaks the bash scripts.
 - Testing the editor in the browser: claude-in-chrome can't open `file://`. Serve the folder instead with `uv run python -m http.server 8765 --bind 127.0.0.1 --directory graph-view`.
 
@@ -95,10 +115,10 @@ config/relationships.yaml   # PID allowlist, labels, groups, strengths, directio
 config/demo_cases.yaml      # ≥3 prevalidated pairs (QIDs + labels)
 ontology/people_connections.ttl  # small teaching ontology (mapping layer, not a Wikidata replacement)
 src/server.py  config.py  models.py (Pydantic DTOs)
-src/wikidata/   provider.py (KnowledgeProvider protocol), entity_search.py, sparql.py, entity_data.py, cache.py
+src/wikidata/   provider.py (KnowledgeProvider protocol), offline.py (SQLite + fixtures)   [built]
 src/graph/      model.py, store.py (GraphView: InMemoryGraph, SqliteGraph), paths.py, turtle_projection.py   [built]
 src/agent/      client.py, tools.py, investigator.py, prompts.py
-src/investigations/  service.py, state.py, events.py, replay.py
+src/investigations/  service.py, state.py, events.py, baseline.py, replay.py   [built]
 src/ui/         index.html, css/, js/{api,graph-view,turtle-editor,investigation,path-comparison,main}.js, vendor/
 data/wikidata/  data/fixtures/{cases,event_traces}/  data/sandbox/
 docs/wikidata-ingestion-decision.md   docs/workshop-runbook.md
