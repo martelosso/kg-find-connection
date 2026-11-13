@@ -159,6 +159,47 @@ def test_v2_properties_are_extracted_and_classified(root, tmp_path):
         g.close()
 
 
+def test_v3_work_and_founder_statements_point_at_people(root, tmp_path):
+    """Work -> person credits and organization -> founder are kept although their subject is not
+    human; the same properties between non-humans are not. Node kinds follow the properties."""
+    actor1, actor2, director, singer, founder, worker = (f"Q90002{i}" for i in range(6))
+    film, song, company, city, other_film, prize = "Q920001", "Q920002", "Q920003", "Q920004", "Q920005", "Q920006"
+    people = {actor1: "Actor One", actor2: "Actor Two", director: "Director", singer: "Singer",
+              founder: "Founder", worker: "Worker"}
+    others = {film: "A Film", song: "A Song", company: "A Company", city: "A City", other_film: "Other Film",
+              prize: "A Prize"}
+    triples = [
+        (film, "P161", actor1), (film, "P161", actor2), (film, "P57", director),   # work -> person: kept
+        (song, "P175", singer), (song, "P175", actor2),                             # a "feat." credit
+        (company, "P112", founder), (worker, "P108", company),                      # founder <- company <- worker
+        (actor1, "P19", city), (director, "P19", city),                             # weak: birthplace
+        (actor1, "P166", prize),                                                    # weak: award
+        (other_film, "P161", film),                                                 # non-human object: dropped
+        (film, "P108", company),                                                    # non-human subject: dropped
+    ]
+    g = SqliteGraph(build_people_db(root, tmp_path, people, others, triples))
+    try:
+        assert g.meta["counts"]["edges_by_pid"] == {"P108": 1, "P112": 1, "P161": 2, "P166": 1, "P175": 2,
+                                                    "P19": 2, "P57": 1}
+        kinds = {q: g.node(q).kind for q in (film, song, company, city, prize)}
+        assert kinds == {film: "work", song: "work", company: "organization", city: "place", prize: "other"}
+        assert g.node(other_film) is None
+        cmp = compare_paths(g, actor1, singer, policy())
+        assert [n.qid for n in cmp.shortest.result.nodes] == [actor1, film, actor2, song, singer]
+        hops = cmp.shortest.result.hops
+        assert [(h.pid, h.direction, h.label) for h in hops[:2]] == [("P161", "reverse", "acted in"),
+                                                                    ("P161", "forward", "cast member")]
+        assert hops[0].subject == film and hops[0].object == actor1  # original Wikidata direction kept
+        founded = compare_paths(g, founder, worker, policy()).shortest.result
+        assert [h.label for h in founded.hops] == ["founded", "employed"]
+        # Weak groups only when enabled: same city, same prize.
+        assert compare_paths(g, actor1, director, policy(), {"family"}).shortest.result is None
+        born = compare_paths(g, actor1, director, policy(), {"birthplace"}).shortest.result
+        assert [n.qid for n in born.nodes] == [actor1, city, director]
+    finally:
+        g.close()
+
+
 def test_extraction_script_and_builder_cover_every_policy_property(root):
     """Adding a PID to the policy without re-extracting would silently find nothing."""
     pids = set(policy().properties)

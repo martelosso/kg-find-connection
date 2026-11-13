@@ -10,7 +10,11 @@
 # Every allowlisted property is traversable in both directions for connectivity; the original
 # Wikidata direction is preserved and shown (reverse hops use `inverse_label`).
 
-version: 2  # v2 (2026-11-13): + P40 child, P451 unmarried partner, P1038 relative, P54 sports team
+version: 3
+# v2 (2026-11-13): + P40 child, P451 unmarried partner, P1038 relative, P54 sports team.
+# v3 (2026-11-13): + works group (film/music credits, stored on the WORK and pointing at the
+#   person), doctoral advisor/student and "student" in mentorship, "founded by" in institutional,
+#   and four weak groups that are off by default (birthplace, awards, party, influence).
 
 groups:
   family:
@@ -31,12 +35,47 @@ groups:
       linked through an organization share an affiliation; this is an association, NOT
       evidence that they met.
     enabled_by_default: true
+  works:
+    label: Shared film / music
+    label_es: Obra compartida (cine / música)
+    description: >-
+      Credits recorded on a film, series, song or album (cast, director, screenwriter, composer,
+      performer). Two people credited on the same work probably worked together, but a shared
+      credit is still an association, not proof that they met.
+    enabled_by_default: true
   position:
     label: Position held (weak)
     label_es: Cargo ocupado (débil)
     description: >-
       Person -> role links (e.g. a parliamentary seat). Very high-degree role nodes; weak
       association only. Off by default; the presenter can enable it.
+    enabled_by_default: false
+  birthplace:
+    label: Birthplace (weak)
+    label_es: Lugar de nacimiento (débil)
+    description: >-
+      Person -> place of birth. Being born in the same city says nothing about knowing each other;
+      a fun but weak link. Big cities are hubs and fall under the hub cap. Off by default.
+    enabled_by_default: false
+  awards:
+    label: Awards (weak)
+    label_es: Premios (débil)
+    description: >-
+      Person -> award received (e.g. a Nobel Prize, a Grammy category). Shared recognition, not
+      contact. Off by default.
+    enabled_by_default: false
+  party:
+    label: Political party (weak)
+    label_es: Partido político (débil)
+    description: >-
+      Person -> political party membership. Large parties are hubs. Off by default.
+    enabled_by_default: false
+  influence:
+    label: Influence (weak)
+    label_es: Influencia (débil)
+    description: >-
+      "Influenced by" between people: an intellectual influence recorded in Wikidata, often across
+      centuries. Not contact. Off by default.
     enabled_by_default: false
 
 properties:
@@ -102,6 +141,28 @@ properties:
     inverse_label_es: maestro/a de
     group: mentorship
     strength: 0.80
+  P802:
+    # The teacher's side of P1066: often only one of the two is recorded.
+    label: student
+    label_es: alumno/a
+    inverse_label: teacher
+    inverse_label_es: maestro/a
+    group: mentorship
+    strength: 0.80
+  P184:
+    label: doctoral advisor
+    label_es: director/a de tesis
+    inverse_label: doctoral student
+    inverse_label_es: doctorando/a
+    group: mentorship
+    strength: 0.85
+  P185:
+    label: doctoral student
+    label_es: doctorando/a
+    inverse_label: doctoral advisor
+    inverse_label_es: director/a de tesis
+    group: mentorship
+    strength: 0.85
   P108:
     label: employer
     label_es: empleador
@@ -131,6 +192,50 @@ properties:
     inverse_label_es: tuvo como jugador/a a
     group: institutional
     strength: 0.35
+  P112:
+    # Stored on the ORGANIZATION, pointing at the founder (organization -> person).
+    label: founded by
+    label_es: fundado/a por
+    inverse_label: founded
+    inverse_label_es: fundó
+    group: institutional
+    strength: 0.40
+  # ---- works: stored on the WORK, pointing at the person (work -> person) ----
+  P161:
+    label: cast member
+    label_es: reparto
+    inverse_label: acted in
+    inverse_label_es: actuó en
+    group: works
+    strength: 0.50
+  P57:
+    label: director
+    label_es: dirección
+    inverse_label: directed
+    inverse_label_es: dirigió
+    group: works
+    strength: 0.50
+  P58:
+    label: screenwriter
+    label_es: guion
+    inverse_label: wrote
+    inverse_label_es: escribió
+    group: works
+    strength: 0.50
+  P86:
+    label: composer
+    label_es: compositor/a
+    inverse_label: composed
+    inverse_label_es: compuso
+    group: works
+    strength: 0.50
+  P175:
+    label: performer
+    label_es: intérprete
+    inverse_label: performed
+    inverse_label_es: interpretó
+    group: works
+    strength: 0.50
   P39:
     label: position held
     label_es: cargo ocupado
@@ -138,6 +243,34 @@ properties:
     inverse_label_es: ocupado por
     group: position
     strength: 0.10
+  P19:
+    label: place of birth
+    label_es: lugar de nacimiento
+    inverse_label: birthplace of
+    inverse_label_es: lugar de nacimiento de
+    group: birthplace
+    strength: 0.10
+  P166:
+    label: award received
+    label_es: premio recibido
+    inverse_label: awarded to
+    inverse_label_es: otorgado a
+    group: awards
+    strength: 0.15
+  P102:
+    label: member of political party
+    label_es: miembro del partido
+    inverse_label: has member
+    inverse_label_es: tiene como miembro a
+    group: party
+    strength: 0.15
+  P737:
+    label: influenced by
+    label_es: influido/a por
+    inverse_label: influenced
+    inverse_label_es: influyó en
+    group: influence
+    strength: 0.40
 
 ranking:
   # edge_cost = -ln(max(minimum_strength, strength)) + hop_penalty + hub_penalty(entered node)

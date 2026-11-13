@@ -11,8 +11,10 @@ import { PeoplePicker } from "./people-picker.js";
 import { Timeline } from "./timeline.js";
 import { TurtleEditor } from "./turtle-editor.js";
 
+// Fallback only (server unreachable at startup); the real list comes from the policy via /api/health.
 const GROUPS = [["family", "Family", true], ["mentorship", "Teacher/student", true],
-                ["institutional", "Institutions", true], ["position", "Positions (weak)", false]];
+                ["institutional", "Institutions", true], ["works", "Film / music", true]];
+let groupsFromPolicy = false;
 
 const model = new InvestigationModel();
 let es = null;
@@ -35,17 +37,37 @@ const editor = new TurtleEditor($("#cm-wrap"), {
 const pickSource = new PeoplePicker($("#pick-source"), { placeholder: "From: name or QID" });
 const pickTarget = new PeoplePicker($("#pick-target"), { placeholder: "To: name or QID" });
 
-$("#groups").append(...GROUPS.map(([id, text, on]) => {
-  const b = el("button", { class: `tog${on ? " on" : ""}`, "data-group": id, type: "button" }, text);
-  b.addEventListener("click", () => b.classList.toggle("on"));
-  return b;
-}));
+// Groups that are off by default (the weak ones) sit behind one "Weak links" button so the toolbar
+// stays on two rows on a 1366px projector. A weak group that is switched on stays visible.
+function renderGroups(groups) {
+  let open = false;
+  const weak = [];
+  const buttons = groups.map(([id, text, on, title]) => {
+    const b = el("button", { class: `tog${on ? " on" : ""}`, "data-group": id, type: "button", title: title || text }, text);
+    b.addEventListener("click", () => { b.classList.toggle("on"); sync(); });
+    if (!on) weak.push(b);
+    return b;
+  });
+  const more = el("button", { class: "tog more", type: "button", title: "Show weak relationship groups (off by default)" });
+  more.addEventListener("click", () => { open = !open; sync(); });
+  function sync() {
+    for (const b of weak) b.hidden = !open && !b.classList.contains("on");
+    more.textContent = open ? "Weak links ◂" : `Weak links (${weak.length}) ▸`;
+  }
+  sync();
+  $("#groups").replaceChildren(...buttons, ...(weak.length ? [more] : []));
+}
+renderGroups(GROUPS);
 
 // ---- startup ----------------------------------------------------------------------------------
 async function refreshHealth() {
   try {
     health = await api.health();
     graph.maxVisible = health.ui?.max_visible_nodes || graph.maxVisible;
+    if (!groupsFromPolicy && Array.isArray(health.groups) && health.groups.length) {
+      groupsFromPolicy = true;  // once: later polls must not reset the presenter's toggles
+      renderGroups(health.groups.map((g) => [g.id, g.label, g.enabled_by_default, `${g.label} / ${g.label_es}`]));
+    }
     const prov = health.provider ? `${health.provider.name}${health.provider.snapshot ? ` · snapshot ${health.provider.snapshot}` : ""}` : "no people graph installed (replay only)";
     $("#conn").className = "sd";
     $("#conn-text").textContent = "Server online";

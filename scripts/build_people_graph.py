@@ -12,8 +12,11 @@ relationships, en/es rdfs:label). Output tables:
     entity_type(qid INTEGER, class_qid INTEGER)            -- P31 for entities in the graph
     meta(key TEXT PK, value TEXT)
 
-Only statements whose SUBJECT is a human (P31 Q5) are kept: every allowlisted property is
-person-centric, and this excludes e.g. organizations that are "member of" other bodies.
+Kept: statements whose SUBJECT is a human (P31 Q5), which excludes e.g. organizations that are
+"member of" other bodies; plus, for OBJECT_SIDE_PIDS only, statements whose OBJECT is a human.
+Those properties are recorded on the work or organization and point at the person (a film's
+cast member, a song's performer, a company's founder). P50 "author" is deliberately not among
+them: it is dominated by scholarly-article co-authorship and would swamp the graph.
 QIDs are stored as integers (Q42 -> 42). Edges are deduplicated on (subject, pid, object).
 """
 
@@ -32,8 +35,16 @@ WD = "http://www.wikidata.org/entity/Q"
 WDT = "http://www.wikidata.org/prop/direct/"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 
-RELATION_PIDS = ("P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066", "P108", "P69", "P463", "P54", "P39")
-INSTITUTION_PIDS = ("P108", "P69", "P463", "P54")
+RELATION_PIDS = (
+    "P26", "P22", "P25", "P3373", "P40", "P451", "P1038",      # family
+    "P1066", "P802", "P184", "P185",                           # mentorship
+    "P108", "P69", "P463", "P54", "P112",                      # institutional
+    "P161", "P57", "P58", "P86", "P175",                       # works
+    "P39", "P19", "P166", "P102", "P737",                      # weak groups (off by default)
+)
+WORK_PIDS = ("P161", "P57", "P58", "P86", "P175")             # work -> person
+OBJECT_SIDE_PIDS = WORK_PIDS + ("P112",)                       # kept when the OBJECT is a human
+INSTITUTION_PIDS = ("P108", "P69", "P463", "P54", "P102")      # person -> organization
 HUMAN = 5
 
 TRIPLE = re.compile(r'^<([^>]+)> <([^>]+)> (.+) \.\s*$')
@@ -41,6 +52,10 @@ LANG_LITERAL = re.compile(r'^"((?:[^"\\]|\\.)*)"@(en|es)$')
 UCHAR8 = re.compile(r"\\U([0-9A-Fa-f]{8})")
 
 BATCH = 200_000
+
+
+def _sql_list(pids) -> str:
+    return ",".join(f"'{p}'" for p in pids)
 
 
 def unescape(lit: str) -> str:
@@ -137,11 +152,14 @@ def finalize(db: sqlite3.Connection) -> None:
     steps = [
         ("humans", "CREATE TABLE human AS SELECT DISTINCT s AS qid FROM raw_type WHERE o = ?", (HUMAN,)),
         ("human pk", "CREATE UNIQUE INDEX human_qid ON human(qid)", ()),
-        ("edges (human subjects, deduped)",
-         """CREATE TABLE edge AS
+        ("edges (human subjects, or human objects for work/founder PIDs; deduped)",
+         f"""CREATE TABLE edge AS
               SELECT DISTINCT e.s AS subject, e.pid AS pid, e.o AS object
-              FROM raw_edge e JOIN human h ON h.qid = e.s
-              WHERE e.s <> e.o""", ()),
+              FROM raw_edge e
+              WHERE e.s <> e.o
+                AND (EXISTS (SELECT 1 FROM human h WHERE h.qid = e.s)
+                     OR (e.pid IN ({_sql_list(OBJECT_SIDE_PIDS)})
+                         AND EXISTS (SELECT 1 FROM human h WHERE h.qid = e.o)))""", ()),
         ("edge indexes", "CREATE INDEX edge_subject ON edge(subject); CREATE INDEX edge_object ON edge(object)", ()),
         ("entity ids",
          "CREATE TABLE node AS SELECT subject AS qid FROM edge UNION SELECT object FROM edge", ()),
@@ -160,10 +178,17 @@ def finalize(db: sqlite3.Connection) -> None:
                     CASE
                       WHEN EXISTS (SELECT 1 FROM human WHERE qid = n.qid) THEN 'person'
                       WHEN EXISTS (SELECT 1 FROM edge WHERE object = n.qid
-                                   AND pid IN ({",".join(f"'{p}'" for p in INSTITUTION_PIDS)}))
+                                   AND pid IN ({_sql_list(INSTITUTION_PIDS)}))
                         THEN 'organization'
+                      WHEN EXISTS (SELECT 1 FROM edge WHERE subject = n.qid AND pid = 'P112')
+                        THEN 'organization'
+                      WHEN EXISTS (SELECT 1 FROM edge WHERE subject = n.qid
+                                   AND pid IN ({_sql_list(WORK_PIDS)}))
+                        THEN 'work'
                       WHEN EXISTS (SELECT 1 FROM edge WHERE object = n.qid AND pid = 'P39')
                         THEN 'position'
+                      WHEN EXISTS (SELECT 1 FROM edge WHERE object = n.qid AND pid = 'P19')
+                        THEN 'place'
                       ELSE 'other'
                     END
              FROM node n""", ()),

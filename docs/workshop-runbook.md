@@ -33,7 +33,13 @@ Say these out loud, because the UI says them too:
    - `DEEPSEEK_API_KEY=...` (DeepSeek, OpenAI-compatible), **or**
    - `OPENROUTER_API_KEY=sk-or-...` (OpenRouter).
    - Optionally set `LLM_PROVIDER=deepseek|openrouter` and `DEEPSEEK_MODEL` / `OPENROUTER_MODEL`.
-4. Choose and record the demo pairs:
+4. Choose the hub cap (organisations above it can't be intermediate path nodes):
+   ```bash
+   uv run python scripts/analyze_hubs.py --out hubs.json            # degree distribution + cap sweep
+   uv run python scripts/analyze_hubs.py --seeds config/demo_seeds.txt --cross recent historical
+   ```
+   Pick the cap that keeps most pairs connected while fewer shortest paths lean on giant hubs. Set `pathfinding.max_intermediate_degree` in `config/relationships.yaml` and bump its `version`. Do this **before** recording cases: preflight fails replays recorded under another policy.
+5. Choose and record the demo pairs:
    ```bash
    uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --resolve-only    # check names → QIDs
    uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --cross recent historical        --pairs 400 --out candidates.json                                                    # suggestions only
@@ -84,14 +90,14 @@ Tip: a deep link pre-fills a pair, for example `http://localhost:5000/?source=Q�
 |---|---|---|
 | 1 | Show the empty workbench. | Toolbar: two people, strategy, relationship groups. Bottom right: the data source and **snapshot date** (offline Wikidata snapshot). |
 | 2 | Type the first person's name and pick them from the list. Do the same for the second. | Names come from Wikidata labels (English and Spanish); each person has a stable QID. |
-| 3 | Leave **Family**, **Teacher/student** and **Institutions** on. Mode: **AI agent**. Click **Explore**. | Badges: **LIVE** and **AI agent · model**. The two people are pinned left and right. |
+| 3 | Leave **Family**, **Teacher / student**, **Shared institution** and **Shared film / music** on. Mode: **AI agent**. Click **Explore**. | Badges: **LIVE** and **AI agent · model**. The two people are pinned left and right. |
 | 4 | Watch the timeline. | Each indented row is a tool call the agent chose, under a one-line decision. Rows show how many edges came back and whether the result was truncated. The agent picks *what* to explore; the backend fetches, computes and verifies. |
 | 5 | A path appears (orange "Path found" row). | Result panel. **Shortest** = fewest relationships. **Strongest** = lowest cost. If they differ, open both tabs and show why: family/mentorship beats a shared school. The agent's summary is shown only if it mentions nothing but path entities. |
 | 6 | Click an edge on the path. | The Turtle source highlights that exact triple: `wd:Q… wdt:P… wd:Q… .` The inspector shows subject, property and object with Wikidata links. "This is one RDF statement." |
 | 7 | Click a timeline step. | Those are the edges that step fetched. |
 | 8 | Select a few lines in the Turtle source. | The matching nodes and edges light up. The text and the graph are two views of the same triples. |
 | 9 | Optional: select the two people, click **+ sandbox edge**, change the PID if you like, then **Apply sandbox**. | A **With sandbox** tab appears with a hypothetical result. Pink dashed edge, "NOT Wikidata" banner. Wikidata facts are untouched; **Clear** removes it. |
-| 10 | Optional: turn on **Positions (weak)** and click **Explore** again. | Shows how the relationship policy changes the answer. |
+| 10 | Optional: open **Weak links**, turn on e.g. **Birthplace (weak)** or **Awards (weak)**, and click **Explore** again. | Shows how the relationship policy changes the answer ("both born in Medellín" is a fun but weak link). |
 | 11 | Close. | Enterprise analogy: beneficial-ownership investigations, cross-domain entity discovery. The same pattern (typed relationships, a bounded agentic search, verified paths, provenance per edge) applies. |
 
 **Replay instead of live:** pick a case in **Replay a demo case…**. The badge reads **REPLAY · recorded <time>**. Say it is a recording.

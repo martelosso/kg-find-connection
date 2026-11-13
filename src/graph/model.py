@@ -10,7 +10,7 @@ import hashlib
 from dataclasses import dataclass, field
 from typing import Literal
 
-NodeKind = Literal["person", "organization", "position", "other"]
+NodeKind = Literal["person", "organization", "work", "position", "place", "other"]
 EdgeOrigin = Literal["wikidata", "sandbox"]
 
 WIKIDATA_ENTITY = "https://www.wikidata.org/wiki/"

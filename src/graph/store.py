@@ -140,8 +140,8 @@ class SqliteGraph:
         return sorted(edges, key=_sort_key)
 
 
-_KINDS: tuple[NodeKind, ...] = ("person", "organization", "position", "other")
-_INDEX_FORMAT = 1
+_KINDS: tuple[NodeKind, ...] = ("person", "organization", "work", "position", "place", "other")
+_INDEX_FORMAT = 2  # bump when the array layout or kind codes change
 
 
 class IndexedPeopleGraph(SqliteGraph):
@@ -255,6 +255,20 @@ class IndexedPeopleGraph(SqliteGraph):
         """(kind, degree) without labels, from memory. None if the QID is not in the graph."""
         i = self._index(qid)
         return None if i is None else (_KINDS[int(self._kind[i])], int(self._degree[i]))
+
+    def qids_of_kind(self, kind: NodeKind, min_degree: int = 0, max_degree: int | None = None):
+        """Integer QIDs (numpy array, ascending) of every node of ``kind`` within the degree range."""
+        keep = (self._kind == _KINDS.index(kind)) & (self._degree >= min_degree)
+        if max_degree is not None:
+            keep &= self._degree <= max_degree
+        return self._qids[keep]
+
+    def degrees_of_kind(self, kinds: tuple[NodeKind, ...]):
+        """(int QIDs, degrees) of every node whose kind is in ``kinds``."""
+        keep = self._kind == _KINDS.index(kinds[0])
+        for k in kinds[1:]:
+            keep |= self._kind == _KINDS.index(k)
+        return self._qids[keep], self._degree[keep]
 
     def _mask(self, pids: frozenset[str]):
         import numpy as np

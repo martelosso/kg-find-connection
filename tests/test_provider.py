@@ -10,10 +10,10 @@ from src.graph.model import Edge
 from src.wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider, build_case_fixture
 from src.wikidata.provider import ProviderError, neighbour_key
 
-from .graph_helpers import build_people_db, random_people_graph
+from .graph_helpers import build_people_db, policy, random_people_graph
 
-ALL_PIDS = ["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066", "P108", "P69", "P463", "P54", "P39"]
-STRONG_FIRST = ["P26", "P22", "P25", "P40", "P3373", "P451", "P1066", "P1038", "P108", "P54", "P69", "P463", "P39"]
+ALL_PIDS = list(policy().properties)  # every property the graph may hold
+STRONG_FIRST = sorted(ALL_PIDS, key=lambda p: (-policy().properties[p].strength, p))
 
 
 @pytest.fixture(scope="module")

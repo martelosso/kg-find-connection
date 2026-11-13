@@ -251,6 +251,8 @@ class InvestigationService:
             "provider": None if p is None else {"name": p.name, "snapshot": p.snapshot},
             "replay_cases": [c.id for c in self.demo_cases.cases if c.trace],
             "policy_version": self.policy.version,
+            "groups": [{"id": gid, "label": g.label, "label_es": g.label_es, "enabled_by_default": g.enabled_by_default}
+                       for gid, g in self.policy.groups.items()],
             "ui": self.search.ui.model_dump(),
             "agent": self._agent_status(),
         }

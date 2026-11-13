@@ -219,7 +219,11 @@ def test_prompt_is_small_and_tools_are_typed():
     pol = policy()
     prompt = build_system_prompt(pol, SEARCH.budgets, pol.default_groups)
     assert len(prompt) < 4000 and "@prefix" not in prompt and "PREFIX" not in prompt
-    assert "position [disabled]" in prompt and "family [ENABLED]" in prompt
+    assert "- family (Family): spouse P26" in prompt
+    disabled_line = next(line for line in prompt.splitlines() if line.startswith("- Disabled"))
+    assert "position" in disabled_line and "P39" not in prompt  # disabled groups: names only
+    everything = build_system_prompt(pol, SEARCH.budgets, frozenset(pol.groups))
+    assert len(everything) < 4000 and "P39" in everything and "- Disabled" not in everything
     defs = {d["function"]["name"]: d["function"]["parameters"] for d in tool_definitions()}
     assert set(defs) == set(TOOL_SPECS)
     assert defs["get_neighbors"]["required"] == ["qid", "relation_groups"]

@@ -14,6 +14,7 @@ export class GraphView {
     this.colors = {
       source: css("--c-source"), target: css("--c-target"), person: css("--c-person"),
       organization: css("--c-org"), position: css("--c-position"), other: css("--c-other"),
+      work: css("--c-work"), place: css("--c-place"),
       edge: css("--c-edge"), dim: css("--c-dim"), shortest: css("--c-shortest"), strongest: css("--c-strongest"),
       fresh: css("--c-fresh"), sandbox: css("--c-sandbox"), select: css("--c-select"),
     };

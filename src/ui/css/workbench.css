@@ -5,7 +5,7 @@
   --bg: #f7f5f1; --surface: #ffffff; --surface2: #f0ede7; --border: #e5e0d8;
   --text: #1c1917; --muted: #78716c; --muted2: #a8a29e; --accent: #44403c; --accent-dim: rgba(68,64,60,.07);
   --green: #15803d; --amber: #b45309; --red: #b91c1c;
-  --c-source: #0f766e; --c-target: #c2410c; --c-person: #57534e; --c-org: #7c3aed; --c-position: #a16207;
+  --c-source: #0f766e; --c-target: #c2410c; --c-person: #57534e; --c-org: #7c3aed; --c-position: #a16207; --c-work: #4d7c0f; --c-place: #64748b;
   --c-other: #a8a29e; --c-edge: #c4bfb6; --c-dim: rgba(196,191,182,.28); --c-shortest: #2563eb;
   --c-strongest: #d97706; --c-fresh: #16a34a; --c-sandbox: #db2777; --c-select: #1c1917;
 }
@@ -50,6 +50,8 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; back
 .tog { height: 28px; padding: 0 9px; border-radius: 5px; border: 1px solid var(--border); background: transparent;
   color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer; }
 .tog.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tog[hidden] { display: none; }
+.tog.more { border-style: dashed; color: var(--muted); }
 .badge { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
 .badge.idle { background: var(--surface2); color: var(--muted); }
 .badge.live { background: #dcfce7; color: #166534; }

@@ -83,8 +83,11 @@ def random_people_graph(seed: int, n_people: int = 40, n_orgs: int = 6, n_edges:
     triples = set()
     while len(triples) < n_edges:
         s = rng.choice(pq)
-        if rng.random() < 0.5:
+        r = rng.random()
+        if r < 0.4:
             p, o = rng.choice(["P108", "P69", "P463", "P54", "P39"]), rng.choice(oq)
+        elif r < 0.5:  # stored on the work/organization, pointing at the person
+            s, p, o = rng.choice(oq), rng.choice(["P161", "P175", "P112"]), s
         else:
             p, o = rng.choice(["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066"]), rng.choice(pq)
         if s != o:

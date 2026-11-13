@@ -76,8 +76,11 @@ def dense_case(rng: random.Random):
     triples = set()
     for _ in range(rng.randint(10, 26)):
         s = rng.choice(people)
-        if rng.random() < 0.35:
+        r = rng.random()
+        if r < 0.3:
             pid, o = rng.choice(["P108", "P69", "P463", "P54"]), rng.choice(orgs)
+        elif r < 0.4:  # work -> person credit (reversed shape)
+            s, pid, o = rng.choice(orgs), rng.choice(["P161", "P57", "P175"]), s
         else:
             pid, o = rng.choice(["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066"]), rng.choice(people)
         if s != o:
