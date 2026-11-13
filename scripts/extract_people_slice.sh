@@ -26,9 +26,11 @@ echo '<http://www.w3.org/2000/01/rdf-schema#label> ' >> "$PATTERNS"
 
 # The per-line filter. Every line is judged on its own, so filtering byte ranges of the stream
 # in parallel and concatenating the results in order gives exactly the sequential output.
+# Stage 2 keeps non-label lines and en/es labels. It was gawk; perl gives identical output at
+# ~2.7x the speed (it sees every grep match, mostly labels in all languages).
 filter() {
   LC_ALL=C grep -F -f "$PATTERNS" \
-    | LC_ALL=C awk 'index($0, "rdf-schema#label> ") == 0 || /"@(en|es) \.$/'
+    | LC_ALL=C perl -ne 'print if index($_, "rdf-schema#label> ") < 0 || /"\@e[ns] \.$/'
 }
 
 # Parallelism: the Wikidata .gz is ~1,200 concatenated gzip members, and one gzip|grep|awk
@@ -36,13 +38,13 @@ filter() {
 # The file is cut at member boundaries (scripts/gzip_members.py) and JOBS pipelines run on the
 # ranges. A cut that is not a real boundary makes gzip fail (truncated member / CRC), and any
 # failure aborts the run. JOBS=1 (or a single-member file) runs the original sequential path.
-JOBS="${JOBS:-$(( $(nproc) / 2 > 1 ? $(nproc) / 2 : 1 ))}"
+JOBS="${JOBS:-$(nproc)}"
 TMP_OUT="${OUT_DIR}/slice.nt.partial"
 
 start=$(date +%s)
 case "$IN" in
   *.gz)
-    mapfile -t RANGES < <(uv run --project "$ROOT" python "${ROOT}/scripts/gzip_members.py" "$IN" "$JOBS")
+    mapfile -t RANGES < <(uv run --project "$ROOT" python "${ROOT}/scripts/gzip_members.py" "$IN" "$JOBS" | tr -d '\r')
     [[ ${#RANGES[@]} -ge 1 ]] || { echo "could not split $IN" >&2; exit 1; }
     echo "decompressing ${#RANGES[@]} member-aligned range(s) in parallel" >&2
     pids=()

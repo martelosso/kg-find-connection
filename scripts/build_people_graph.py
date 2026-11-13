@@ -460,8 +460,8 @@ def main(argv: list[str] | None = None) -> int:
     from src.graph.store import IndexedPeopleGraph
 
     indexed = IndexedPeopleGraph(args.out)
-    print(f"adjacency index: {indexed.cache_path.name} "
-          f"({indexed.cache_path.stat().st_size / 2**20:.0f} MiB, {time.time() - t1:.0f}s)")
+    print(f"adjacency index: {indexed.cache_dir.name}/ "
+          f"({indexed.cache_bytes / 2**20:.0f} MiB, {time.time() - t1:.0f}s)")
     indexed.close()
     return 0
 

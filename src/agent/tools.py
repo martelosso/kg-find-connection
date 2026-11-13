@@ -187,10 +187,11 @@ class Toolbox:
         disabled = set(args.relation_groups) - st.groups
         if disabled:
             raise ToolError("not_allowed", f"relation groups {sorted(disabled)} are not enabled for this investigation")
-        cap = pol.pathfinding.max_intermediate_degree
-        if (cap is not None and node.kind != "person" and node.degree > cap
+        if (pol.pathfinding.is_hub(node.kind, node.degree)
                 and args.qid not in (st.source_qid, st.target_qid)):
-            raise ToolError("not_allowed", f"{args.qid} has degree {node.degree} > {cap}: hubs cannot be intermediate nodes")
+            cap = pol.pathfinding.hub_cap(node.kind)
+            raise ToolError("not_allowed", f"{args.qid} has degree {node.degree} > {cap} ({node.kind} hub cap): "
+                                           "hubs cannot be intermediate nodes")
         pids = pol.active_pids(frozenset(args.relation_groups))
         for r in st.expansions:
             if r.qid == args.qid and r.error is None and r.complete and set(pids) <= set(r.properties) \

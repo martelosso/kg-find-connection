@@ -54,15 +54,14 @@ def rank_frontier(
     groups: set[str] | frozenset[str] | None = None,
 ) -> list[ExpansionCandidate]:
     pids = policy.active_pids(groups)
-    cap = policy.pathfinding.max_intermediate_degree
     max_hops = policy.pathfinding.max_hops
     endpoints = {source_qid, target_qid}
 
     def blocked(qid: str) -> bool:
-        if qid in endpoints or cap is None:
+        if qid in endpoints:
             return False
         node = graph.node(qid)
-        return node is not None and node.kind != "person" and node.degree > cap
+        return node is not None and policy.pathfinding.is_hub(node.kind, node.degree)
 
     def step(edge: Edge, into: str) -> float:
         c = policy.strength_cost(edge.pid) + policy.ranking.hop_penalty

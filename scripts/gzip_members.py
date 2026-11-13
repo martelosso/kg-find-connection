@@ -69,8 +69,8 @@ def main(argv: list[str]) -> int:
     if len(argv) != 3:
         print(__doc__, file=sys.stderr)
         return 2
-    for offset, length in ranges(Path(argv[1]), int(argv[2])):
-        print(offset, length)
+    lines = "".join(f"{offset} {length}\n" for offset, length in ranges(Path(argv[1]), int(argv[2])))
+    sys.stdout.buffer.write(lines.encode("ascii"))  # "\n" even on Windows (bash reads it)
     return 0
 
 

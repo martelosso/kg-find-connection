@@ -23,22 +23,15 @@ import json
 import random
 import sqlite3
 import sys
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.config import load_policy, load_search_config  # noqa: E402
 from src.graph.model import is_qid  # noqa: E402
-from src.graph.paths import compare_paths  # noqa: E402
-from src.graph.store import open_people_graph  # noqa: E402
-from src.investigations.baseline import run_deterministic  # noqa: E402
 from src.investigations.service import DEFAULT_GRAPH_PATH  # noqa: E402
-from src.investigations.state import InvestigationState  # noqa: E402
-from src.wikidata.offline import SqlitePeopleGraphProvider  # noqa: E402
+from src.pairwork import default_workers, demo_pair_row, map_pairs  # noqa: E402
 
-INTERPERSONAL = {"family", "mentorship"}
 LOW_DEGREE = 5  # a famous person usually has more links; fewer suggests a namesake
 
 
@@ -157,6 +150,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="with --seeds: only pair people of seed group A with people of group B")
     ap.add_argument("--resolve-only", action="store_true", help="with --seeds: print the name → QID resolution and stop")
     ap.add_argument("--out", type=Path, default=None, help="write all evaluated rows as JSON")
+    ap.add_argument("--workers", type=int, default=default_workers(),
+                    help="parallel processes (default: half the cores, at most 8; 1 = in-process)")
     args = ap.parse_args(argv)
 
     rng = random.Random(args.seed)
@@ -182,45 +177,23 @@ def main(argv: list[str] | None = None) -> int:
         wanted = args.pairs or 40
         pairs = [tuple(rng.sample(people, 2)) for _ in range(wanted * 3)]
 
-    policy, search = load_policy(), load_search_config()
-    graph, provider = open_people_graph(args.db), SqlitePeopleGraphProvider(args.db)
     print(f"{len(people)} candidate people, {len(pairs)} pairs to try, keeping up to {wanted} "
-          f"with a 2-{args.max_hops} hop connection", file=sys.stderr)
+          f"with a 2-{args.max_hops} hop connection ({args.workers} worker(s))", file=sys.stderr)
 
     rows = []
-    for i, (s, t) in enumerate(pairs, 1):
-        if len(rows) >= wanted:
-            break
+    results = map_pairs(args.db, demo_pair_row, pairs, args.workers, max_hops=args.max_hops)
+    for i, row in enumerate(results, 1):  # input order: same rows whatever the worker count
         if i % 25 == 0:
             print(f"  … {i}/{len(pairs)} pairs tried, {len(rows)} kept", file=sys.stderr, flush=True)
-        t0 = time.time()
-        exact = compare_paths(graph, s, t, policy)
-        exact_s = time.time() - t0
-        short, strong = exact.shortest.result, exact.strongest.result
-        if short is None or short.hop_count < 2 or short.hop_count > args.max_hops:
+        if row is None:
             continue
-        nodes = {n.qid: n for r in (short, strong) for n in r.nodes}
-        state = InvestigationState(s, t, policy.default_groups, search.budgets, snapshot=provider.snapshot)
-        t0 = time.time()
-        run_deterministic(state, provider, policy, search)
-        live = state.comparison.shortest.result if state.comparison else None
-        row = {
-            "source": s, "target": t,
-            "source_label": graph.node(s).label(), "target_label": graph.node(t).label(),
-            "shortest_hops": short.hop_count, "strongest_hops": strong.hop_count,
-            "shortest_cost": round(short.total_cost, 3), "strongest_cost": round(strong.total_cost, 3),
-            "divergent": not exact.same_path,
-            "interpersonal_hops": sum(h.relation_group in INTERPERSONAL for h in strong.hops),
-            "unlabeled_nodes": sum(1 for n in nodes.values() if not n.label_en),
-            "strongest_route": " → ".join(n.label_en or n.qid for n in strong.nodes),
-            "live_found": live is not None, "live_hops": live.hop_count if live else None,
-            "live_requests": state.provider_requests, "live_stop": state.stop_reason,
-            "exact_seconds": round(exact_s, 2), "live_seconds": round(time.time() - t0, 2),
-        }
         row["score"] = score(row)
         rows.append(row)
         print(f"  {row['score']:>5}  {row['source_label']} ↔ {row['target_label']}: {row['shortest_hops']}/"
               f"{row['strongest_hops']} hops, live {'yes' if row['live_found'] else 'no'}", file=sys.stderr, flush=True)
+        if len(rows) >= wanted:
+            results.close()  # cancels the pairs not started yet
+            break
 
     rows.sort(key=lambda r: -r["score"])
     print("\nTop candidates (score · pair · shortest/strongest hops · live · strongest route):")

@@ -79,6 +79,16 @@ The supplied repository is a small Python 3.13+ / `uv` project, with Flask, RDFL
 - Optional: enable a **weak-association** relation category or a sandbox edit, recalculate, and observe the ranking change.
 - Conclude with the enterprise analogy: beneficial ownership investigations or cross-domain entity discovery. Do **not** build a second enterprise demo into MVP.
 
+### Step-through presentation (presenter-paced)
+
+The demo's goal is to show the audience **the path, the tools and the agent's reasoning**. At every step it must be clear which decision the agent made and why. The investigation can therefore be presented as a **step-by-step sequence**: the presenter clicks a **Next step** button to reveal the next step, rather than watching the run stream past.
+
+- Each step pairs one agent decision (its short decision summary) with the tool calls it led to and their results: the nodes/edges added, the paths found or improved, and the stop reason.
+- The graph, timeline, Turtle and path views show the state as of the current step only. Advancing applies that step's deltas to the existing network (no rebuild).
+- "Reasoning" means the agent's own visible decision text plus backend facts (tool arguments, results, budgets, improvement leads). Never invent or reconstruct hidden chain of thought.
+- It works for live runs and replays alike, and the Live / Replay indicator stays honest.
+- Specifics (step granularity, going back a step, auto-play, how a step is laid out on screen) are still to be decided.
+
 ### Presenter safeguards
 
 - Provide **Replay** mode using captured authentic events and frozen cached data; same UI as a live run.
@@ -366,6 +376,7 @@ If moving static assets to Flask static hosting, copy/move `graph-view/vis-netwo
 - Make paths prominent: tabs **Shortest** and **Strongest**; show hop count, score/cost, edge list, and “explored graph” label.
 - Timeline rows should show tool, count returned, truncation/error status, and action highlights. Avoid displaying invisible private model reasoning.
 - Provide **Reset**, **Replay**, **Live/Offline indicator**, and clear empty states.
+- Provide a **step-through mode** (§2): a **Next step** button reveals the investigation one agent decision at a time, with its tool calls, results and graph changes, so the audience can follow each decision. Details are still to be decided.
 - Responsive enough for a projector and common desktop widths; mobile perfection is non-goal.
 
 ### Browser Turtle parser safety
@@ -491,7 +502,7 @@ Current: Flask, RDFLib, `openai`, dotenv, `uv`. Likely add: `networkx`, `pydanti
 
 ### Milestone 6 — Workshop reliability and polish
 
-**Tasks:** create 3 authentic pretested demo pairs, capture replay traces, implement offline assets, make a runbook with exact click-by-click flow, test rate limiting/network failure, improve layout/labels, add visual regression or E2E smoke tests if feasible.
+**Tasks:** create 3 authentic pretested demo pairs, capture replay traces, add the presenter-paced step-through mode (§2), implement offline assets, make a runbook with exact click-by-click flow, test rate limiting/network failure, improve layout/labels, add visual regression or E2E smoke tests if feasible.
 
 **Done when:** cold-start offline replay works; one live lookup works in a healthy network environment; presenter can complete demo with no editing code or terminal interaction; no unverified or fabricated path is labeled as fact.
 

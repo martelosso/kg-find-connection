@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from typing import get_args
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from src.graph.model import NodeKind
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY_PATH = ROOT / "config" / "relationships.yaml"
@@ -43,8 +46,32 @@ class RankingPolicy(_Frozen):
 class PathfindingPolicy(_Frozen):
     max_hops: int = Field(ge=1, le=12)
     max_intermediate_degree: int | None = Field(default=None, ge=1)
+    # Per-kind overrides of the hub cap (e.g. a lower cap for birthplaces). Kinds not listed use
+    # max_intermediate_degree; a listed None means "no cap" for that kind. Persons are never hubs.
+    max_intermediate_degree_by_kind: dict[str, int | None] = Field(default_factory=dict)
     max_visited_nodes: int = Field(ge=1)
     max_expanded_states: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _check_kind_caps(self) -> "PathfindingPolicy":
+        kinds = set(get_args(NodeKind)) - {"person"}
+        for kind, cap in self.max_intermediate_degree_by_kind.items():
+            if kind not in kinds:
+                raise ValueError(f"max_intermediate_degree_by_kind: unknown or person kind {kind!r}")
+            if cap is not None and cap < 1:
+                raise ValueError(f"max_intermediate_degree_by_kind[{kind!r}] must be >= 1")
+        return self
+
+    def hub_cap(self, kind: str) -> int | None:
+        """The hub cap that applies to a non-person node of this kind (None = no cap)."""
+        return self.max_intermediate_degree_by_kind.get(kind, self.max_intermediate_degree)
+
+    def is_hub(self, kind: str, degree: int) -> bool:
+        """True if a node may not be an INTERMEDIATE path node (endpoints are always allowed)."""
+        if kind == "person":
+            return False
+        cap = self.hub_cap(kind)
+        return cap is not None and degree > cap
 
 
 class RelationshipPolicy(_Frozen):

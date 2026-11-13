@@ -141,7 +141,7 @@ class SqliteGraph:
 
 
 _KINDS: tuple[NodeKind, ...] = ("person", "organization", "work", "position", "place", "other")
-_INDEX_FORMAT = 2  # bump when the array layout or kind codes change
+_INDEX_FORMAT = 3  # bump when the array layout, kind codes or cache files change
 
 
 class IndexedPeopleGraph(SqliteGraph):
@@ -153,9 +153,13 @@ class IndexedPeopleGraph(SqliteGraph):
     ``node()``, i.e. for the few nodes that end up on a result. It returns exactly what
     ``SqliteGraph`` returns (tests check parity).
 
-    The arrays are built from the SQLite file on first use and saved next to it as
-    ``<db>.adjacency.npz`` (rebuilt automatically when the database changes).
+    The arrays are built from the SQLite file on first use and saved next to it in the directory
+    ``<db>.adjacency/`` (one ``.npy`` per array plus ``manifest.json``), rebuilt automatically when
+    the database changes. They are opened memory-mapped and read-only, so parallel worker processes
+    (scripts' ``--workers``) share one copy through the OS page cache instead of each loading it.
     """
+
+    _ARRAYS = ("qids", "kind", "degree", "offsets", "nbr", "code")
 
     def __init__(self, path: Path | str, *, cache: bool = True) -> None:
         super().__init__(path)
@@ -174,6 +178,12 @@ class IndexedPeopleGraph(SqliteGraph):
         self._pid_names: list[str] = [str(p) for p in arrays["pids"]]
         self._pid_masks: dict[frozenset[str], object] = {}
 
+    def close(self) -> None:
+        """Close SQLite and drop the memory maps (Windows keeps mapped files locked)."""
+        super().close()
+        for name in self._ARRAYS:
+            setattr(self, f"_{name}", None)
+
     # ---- build / cache ---------------------------------------------------------------------
 
     def _fingerprint(self) -> str:
@@ -183,29 +193,60 @@ class IndexedPeopleGraph(SqliteGraph):
                            "edges": (self.meta.get("counts") or {}).get("edges")}, sort_keys=True)
 
     @property
+    def cache_dir(self) -> Path:
+        return self._path.with_name(self._path.name + ".adjacency")
+
+    @property
     def cache_path(self) -> Path:
-        return self._path.with_name(self._path.name + ".adjacency.npz")
+        """The cache's manifest; the cache is valid only if it exists and matches the database."""
+        return self.cache_dir / "manifest.json"
+
+    @property
+    def cache_bytes(self) -> int:
+        return sum(f.stat().st_size for f in self.cache_dir.glob("*") if f.is_file()) if self.cache_dir.is_dir() else 0
 
     def _load_cached(self) -> dict | None:
         import numpy as np
 
         try:
-            with np.load(self.cache_path, allow_pickle=False) as npz:
-                if str(npz["fingerprint"]) != self._fingerprint():
-                    return None
-                return {k: npz[k] for k in npz.files}
-        except (OSError, KeyError, ValueError):
+            manifest = json.loads(self.cache_path.read_text(encoding="utf-8"))
+            if manifest.get("fingerprint") != self._fingerprint():
+                return None
+            arrays = {k: np.asarray(np.load(self.cache_dir / f"{k}.npy", mmap_mode="r", allow_pickle=False))
+                      for k in self._ARRAYS}
+            if len(arrays["offsets"]) != len(arrays["qids"]) + 1 or len(arrays["nbr"]) != len(arrays["code"]):
+                return None
+            arrays["pids"] = list(manifest["pids"])
+            return arrays
+        except (OSError, KeyError, ValueError, TypeError):
             return None
 
     def _save_cached(self, arrays: dict) -> None:
+        """Write a fresh directory, then swap it in. If the old one is in use (memory-mapped by
+        another process on Windows) or the location is read-only, keep the in-memory arrays and
+        skip the cache; correctness never depends on it."""
+        import os
+        import shutil
+
         import numpy as np
 
-        tmp = self.cache_path.with_name(self.cache_path.name + ".tmp.npz")
+        tmp = self.cache_dir.with_name(f"{self.cache_dir.name}.tmp-{os.getpid()}")
+        old = self.cache_dir.with_name(f"{self.cache_dir.name}.old-{os.getpid()}")
         try:
-            np.savez(tmp, fingerprint=np.array(self._fingerprint()), **arrays)
-            tmp.replace(self.cache_path)
-        except OSError:  # read-only location: keep the in-memory arrays, skip the cache
-            tmp.unlink(missing_ok=True)
+            shutil.rmtree(tmp, ignore_errors=True)
+            tmp.mkdir(parents=True)
+            for k in self._ARRAYS:
+                np.save(tmp / f"{k}.npy", np.ascontiguousarray(arrays[k]), allow_pickle=False)
+            (tmp / "manifest.json").write_text(json.dumps(
+                {"fingerprint": self._fingerprint(), "pids": [str(p) for p in arrays["pids"]]}), encoding="utf-8")
+            if self.cache_dir.exists():
+                self.cache_dir.rename(old)
+            tmp.rename(self.cache_dir)
+            shutil.rmtree(old, ignore_errors=True)
+        except OSError:
+            shutil.rmtree(tmp, ignore_errors=True)
+            if old.exists() and not self.cache_dir.exists():
+                old.rename(self.cache_dir)  # put the previous cache back; it is re-validated on use
 
     def _build_arrays(self) -> dict:
         import numpy as np
@@ -234,7 +275,7 @@ class IndexedPeopleGraph(SqliteGraph):
         offsets = np.zeros(len(qids) + 1, dtype=np.int64)
         np.cumsum(np.bincount(owner_idx, minlength=len(qids)), out=offsets[1:])
         return {"qids": qids, "kind": ents[:, 1].astype(np.int8), "degree": ents[:, 2].astype(np.int32),
-                "offsets": offsets, "nbr": nbr[order], "code": code[order], "pids": np.array(pids, dtype=str)}
+                "offsets": offsets, "nbr": nbr[order], "code": code[order], "pids": pids}
 
     # ---- queries -------------------------------------------------------------------------------
 

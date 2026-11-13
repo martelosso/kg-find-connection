@@ -14,19 +14,13 @@ import random
 import sqlite3
 import statistics
 import sys
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.config import load_policy, load_search_config  # noqa: E402
-from src.graph.paths import compute_shortest_path  # noqa: E402
-from src.graph.store import open_people_graph  # noqa: E402
-from src.investigations.baseline import run_deterministic  # noqa: E402
 from src.investigations.service import DEFAULT_GRAPH_PATH  # noqa: E402
-from src.investigations.state import InvestigationState  # noqa: E402
-from src.wikidata.offline import SqlitePeopleGraphProvider  # noqa: E402
+from src.pairwork import benchmark_pair, default_workers, map_pairs  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -40,33 +34,31 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-degree", type=int, default=4)
     ap.add_argument("--max-degree", type=int, default=200)
     ap.add_argument("--max-tries", type=int, default=1000)
+    ap.add_argument("--workers", type=int, default=default_workers(),
+                    help="parallel processes (default: half the cores, at most 8; 1 = in-process)")
     args = ap.parse_args(argv)
 
-    pol, search = load_policy(), load_search_config()
-    graph, provider = open_people_graph(args.db), SqlitePeopleGraphProvider(args.db)
     con = sqlite3.connect(f"file:{args.db.as_posix()}?mode=ro", uri=True)
     people = [f"Q{q}" for (q,) in con.execute(
         "SELECT qid FROM entity WHERE is_human AND label_en IS NOT NULL AND out_degree + in_degree BETWEEN ? AND ?",
         (args.min_degree, args.max_degree))]
+    con.close()
     rng = random.Random(args.seed)
+    candidates = [tuple(rng.sample(people, 2)) for _ in range(args.max_tries)]  # same draws as before
     rows, tries = [], 0
     print("source      target      full_hops  found_hops  stop                   expansions  exact_s  inv_s")
-    while len(rows) < args.pairs and tries < args.max_tries:
+    results = map_pairs(args.db, benchmark_pair, candidates, args.workers)
+    for r in results:  # input order: same rows whatever the worker count
         tries += 1
-        s, t = rng.sample(people, 2)
-        t0 = time.time()
-        exact = compute_shortest_path(graph, s, t, pol)
-        exact_s = time.time() - t0
-        if exact.result is None:
+        if r is None:
             continue
-        state = InvestigationState(s, t, pol.default_groups, search.budgets, snapshot=provider.snapshot)
-        t0 = time.time()
-        run_deterministic(state, provider, pol, search)
-        inv_s = time.time() - t0
-        found = state.comparison.shortest.result if state.comparison else None
-        rows.append((exact.result.hop_count, found.hop_count if found else None, inv_s))
-        print(f"{s:<11} {t:<11} {exact.result.hop_count:>9}  {found.hop_count if found else '-':>10}  "
-              f"{state.stop_reason:<22} {len(state.expansions):>10}  {exact_s:>7.2f}  {inv_s:>5.2f}", flush=True)
+        rows.append((r["full_hops"], r["found_hops"], r["inv_s"]))
+        print(f"{r['source']:<11} {r['target']:<11} {r['full_hops']:>9}  "
+              f"{r['found_hops'] if r['found_hops'] is not None else '-':>10}  "
+              f"{r['stop']:<22} {r['expansions']:>10}  {r['exact_s']:>7.2f}  {r['inv_s']:>5.2f}", flush=True)
+        if len(rows) >= args.pairs:
+            results.close()  # cancels the pairs not started yet
+            break
     if not rows:
         print("no connected pairs found")
         return 1

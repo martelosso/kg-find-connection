@@ -77,6 +77,7 @@ def begin(state: InvestigationState, provider: KnowledgeProvider, policy: Relati
         "search_config_version": search.version, "budgets": state.budgets.model_dump(),
         "max_hops": policy.pathfinding.max_hops,
         "max_intermediate_degree": policy.pathfinding.max_intermediate_degree,
+        "max_intermediate_degree_by_kind": dict(policy.pathfinding.max_intermediate_degree_by_kind),
         **(extra or {}),
     })
     if s == t:

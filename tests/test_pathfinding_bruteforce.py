@@ -16,12 +16,14 @@ PIDS = ["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066", "P108", "
 def brute_force(g, p, source, target, pids):
     """All simple eligible paths source->target with <= max_hops edges -> list of (hops, cost)."""
     H, cap = p.pathfinding.max_hops, p.pathfinding.max_intermediate_degree
+    by_kind = p.pathfinding.max_intermediate_degree_by_kind
 
     def blocked(q):
         if q in (source, target):
             return False
         n = g.node(q)
-        return cap is not None and n.kind != "person" and n.degree > cap
+        c = by_kind.get(n.kind, cap)  # per-kind override, else the global cap
+        return c is not None and n.kind != "person" and n.degree > c
 
     def step(edge, into):
         c = -math.log(max(p.ranking.minimum_strength, p.properties[edge.pid].strength)) + p.ranking.hop_penalty
@@ -63,7 +65,8 @@ def random_case(rng: random.Random):
         if s != o:
             triples.add((s, pid, o))
     g = graph([person(q) for q in people] + [org(q) for q in orgs], sorted(triples), complete=True)
-    p = policy(max_hops=rng.randint(1, 5), max_intermediate_degree=rng.choice([None, 2, 3, 5]))
+    p = policy(max_hops=rng.randint(1, 5), max_intermediate_degree=rng.choice([None, 2, 3, 5]),
+               max_intermediate_degree_by_kind=rng.choice([{}, {"organization": 2}, {"organization": None}]))
     groups = set(p.default_groups) | ({"position"} if rng.random() < 0.3 else set())
     source, target = rng.sample(people, 2)
     return g, p, groups, source, target

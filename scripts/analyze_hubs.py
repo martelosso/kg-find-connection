@@ -35,19 +35,13 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from src.config import RelationshipPolicy, load_policy  # noqa: E402
-from src.graph.paths import compare_paths  # noqa: E402
 from src.graph.store import IndexedPeopleGraph  # noqa: E402
 from src.investigations.service import DEFAULT_GRAPH_PATH  # noqa: E402
+from src.pairwork import Context, default_workers, hub_sweep_pair, map_pairs, with_cap  # noqa: E402,F401
 
 THRESHOLDS = (100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000)
 PERCENTILES = (50, 90, 99, 99.9, 99.99)
-INTERPERSONAL = {"family", "mentorship"}
 NON_PERSON = ("organization", "work", "position", "place", "other")
-
-
-def with_cap(policy: RelationshipPolicy, cap: int | None) -> RelationshipPolicy:
-    return policy.model_copy(update={"pathfinding": policy.pathfinding.model_copy(
-        update={"max_intermediate_degree": cap})})
 
 
 def parse_cap(text: str) -> int | None:
@@ -140,45 +134,32 @@ def seed_pairs(db: Path, seeds: Path, cross: list[str] | None, n: int, seed: int
 
 
 def sweep(graph: IndexedPeopleGraph, policy: RelationshipPolicy, caps: list[int | None],
-          pairs: list[tuple[str, str]], groups: frozenset[str] | None, hub_floor: int) -> list[dict]:
+          pairs: list[tuple[str, str]], groups: frozenset[str] | None, hub_floor: int,
+          *, workers: int = 1) -> list[dict]:
+    """Per-pair exact searches (in parallel when workers > 1), aggregated per cap in pair order."""
+    ctx = Context(graph._path, graph=graph)  # noqa: SLF001 - in-process path reuses the open graph
+    ctx.policy = policy
+    per_pair = list(map_pairs(graph._path, hub_sweep_pair, pairs, workers, context=ctx,  # noqa: SLF001
+                              caps=caps, groups=groups, hub_floor=hub_floor))
     rows = []
-    for cap in caps:
-        pol = with_cap(policy, cap)
-        stats = Counter()
-        short_hops, strong_hops, times, max_org_deg = [], [], [], []
+    for i, cap in enumerate(caps):
+        recs = [p[i] for p in per_pair]
+        ok = [r for r in recs if r["connected"]]
+        strong = [r for r in ok if "strong_hops" in r]
+        org_degs = [r["max_org_degree"] for r in ok if r["max_org_degree"] is not None]
+        times = [r["seconds"] for r in recs]
         hub_use: Counter = Counter()
-        for s, t in pairs:
-            t0 = time.perf_counter()
-            cmp = compare_paths(graph, s, t, pol, groups)
-            times.append(time.perf_counter() - t0)
-            short, strong = cmp.shortest.result, cmp.strongest.result
-            if cmp.shortest.status == "budget_exhausted" or cmp.strongest.status == "budget_exhausted":
-                stats["truncated"] += 1
-            if short is None:
-                continue
-            stats["connected"] += 1
-            short_hops.append(short.hop_count)
-            orgs = [n.qid for n in short.nodes[1:-1] if n.kind != "person"]
-            if orgs:
-                stats["short_via_org"] += 1
-                degs = [graph.node_profile(q)[1] for q in orgs]
-                max_org_deg.append(max(degs))
-                hub_use.update(q for q, d in zip(orgs, degs) if d >= hub_floor)
-            if strong is not None:
-                strong_hops.append(strong.hop_count)
-                stats["divergent"] += not cmp.same_path
-                stats["strong_interpersonal_only"] += all(h.relation_group in INTERPERSONAL for h in strong.hops)
-                stats["strong_has_interpersonal"] += any(h.relation_group in INTERPERSONAL for h in strong.hops)
-        n = len(pairs)
+        for r in ok:
+            hub_use.update(r["hubs"])
         rows.append({
-            "cap": cap, "pairs": n, "connected": stats["connected"], "truncated": stats["truncated"],
-            "median_short_hops": statistics.median(short_hops) if short_hops else None,
-            "median_strong_hops": statistics.median(strong_hops) if strong_hops else None,
-            "short_via_org": stats["short_via_org"],
-            "median_max_org_degree": statistics.median(max_org_deg) if max_org_deg else None,
-            "divergent": stats["divergent"],
-            "strong_has_interpersonal": stats["strong_has_interpersonal"],
-            "strong_interpersonal_only": stats["strong_interpersonal_only"],
+            "cap": cap, "pairs": len(pairs), "connected": len(ok), "truncated": sum(r["truncated"] for r in recs),
+            "median_short_hops": statistics.median(r["short_hops"] for r in ok) if ok else None,
+            "median_strong_hops": statistics.median(r["strong_hops"] for r in strong) if strong else None,
+            "short_via_org": sum(r["short_via_org"] for r in ok),
+            "median_max_org_degree": statistics.median(org_degs) if org_degs else None,
+            "divergent": sum(r["divergent"] for r in strong),
+            "strong_has_interpersonal": sum(r["strong_has_interpersonal"] for r in strong),
+            "strong_interpersonal_only": sum(r["strong_interpersonal_only"] for r in strong),
             "median_s": round(statistics.median(times), 4) if times else None,
             "max_s": round(max(times), 3) if times else None,
             "busiest_hubs": [{"qid": q, "label": (graph.node(q).label() if graph.node(q) else q), "paths": c,
@@ -231,6 +212,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--hub-floor", type=int, default=1000, help="degree from which a hub is listed as 'busiest'")
     ap.add_argument("--seed", type=int, default=5)
     ap.add_argument("--no-sweep", action="store_true")
+    ap.add_argument("--workers", type=int, default=default_workers(),
+                    help="parallel processes for the sweep (default: half the cores, at most 8; 1 = in-process)")
     ap.add_argument("--out", type=Path, help="write all numbers as JSON")
     args = ap.parse_args(argv)
 
@@ -250,8 +233,9 @@ def main(argv: list[str] | None = None) -> int:
             pairs = sample_pairs(graph, args.pairs, args.min_degree, args.seed)
         caps = [parse_cap(c) for c in args.caps]
         groups = frozenset(args.groups.split(",")) if args.groups else None
-        print(f"\nsweeping {len(caps)} caps over {len(pairs)} pairs ...", flush=True)
-        report["sweep"] = sweep(graph, policy, caps, pairs, groups, args.hub_floor)
+        print(f"\nsweeping {len(caps)} caps over {len(pairs)} pairs ({args.workers} worker(s)) ...", flush=True)
+        report["sweep"] = sweep(graph, policy, caps, pairs, groups, args.hub_floor, workers=args.workers)
+        report["workers"] = args.workers
         report["pairs"] = pairs
         print_sweep(report["sweep"], args.hub_floor)
     if args.out:

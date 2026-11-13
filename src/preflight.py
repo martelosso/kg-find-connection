@@ -42,8 +42,10 @@ class Check:
 def _checks_config(out: list[Check]) -> None:
     try:
         policy, search = load_policy(), load_search_config()
+        by_kind = "".join(f", {kind}s {cap}" for kind, cap in
+                          sorted(policy.pathfinding.max_intermediate_degree_by_kind.items()))
         out.append(Check("ok", "config", f"policy v{policy.version}, search v{search.version}, "
-                                         f"hub cap {policy.pathfinding.max_intermediate_degree}"))
+                                         f"hub cap {policy.pathfinding.max_intermediate_degree}{by_kind}"))
     except Exception as exc:  # noqa: BLE001 - report anything
         out.append(Check("fail", "config", f"{type(exc).__name__}: {exc}"))
 

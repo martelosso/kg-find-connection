@@ -104,7 +104,7 @@ def test_indexed_graph_cache_is_reused_and_invalidated(people_db, tmp_path):
     assert second.cache_path.stat().st_mtime_ns == stamp
     assert second.incident(A, ALL_PIDS) == people_db.incident(A, ALL_PIDS)
     second.close()
-    second.cache_path.write_bytes(b"not an npz")  # corrupt cache: rebuilt, never trusted
+    second.cache_path.write_bytes(b"not a manifest")  # corrupt cache: rebuilt, never trusted
     third = IndexedPeopleGraph(path)
     assert third.incident(A, ALL_PIDS) == people_db.incident(A, ALL_PIDS)
     third.close()

@@ -10,11 +10,14 @@
 # Every allowlisted property is traversable in both directions for connectivity; the original
 # Wikidata direction is preserved and shown (reverse hops use `inverse_label`).
 
-version: 3
+version: 4
 # v2 (2026-11-13): + P40 child, P451 unmarried partner, P1038 relative, P54 sports team.
 # v3 (2026-11-13): + works group (film/music credits, stored on the WORK and pointing at the
 #   person), doctoral advisor/student and "student" in mentorship, "founded by" in institutional,
 #   and four weak groups that are off by default (birthplace, awards, party, influence).
+# v4 (2026-11-13): birthplace ON by default (connects ~half of all people; strength 0.10 keeps it
+#   out of strongest paths when anything better exists), with a lower hub cap for places
+#   (max_intermediate_degree_by_kind.place) so only small towns can act as connectors.
 
 groups:
   family:
@@ -55,8 +58,8 @@ groups:
     label_es: Lugar de nacimiento (débil)
     description: >-
       Person -> place of birth. Being born in the same city says nothing about knowing each other;
-      a fun but weak link. Big cities are hubs and fall under the hub cap. Off by default.
-    enabled_by_default: false
+      a fun but weak link. Places have their own, lower hub cap, so only small towns connect.
+    enabled_by_default: true
   awards:
     label: Awards (weak)
     label_es: Premios (débil)
@@ -285,6 +288,10 @@ pathfinding:
   # Non-person nodes with degree above this cannot be intermediate path nodes (null = no cap).
   # PROVISIONAL: set from the measured degree distribution of the full people graph.
   max_intermediate_degree: 5000
+  # Per-kind overrides (kinds: organization, work, position, place, other). Places get a lower cap:
+  # a shared birth town is a weak link, and only small ones say anything about the two people.
+  max_intermediate_degree_by_kind:
+    place: 1000
   # Work caps for a single path computation; hitting one yields a partial ("explored_graph") result.
   max_visited_nodes: 250000
   max_expanded_states: 250000

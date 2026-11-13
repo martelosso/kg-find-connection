@@ -8,9 +8,9 @@ from src.config import RelationshipPolicy, load_policy
 
 def test_policy_loads_with_expected_groups():
     p = load_policy()
-    assert p.default_groups == {"family", "mentorship", "institutional", "works"}
-    for weak, pid in (("position", "P39"), ("birthplace", "P19"), ("awards", "P166"), ("party", "P102"),
-                      ("influence", "P737")):
+    assert p.default_groups == {"family", "mentorship", "institutional", "works", "birthplace"}
+    assert "P19" in p.active_pids()  # birthplace is on by default since policy v4
+    for weak, pid in (("position", "P39"), ("awards", "P166"), ("party", "P102"), ("influence", "P737")):
         assert weak in p.groups and not p.groups[weak].enabled_by_default
         assert pid not in p.active_pids()
         assert pid in p.active_pids(p.default_groups | {weak})
@@ -75,5 +75,31 @@ def _raw():
 def test_invalid_policies_rejected(mutate):
     data = _raw()
     mutate(data)
+    with pytest.raises(ValidationError):
+        RelationshipPolicy.model_validate(data)
+
+
+def test_places_have_a_lower_hub_cap_than_other_kinds():
+    pf = load_policy().pathfinding
+    assert pf.hub_cap("place") is not None and pf.hub_cap("place") < pf.max_intermediate_degree
+    assert pf.hub_cap("organization") == pf.max_intermediate_degree  # not overridden
+    place_cap = pf.hub_cap("place")
+    assert pf.is_hub("place", place_cap + 1) and not pf.is_hub("place", place_cap)
+    assert not pf.is_hub("organization", place_cap + 1)
+    assert not pf.is_hub("person", 10**9)  # people are never hubs
+
+
+def test_per_kind_cap_override_and_none():
+    pf = load_policy().pathfinding.model_copy(
+        update={"max_intermediate_degree": 10, "max_intermediate_degree_by_kind": {"place": 3, "work": None}})
+    assert pf.is_hub("place", 4) and not pf.is_hub("place", 3)
+    assert not pf.is_hub("work", 10**6)  # explicit None: no cap for works
+    assert pf.is_hub("position", 11)     # falls back to the global cap
+
+
+@pytest.mark.parametrize("bad", [{"person": 5}, {"planet": 5}, {"place": 0}])
+def test_per_kind_cap_validation(bad):
+    data = load_policy().model_dump()
+    data["pathfinding"]["max_intermediate_degree_by_kind"] = bad
     with pytest.raises(ValidationError):
         RelationshipPolicy.model_validate(data)

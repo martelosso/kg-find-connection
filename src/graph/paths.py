@@ -96,9 +96,8 @@ class _Search:
         """True if ``qid`` may not be an intermediate node under the hub policy."""
         if self.is_endpoint(qid):
             return False
-        cap = self.policy.pathfinding.max_intermediate_degree
         prof = self.profile(qid)
-        return cap is not None and prof is not None and prof[0] != "person" and prof[1] > cap
+        return prof is not None and self.policy.pathfinding.is_hub(prof[0], prof[1])
 
     def incident(self, qid: str) -> list[Edge]:
         cached = self._incident.get(qid)

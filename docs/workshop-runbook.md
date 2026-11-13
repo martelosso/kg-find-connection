@@ -24,7 +24,7 @@ Say these out loud, because the UI says them too:
 2. Build the offline people graph (see `docs/wikidata-ingestion-decision.md`):
    ```bash
    bash scripts/download_wikidata_dump.sh          # ~72 GB, resumable, MD5-verified
-   bash scripts/extract_people_slice.sh data/wikidata/raw/wikidata-<date>-truthy-BETA.nt.gz
+   bash scripts/extract_people_slice.sh data/wikidata/raw/wikidata-<date>-truthy-BETA.nt.gz   # ~13 min, JOBS=nproc
    uv run python scripts/build_people_graph.py data/wikidata/slice/slice.nt \
        --out data/wikidata/people_graph.sqlite \
        --dump-meta data/wikidata/raw/wikidata-<date>-truthy-BETA.nt.gz.meta.json
@@ -39,6 +39,7 @@ Say these out loud, because the UI says them too:
    uv run python scripts/analyze_hubs.py --seeds config/demo_seeds.txt --cross recent historical
    ```
    Pick the cap that keeps most pairs connected while fewer shortest paths lean on giant hubs. Set `pathfinding.max_intermediate_degree` in `config/relationships.yaml` and bump its `version`. Do this **before** recording cases: preflight fails replays recorded under another policy.
+   - Node kinds can have their own cap in `pathfinding.max_intermediate_degree_by_kind`. Places use 1,000 (policy v4): birthplace is on by default, and only small towns should connect people. `analyze_hubs.py --caps` sweeps the global cap only; the per-kind caps stay as configured.
 5. Choose and record the demo pairs:
    ```bash
    uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --resolve-only    # check names → QIDs
