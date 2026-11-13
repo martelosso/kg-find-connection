@@ -2,7 +2,8 @@
 # Stream a Wikidata truthy N-Triples dump and keep only the lines the people graph needs:
 #   * wdt:P31 (instance of) — to identify humans (Q5) and classify intermediate nodes
 #   * the relationship allowlist (interpersonal + institutional, incl. P39 for the weak group)
-#   * rdfs:label in English and Spanish
+#   * rdfs:label in English, Spanish and "mul" (Wikidata's language-independent default label;
+#     since 2024 many items, e.g. Marie Curie, carry their name ONLY as mul, with no en/es label)
 #
 # Usage: scripts/extract_people_slice.sh <dump.nt.gz|filtered.nt> [OUT_DIR]
 # Output: OUT_DIR/slice.nt   (default OUT_DIR: data/wikidata/slice)
@@ -26,11 +27,11 @@ echo '<http://www.w3.org/2000/01/rdf-schema#label> ' >> "$PATTERNS"
 
 # The per-line filter. Every line is judged on its own, so filtering byte ranges of the stream
 # in parallel and concatenating the results in order gives exactly the sequential output.
-# Stage 2 keeps non-label lines and en/es labels. It was gawk; perl gives identical output at
+# Stage 2 keeps non-label lines and en/es/mul labels. It was gawk; perl gives identical output at
 # ~2.7x the speed (it sees every grep match, mostly labels in all languages).
 filter() {
   LC_ALL=C grep -F -f "$PATTERNS" \
-    | LC_ALL=C perl -ne 'print if index($_, "rdf-schema#label> ") < 0 || /"\@e[ns] \.$/'
+    | LC_ALL=C perl -ne 'print if index($_, "rdf-schema#label> ") < 0 || /"\@(?:e[ns]|mul) \.$/'
 }
 
 # Parallelism: the Wikidata .gz is ~1,200 concatenated gzip members, and one gzip|grep|awk

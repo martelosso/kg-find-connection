@@ -88,7 +88,7 @@ Alexander the Great
 # Politics and royalty
 Abraham Lincoln
 Winston Churchill
-Queen Victoria
+Q9439      # Queen Victoria (label is just "Victoria")
 Elizabeth II
 Napoleon
 
@@ -107,7 +107,7 @@ Alisson Becker
 # Brazil: other sport
 Rayssa Leal
 Rebeca Andrade
-João Fonseca
+Q116855500 # João Fonseca, tennis (the name resolves to a Portuguese footballer)
 Gabriel Medina
 Bruno Senna             # Ayrton Senna's nephew
 
@@ -172,7 +172,7 @@ Kim Kardashian
 Kylie Jenner
 Kanye West
 Beyoncé
-Jay-Z
+Q62766     # Jay-Z (label is stylised "JAŸ‐Z")
 Rihanna
 Selena Gomez
 Zendaya
@@ -185,7 +185,7 @@ Mark Zuckerberg
 Barack Obama
 Michelle Obama
 Donald Trump
-Pope Leo XIV
+Q6109517   # Pope Leo XIV (label "Leo XIV")
 
 # International creators and streamers
 PewDiePie
@@ -217,7 +217,7 @@ Sabrina Carpenter
 Ariana Grande
 Harry Styles
 Ed Sheeran
-Jungkook
+Q22338877  # Jungkook of BTS (label "Jung Kook")
 Timothée Chalamet
 Margot Robbie
 Ryan Gosling
@@ -228,7 +228,7 @@ Erling Haaland
 Jude Bellingham
 Lamine Yamal
 Simone Biles
-Carlos Alcaraz
+Q85518537  # Carlos Alcaraz, tennis (the name resolves to an Argentine footballer)
 Jannik Sinner
 Max Verstappen
 Jos Verstappen          # Max Verstappen's father
@@ -307,7 +307,7 @@ Steven Spielberg
 J. K. Rowling
 Oprah Winfrey
 Bill Gates
-Melinda French Gates
+Q463877    # Melinda French Gates (label "Melinda Gates")
 Jeff Bezos
 Madonna                 # likely ambiguous: pin the singer's QID if needed
 Michael Jackson

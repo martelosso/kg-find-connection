@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import sqlite3
 
 import pytest
 
@@ -268,6 +269,43 @@ def test_first_label_wins_within_and_across_chunks(root, tmp_path):
     w.labels([(1, "en", "chunk two"), (1, "es", "uno")])
     assert w.db.execute("SELECT label_en, label_es FROM entity WHERE qid = 1").fetchone() == ("chunk one", "uno")
     w.finish([])
+
+
+def test_mul_label_fills_missing_en_and_es_only(root, tmp_path):
+    """Wikidata's language-independent "mul" label backs up en/es (many famous items have no en)."""
+    build = _load_build_module(root)
+    L = '<http://www.wikidata.org/entity/Q{}> <http://www.w3.org/2000/01/rdf-schema#label> "{}"@{} .'
+    lines = [
+        '<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q5> .',
+        '<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P26> <http://www.wikidata.org/entity/Q900002> .',
+        '<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P26> <http://www.wikidata.org/entity/Q900003> .',
+        L.format(900001, "Marie Curie", "mul"),              # only mul: both languages fall back
+        L.format(900002, "Pierre", "en"),
+        L.format(900002, "Pierre mul", "mul"),               # en kept; es falls back
+        L.format(900003, "Mul first", "mul"),
+        L.format(900003, "English later", "en"),             # a later en label still wins
+        L.format(900003, "Inglés", "en-gb"),                 # other variants are ignored
+    ]
+    path = tmp_path / "slice.nt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    out = tmp_path / "g.sqlite"
+    assert build.main([str(path), "--out", str(out), "--workers", "1"]) == 0
+    g = SqliteGraph(out)
+    try:
+        assert (g.node("Q900001").label_en, g.node("Q900001").label_es) == ("Marie Curie", "Marie Curie")
+        assert (g.node("Q900002").label_en, g.node("Q900002").label_es) == ("Pierre", "Pierre mul")
+        assert (g.node("Q900003").label_en, g.node("Q900003").label_es) == ("English later", "Mul first")
+    finally:
+        g.close()
+    # Across chunks: mul in an earlier chunk must not beat an en label in a later one.
+    w = build.Writer(tmp_path / "w.sqlite")
+    w.db.execute("INSERT INTO entity (qid, is_human, kind) VALUES (1, 1, 'person')")
+    w.labels([(1, "mul", "from mul")])
+    w.labels([(1, "en", "from en"), (1, "mul", "second mul")])
+    w.finish([])
+    db = sqlite3.connect(tmp_path / "w.sqlite")
+    assert db.execute("SELECT label_en, label_es FROM entity WHERE qid = 1").fetchone() == ("from en", "from mul")
+    db.close()
 
 
 def test_extraction_script_and_builder_cover_every_policy_property(root):

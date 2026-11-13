@@ -6,7 +6,7 @@ Usage:
         [--workers N]
 
 Input: N-Triples lines produced by scripts/extract_people_slice.sh (P31, allowlisted
-relationships, en/es rdfs:label). Output tables:
+relationships, en/es/mul rdfs:label). Output tables:
 
     entity(qid INTEGER PK, label_en, label_es, is_human, kind, out_degree, in_degree)
     edge(subject INTEGER, pid TEXT, object INTEGER)        -- original Wikidata direction
@@ -19,6 +19,11 @@ Those properties are recorded on the work or organization and point at the perso
 cast member, a song's performer, a company's founder). P50 "author" is deliberately not among
 them: it is dominated by scholarly-article co-authorship and would swamp the graph.
 QIDs are stored as integers (Q42 -> 42). Edges are deduplicated on (subject, pid, object).
+
+Labels: label_en / label_es hold the first en / es label; where an entity has none, its "mul"
+label fills in. mul is Wikidata's language-independent default label, and since 2024 many items
+carry their name only there (Marie Curie, Donald Trump and Shakira have no en label in the
+2026-11 dump), so without the fallback ~1.1M graph nodes, many famous people, had no label.
 
 How (two passes; ~95% of the slice is P31 and labels of entities that never enter the graph):
   1. scan every line for relationship edges and the set of humans (P31 Q5);
@@ -44,6 +49,7 @@ from pathlib import Path
 WD = "http://www.wikidata.org/entity/Q"
 WDT = "http://www.wikidata.org/prop/direct/"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
+LABEL_LANGS = (b'"@en', b'"@es', b'"@mul')  # mul fills in en and es where those are missing
 
 RELATION_PIDS = (
     "P26", "P22", "P25", "P3373", "P40", "P451", "P1038",      # family
@@ -143,7 +149,7 @@ def scan_edges(path: str, start: int, end: int) -> dict:
             continue
         s, p, o_term = t
         if p == _LABEL:
-            if o_term.startswith(b'"') and (o_term.endswith(b'"@en') or o_term.endswith(b'"@es')):
+            if o_term.startswith(b'"') and o_term.endswith(LABEL_LANGS):
                 stats["labels"] += 1
             else:
                 stats["skipped"] += 1
@@ -184,7 +190,7 @@ def _init_labels(shm_name: str | None, mask: bytes | None) -> None:
 
 
 def scan_labels(path: str, start: int, end: int) -> dict:
-    """Pass 2 over one byte range: en/es labels and P31 classes of graph nodes only."""
+    """Pass 2 over one byte range: en/es/mul labels and P31 classes of graph nodes only."""
     mask = _NODE_MASK[1]
     size = len(mask)
     labels: dict[tuple[int, str], str] = {}
@@ -197,10 +203,11 @@ def scan_labels(path: str, start: int, end: int) -> dict:
         if s >= size or not mask[s]:
             continue
         if p == _LABEL:
-            if o_term.startswith(b'"') and len(o_term) >= 5 and o_term[-4:] in (b'"@en', b'"@es'):
-                key = (s, o_term[-2:].decode())
+            if o_term.startswith(b'"') and o_term.endswith(LABEL_LANGS):
+                at = o_term.rindex(b'"@')
+                key = (s, o_term[at + 2:].decode())
                 if key not in labels:  # first occurrence wins (as the SQL LIMIT 1 did)
-                    labels[key] = unescape(o_term[1:-4].decode("utf-8", errors="replace"))
+                    labels[key] = unescape(o_term[1:at].decode("utf-8", errors="replace"))
         elif p == _P31:
             o = _object_qid(o_term)
             if o is not None:
@@ -325,6 +332,7 @@ class Writer:
               is_human INTEGER NOT NULL, kind TEXT NOT NULL,
               out_degree INTEGER NOT NULL DEFAULT 0, in_degree INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE entity_type(qid INT,class_qid INT);
+            CREATE TEMP TABLE label_mul(qid INTEGER PRIMARY KEY, label TEXT NOT NULL);
         """)
 
     def step(self, name: str, fn) -> None:
@@ -343,15 +351,27 @@ class Writer:
             zip(nodes.tolist(), human.astype(int).tolist(), kind.tolist(), out_deg.tolist(), in_deg.tolist())))
 
     def labels(self, rows) -> int:
-        """Rows in FILE order; the first label per (qid, language) wins."""
+        """Rows in FILE order; the first label per (qid, language) wins.
+
+        mul labels are staged and applied only in finish(): an entity's lines can be split across
+        chunks, so filling in from mul now could beat an en/es label that arrives later."""
         en = [(t, q) for q, lang, t in rows if lang == "en"]
         es = [(t, q) for q, lang, t in rows if lang == "es"]
+        mul = [(q, t) for q, lang, t in rows if lang == "mul"]
         self.db.executemany("UPDATE entity SET label_en = ? WHERE qid = ? AND label_en IS NULL", en)
         self.db.executemany("UPDATE entity SET label_es = ? WHERE qid = ? AND label_es IS NULL", es)
-        return len(en) + len(es)
+        self.db.executemany("INSERT OR IGNORE INTO label_mul VALUES (?, ?)", mul)
+        return len(en) + len(es) + len(mul)
+
+    def apply_mul_fallback(self) -> None:
+        """Fill missing en / es labels from the entity's mul label."""
+        for col in ("label_en", "label_es"):
+            self.db.execute(
+                f"UPDATE entity SET {col} = (SELECT label FROM label_mul m WHERE m.qid = entity.qid) "
+                f"WHERE {col} IS NULL AND qid IN (SELECT qid FROM label_mul)")
 
     def finish(self, types) -> None:
-        self.db.commit()
+        self.step("mul label fallback", self.apply_mul_fallback)
         self.step("entity types", lambda: self.db.executemany("INSERT INTO entity_type VALUES (?, ?)", types))
         self.step("indexes", lambda: self.db.executescript(
             "CREATE INDEX edge_subject ON edge(subject); CREATE INDEX edge_object ON edge(object);"
@@ -382,6 +402,7 @@ def write_meta(db_path: Path, args: argparse.Namespace, stats: dict[str, int]) -
         "kind_rule": "person > place if P19 links >= half of all links > organization > work "
                      "> position > place > other",
         "label_languages": ["en", "es"],
+        "label_fallback": "mul (Wikidata's language-independent label) fills missing en / es",
         "load_stats": stats,
         "counts": counts,
     }

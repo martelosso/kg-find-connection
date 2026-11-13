@@ -29,7 +29,7 @@ D2 also settles open decisions 1 and 2 in plan §13 (how to get RDF, and how to 
 bash scripts/download_wikidata_dump.sh 20261104
 #   -> data/wikidata/raw/wikidata-20261104-truthy-BETA.nt.gz (+ .meta.json); resumable, MD5-verified
 bash scripts/extract_people_slice.sh data/wikidata/raw/wikidata-20261104-truthy-BETA.nt.gz
-#   -> data/wikidata/slice/slice.nt: P31 + allowlisted wdt: properties + en/es rdfs:label
+#   -> data/wikidata/slice/slice.nt: P31 + allowlisted wdt: properties + en/es/mul rdfs:label
 uv run python scripts/build_people_graph.py data/wikidata/slice/slice.nt \
     --out data/wikidata/people_graph.sqlite \
     --dump-meta data/wikidata/raw/wikidata-20261104-truthy-BETA.nt.gz.meta.json
@@ -37,7 +37,7 @@ uv run python scripts/build_people_graph.py data/wikidata/slice/slice.nt \
 
 Everything under `data/wikidata/` is gitignored. Commit curated fixtures in `data/fixtures/`.
 
-**Extraction scope (v3):** `P31`; family `P26 P22 P25 P3373 P40 P451 P1038`; mentorship `P1066 P802 P184 P185`; institutional `P108 P69 P463 P54 P112`; works `P161 P57 P58 P86 P175`; weak `P39 P19 P166 P102 P737`; with `rdfs:label` in `en` and `es`. Statements are kept when the subject is a human, or, for the works properties and P112, when the object is a human.
+**Extraction scope (v3):** `P31`; family `P26 P22 P25 P3373 P40 P451 P1038`; mentorship `P1066 P802 P184 P185`; institutional `P108 P69 P463 P54 P112`; works `P161 P57 P58 P86 P175`; weak `P39 P19 P166 P102 P737`; with `rdfs:label` in `en`, `es` and `mul` (see "Labels: the mul fallback"). Statements are kept when the subject is a human, or, for the works properties and P112, when the object is a human.
 
 *Scope v2 (2026-11-13, policy version 2):* added **P40 child**, **P451 unmarried partner**, **P1038 relative** (family group; relative is weaker because its kinship type is a qualifier the truthy dump omits) and **P54 member of sports team** (institutional, so its teams are organisations under the hub cap). Reason: the demo seeds now include people everyone knows today (footballers, musicians, influencers), who connect mostly through teams, partners and children; without these they have almost no edges. P40 also catches children recorded only on the parent's page. The first full extraction (v1 scope: 248,380,336 lines, 33.8 GB, 29 min, reproduced byte-for-byte by a second run) was therefore redone with the v2 scope. A test keeps `extract_people_slice.sh`, `build_people_graph.py` and the policy on the same property list.
 
@@ -87,7 +87,7 @@ The full people graph exists at `data/wikidata/people_graph.sqlite`. From the 72
 
 Load stats: 125.5M P31 lines, 28.3M relationship statements, 109.9M en/es labels, 27 unparsable lines (blank-node restrictions, as in the sample) and 75k skipped lines.
 
-**Graph:** 10,470,079 entities, 26,649,326 edges. 1,135,041 entities (11%) have neither an English nor a Spanish label.
+**Graph:** 10,470,079 entities, 26,649,326 edges. 1,135,041 entities (11%) had neither an English nor a Spanish label; with the `mul` fallback (below) 549,690 (5%).
 
 | Kind | Entities |
 |---|---|
@@ -163,6 +163,15 @@ Same 100 seed pairs (recent × historical, seed 5), place cap 1,000, v4 graph:
 - **Fix (policy v5):** a node whose birthplace links are at least half of its links is a `place`, whatever else points at it. Requires a rebuild.
 - **Provisional choice: keep the global cap at 5,000.** 2,000 → 5,000 gains 6 points of connectivity and many more strongest ≠ shortest pairs; 10,000 adds nothing and admits mega-academies. To be confirmed by re-running this sweep on the v5 graph.
 - The work caps cut off ~11% of searches at every cap except 1,000; decide on them after the v5 re-run.
+
+### Labels: the mul fallback (2026-11-13)
+
+Seed resolution on the full graph could not find Marie Curie, Shakira, Beyoncé, Federer, Djokovic and 21 other seeds, and resolved Donald Trump and Pierre Curie to low-degree namesakes. The famous items were in the graph with all their edges but **no label**. The dump has no `@en` or `@es` label for them: their name is only in Wikidata's language-independent `mul` label (`"Marie Curie"@mul`), and since 2024 editors and bots remove en labels that duplicate it.
+
+- Extraction now also keeps `@mul` labels (+20.8M slice lines, 35.8 → 38.3 GB; 1,119 s, with the test suite running at the same time).
+- The builder stores `mul` per entity and fills `label_en` / `label_es` only where they are still empty, after the whole scan. An entity's lines can fall into different parallel chunks, so filling earlier could beat a real en label. Tested in `test_mul_label_fills_missing_en_and_es_only`.
+- Wikidata's own language fallback also goes through `mul`, so the result matches what wikidata.org shows. Missing labels: 1,135,041 → 549,690. Edges and kinds are unchanged by this.
+- After the rebuild, every seed resolves. Seven names still need a pinned QID in `config/demo_seeds.txt`: Jay-Z (label "JAŸ‐Z"), Queen Victoria ("Victoria"), Pope Leo XIV ("Leo XIV"), Jungkook ("Jung Kook"), Melinda French Gates ("Melinda Gates"), and the tennis players João Fonseca and Carlos Alcaraz (the exact names resolve to better-connected footballers).
 
 ## Extraction speed (2026-11-13)
 
