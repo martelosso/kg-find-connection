@@ -240,6 +240,16 @@ def main(argv: list[str] | None = None) -> int:
         args.out.unlink()
     tmp.rename(args.out)
     print(json.dumps(meta["counts"], indent=2))
+    # Precompute the in-memory adjacency index used for exact path searches, so the first
+    # script/server that opens the graph does not pay for it.
+    t1 = time.time()
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from src.graph.store import IndexedPeopleGraph
+
+    indexed = IndexedPeopleGraph(args.out)
+    print(f"adjacency index: {indexed.cache_path.name} "
+          f"({indexed.cache_path.stat().st_size / 2**20:.0f} MiB, {time.time() - t1:.0f}s)")
+    indexed.close()
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
     return 0
 

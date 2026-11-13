@@ -1,7 +1,7 @@
 """Measure how often the bounded deterministic investigation finds what the complete graph has.
 
 Samples random human pairs that ARE connected within the hop limit in the full people graph
-(exact search on SqliteGraph), runs the budgeted investigation for each, and reports recall,
+(exact search on the indexed people graph), runs the budgeted investigation for each, and reports recall,
 hop optimality and timing. Use it to tune config/search.yaml and the hub cap.
 
     uv run python scripts/benchmark_investigations.py --db data/wikidata/people_graph.sqlite --pairs 30
@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.config import load_policy, load_search_config  # noqa: E402
 from src.graph.paths import compute_shortest_path  # noqa: E402
-from src.graph.store import SqliteGraph  # noqa: E402
+from src.graph.store import open_people_graph  # noqa: E402
 from src.investigations.baseline import run_deterministic  # noqa: E402
 from src.investigations.service import DEFAULT_GRAPH_PATH  # noqa: E402
 from src.investigations.state import InvestigationState  # noqa: E402
@@ -30,6 +30,9 @@ from src.wikidata.offline import SqlitePeopleGraphProvider  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # names, arrows: never crash on a cp1252 pipe (Windows)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--db", type=Path, default=DEFAULT_GRAPH_PATH)
     ap.add_argument("--pairs", type=int, default=25)
@@ -40,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     pol, search = load_policy(), load_search_config()
-    graph, provider = SqliteGraph(args.db), SqlitePeopleGraphProvider(args.db)
+    graph, provider = open_people_graph(args.db), SqlitePeopleGraphProvider(args.db)
     con = sqlite3.connect(f"file:{args.db.as_posix()}?mode=ro", uri=True)
     people = [f"Q{q}" for (q,) in con.execute(
         "SELECT qid FROM entity WHERE is_human AND label_en IS NOT NULL AND out_degree + in_degree BETWEEN ? AND ?",

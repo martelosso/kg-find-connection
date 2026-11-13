@@ -183,6 +183,9 @@ def run_checks(root: Path = ROOT, *, online: bool = False, port: bool = True,
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # names, arrows: never crash on a cp1252 pipe (Windows)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--online", action="store_true", help="make one tiny LLM call to verify the key")
     args = ap.parse_args(argv)

@@ -138,3 +138,153 @@ class SqliteGraph:
         ).fetchall()
         edges = [Edge(f"Q{s}", p, f"Q{o}", self._source) for s, p, o in rows]
         return sorted(edges, key=_sort_key)
+
+
+_KINDS: tuple[NodeKind, ...] = ("person", "organization", "position", "other")
+_INDEX_FORMAT = 1
+
+
+class IndexedPeopleGraph(SqliteGraph):
+    """``SqliteGraph`` with the adjacency and per-node (kind, degree) held in compact numpy arrays.
+
+    Path searches over the full people graph touch hundreds of thousands of nodes; one SQL query
+    per node dominated their run time. This view answers ``incident`` and ``node_profile`` from
+    memory (CSR layout, ~10 bytes per edge direction) and reads labels from SQLite only in
+    ``node()``, i.e. for the few nodes that end up on a result. It returns exactly what
+    ``SqliteGraph`` returns (tests check parity).
+
+    The arrays are built from the SQLite file on first use and saved next to it as
+    ``<db>.adjacency.npz`` (rebuilt automatically when the database changes).
+    """
+
+    def __init__(self, path: Path | str, *, cache: bool = True) -> None:
+        super().__init__(path)
+        self._path = Path(path)
+        arrays = self._load_cached() if cache else None
+        if arrays is None:
+            arrays = self._build_arrays()
+            if cache:
+                self._save_cached(arrays)
+        self._qids = arrays["qids"]          # int32, sorted entity QIDs
+        self._kind = arrays["kind"]          # int8 index into _KINDS
+        self._degree = arrays["degree"]      # int32 out+in degree (all extracted PIDs)
+        self._offsets = arrays["offsets"]    # int64, len(qids)+1
+        self._nbr = arrays["nbr"]            # int32 neighbour QID per edge direction
+        self._code = arrays["code"]          # uint8: pid_index*2 + (1 if qid is the object)
+        self._pid_names: list[str] = [str(p) for p in arrays["pids"]]
+        self._pid_masks: dict[frozenset[str], object] = {}
+
+    # ---- build / cache ---------------------------------------------------------------------
+
+    def _fingerprint(self) -> str:
+        st = self._path.stat()
+        return json.dumps({"format": _INDEX_FORMAT, "size": st.st_size, "mtime_ns": st.st_mtime_ns,
+                           "dump": (self.meta.get("dump") or {}).get("dump_date"),
+                           "edges": (self.meta.get("counts") or {}).get("edges")}, sort_keys=True)
+
+    @property
+    def cache_path(self) -> Path:
+        return self._path.with_name(self._path.name + ".adjacency.npz")
+
+    def _load_cached(self) -> dict | None:
+        import numpy as np
+
+        try:
+            with np.load(self.cache_path, allow_pickle=False) as npz:
+                if str(npz["fingerprint"]) != self._fingerprint():
+                    return None
+                return {k: npz[k] for k in npz.files}
+        except (OSError, KeyError, ValueError):
+            return None
+
+    def _save_cached(self, arrays: dict) -> None:
+        import numpy as np
+
+        tmp = self.cache_path.with_name(self.cache_path.name + ".tmp.npz")
+        try:
+            np.savez(tmp, fingerprint=np.array(self._fingerprint()), **arrays)
+            tmp.replace(self.cache_path)
+        except OSError:  # read-only location: keep the in-memory arrays, skip the cache
+            tmp.unlink(missing_ok=True)
+
+    def _build_arrays(self) -> dict:
+        import numpy as np
+
+        db = self._db
+        kind_case = " ".join(f"WHEN '{k}' THEN {i}" for i, k in enumerate(_KINDS))
+        ents = np.array(db.execute(
+            f"SELECT qid, CASE kind {kind_case} ELSE {_KINDS.index('other')} END, out_degree + in_degree "
+            f"FROM entity ORDER BY qid").fetchall(), dtype=np.int64).reshape(-1, 3)
+        qids = ents[:, 0].astype(np.int32)
+        pids = sorted(p for (p,) in db.execute("SELECT DISTINCT pid FROM edge"))
+        pid_case = " ".join(f"WHEN '{p}' THEN {i}" for i, p in enumerate(pids))
+        cur = db.execute(f"SELECT subject, object, CASE pid {pid_case} END FROM edge")
+        chunks = []
+        while rows := cur.fetchmany(1_000_000):
+            chunks.append(np.array(rows, dtype=np.int64).reshape(-1, 3))
+        e = np.concatenate(chunks) if chunks else np.zeros((0, 3), dtype=np.int64)
+        subj, obj, pcode = e[:, 0], e[:, 1], e[:, 2]
+        owner = np.concatenate([subj, obj])
+        nbr = np.concatenate([obj, subj]).astype(np.int32)
+        code = np.concatenate([pcode * 2, pcode * 2 + 1]).astype(np.uint8)
+        order = np.argsort(owner, kind="stable")
+        owner_idx = np.searchsorted(qids, owner[order])
+        if len(owner_idx) and not np.array_equal(qids[owner_idx], owner[order]):
+            raise ValueError("edge endpoint missing from the entity table")
+        offsets = np.zeros(len(qids) + 1, dtype=np.int64)
+        np.cumsum(np.bincount(owner_idx, minlength=len(qids)), out=offsets[1:])
+        return {"qids": qids, "kind": ents[:, 1].astype(np.int8), "degree": ents[:, 2].astype(np.int32),
+                "offsets": offsets, "nbr": nbr[order], "code": code[order], "pids": np.array(pids, dtype=str)}
+
+    # ---- queries -------------------------------------------------------------------------------
+
+    def _index(self, qid: str) -> int | None:
+        import numpy as np
+
+        try:
+            q = int(qid[1:])
+        except ValueError:
+            return None
+        if not 0 <= q <= np.iinfo(np.int32).max:
+            return None
+        # Same-dtype scalar: a Python int would make numpy convert the whole array on every call.
+        i = int(self._qids.searchsorted(np.int32(q)))
+        return i if i < len(self._qids) and int(self._qids[i]) == q else None
+
+    def node_profile(self, qid: str) -> tuple[NodeKind, int] | None:
+        """(kind, degree) without labels, from memory. None if the QID is not in the graph."""
+        i = self._index(qid)
+        return None if i is None else (_KINDS[int(self._kind[i])], int(self._degree[i]))
+
+    def _mask(self, pids: frozenset[str]):
+        import numpy as np
+
+        mask = self._pid_masks.get(pids)
+        if mask is None:
+            mask = np.zeros(2 * max(1, len(self._pid_names)), dtype=bool)
+            for i, p in enumerate(self._pid_names):
+                if p in pids:
+                    mask[2 * i] = mask[2 * i + 1] = True
+            self._pid_masks[pids] = mask
+        return mask
+
+    def incident(self, qid: str, pids: frozenset[str]) -> list[Edge]:
+        if not pids:
+            return []
+        i = self._index(qid)
+        if i is None:
+            return []
+        lo, hi = int(self._offsets[i]), int(self._offsets[i + 1])
+        codes = self._code[lo:hi]
+        keep = self._mask(pids)[codes]
+        names, src = self._pid_names, self._source
+        edges = []
+        for n, c in zip(self._nbr[lo:hi][keep].tolist(), codes[keep].tolist()):
+            pid = names[c >> 1]
+            edges.append(Edge(f"Q{n}", pid, qid, src) if c & 1 else Edge(qid, pid, f"Q{n}", src))
+        return sorted(edges, key=_sort_key)
+
+
+def open_people_graph(path: Path | str, *, in_memory: bool = True) -> SqliteGraph:
+    """The full people graph for exact path searches: indexed in memory by default."""
+    return IndexedPeopleGraph(path) if in_memory else SqliteGraph(path)

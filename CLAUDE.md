@@ -21,16 +21,16 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 1 decision is made** (see `docs/wikidata-ingestion-decision.md`). The data source is an **offline people graph** built from the Wikidata truthy dump of 2026-11-04 and stored in SQLite at `data/wikidata/people_graph.sqlite`, which is gitignored. The pipeline is `scripts/download_wikidata_dump.sh` → `scripts/extract_people_slice.sh` → `scripts/build_people_graph.py`. The full build's measurements are still pending.
 
-**Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold, strengths and runtime speed against the full graph; and `ontology/people_connections.ttl`.
+**Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold and strengths against the full graph (speed: see `IndexedPeopleGraph`); and `ontology/people_connections.ttl`.
 
-**Milestone 6 is in progress** (681 tests passing): preflight, recording and runbook are done; the real demo cases wait for the full graph. **Milestone 5 workbench is done**. **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
+**Milestone 6 is in progress** (687 tests passing): preflight, recording and runbook are done; the real demo cases wait for the full graph. **Milestone 5 workbench is done**. **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
 
 ### Milestone 2 engine (where things live)
 - `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
 - `src/graph/model.py`: `Node` and `Edge` (frozen). Edges keep their original direction. `edge_id = sha1(subject|pid|object|source)`.
 - `src/graph/store.py`: the `GraphView` protocol (`complete`, `snapshot`, `node()`, `incident(qid, pids)`) with two implementations:
   - `InMemoryGraph`: explored subgraphs and tests; `complete=False` by default.
-  - `SqliteGraph`: the full people graph; read-only; `complete=True`.
+  - `SqliteGraph`: the full people graph; read-only; `complete=True`. `IndexedPeopleGraph` (below) is the fast in-memory-adjacency variant for exact searches.
 - `src/graph/paths.py`:
   - `compute_shortest_path`: bidirectional BFS, then the cheapest path among all minimum-hop paths, with ties broken by edge-ID sequence.
   - `compute_strongest_path`: **bidirectional, hop-aware Dijkstra** that keeps Pareto (hops, cost) labels per node and checks for meeting paths when a node is finalized *and* while exploring each edge (both are needed for an exact stop).
@@ -41,7 +41,10 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 - Tests:
   - `tests/test_pathfinding_bruteforce.py` checks both searches against brute-force enumeration of simple paths on 400 random graphs, plus 150 graphs that brute force itself selected because the cheapest path is longer than the shortest. **If you change paths.py, these must still pass.**
   - `tests/test_editor_parser_compat.py` runs the editor's own `parseTurtle` (pulled out of `live-editor.html`) in Node and checks that its spans match the backend's.
-- Speed on the 3% sample (SQLite): median 0.03 s per pair, worst 7.8 s. Most of the time goes to per-node SQL queries and `Edge`/sha1 creation. Before the demo, either measure on the full graph and add an in-memory adjacency (CSR) or caching, or precompute the demo pairs.
+- **Speed: `IndexedPeopleGraph`** (`src/graph/store.py`, a `SqliteGraph` subclass; `open_people_graph(path)`) keeps the adjacency in numpy CSR arrays plus per-node (kind, degree). `node_profile(qid)` answers the hub rule and hub penalty without SQL; labels still come from SQLite in `node()`, only for result nodes. The arrays are cached as `<db>.adjacency.npz` (fingerprint: format, file size/mtime, dump date, edge count; rebuilt automatically on mismatch or corruption). `build_people_graph.py` precomputes it. The path search uses `_Search.profile` and float `step_total` in its loops; `CostBreakdown` is built only for results.
+  - 3% sample, 60 random pairs: median 0.039 s → 0.003 s, worst 5.5 s → 0.8 s, identical results. Before, 4.3 of the worst pair's 6.2 s went to per-node `entity` lookups.
+  - Gotcha: `searchsorted` must get a scalar of the array's own dtype (`np.int32(q)`); a Python int made numpy convert the whole array on every call (8× slower than SQLite).
+  - Parity tests in `tests/test_people_graph_build.py` compare it with `SqliteGraph` (incident order, edge IDs, profiles, and full `compare_paths` on random graphs with a biting hub cap). `find_demo_pairs.py` and `benchmark_investigations.py` use it. Live investigations are unaffected: they search the small explored `InMemoryGraph`.
 
 ### Milestone 3 investigation (where things live)
 - `config/search.yaml` + `SearchBudgets`/`SearchConfig` in `src/config.py`: the §12 budgets and frontier heuristics. A request may only **lower** budgets (`SearchBudgets.lowered`).
@@ -175,7 +178,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 ### Repo decisions (Milestone 0)
 
 - The repo is under git. The first commit is the untouched baseline. Commit only when the user asks.
-- Dependencies: `pydantic`, `httpx`, `pyyaml`, plus dev `pytest`. NetworkX was removed on purpose: the searches are custom and hop-aware, and the full graph is too large for NetworkX objects. pytest is configured in `pyproject.toml` with `testpaths=["tests"]` and `pythonpath=["."]`, so tests import `src.*`.
+- Dependencies: `pydantic`, `httpx`, `pyyaml`, `numpy` (the CSR adjacency index), plus dev `pytest`. NetworkX was removed on purpose: the searches are custom and hop-aware, and the full graph is too large for NetworkX objects. pytest is configured in `pyproject.toml` with `testpaths=["tests"]` and `pythonpath=["."]`, so tests import `src.*`.
 - CodeMirror 5.65.16 and vis-network are vendored in `src/ui/vendor/` (moved there in M5; see `docs/third-party-licenses.md`). Neither the workbench nor `live-editor.html` references a CDN, and tests enforce this.
 - `data/wikidata/` (the raw cache) is **gitignored**. Replay fixtures in `data/fixtures/` **must** be committed.
 - Legacy retail assets stay where they are until the workbench replaces them.

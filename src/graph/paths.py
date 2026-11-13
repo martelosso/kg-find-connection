@@ -57,7 +57,9 @@ class _Search:
     groups: frozenset[str]
     pids: frozenset[str] = field(init=False)
     _nodes: dict[str, Node | None] = field(default_factory=dict, init=False)
+    _profiles: dict[str, tuple[str, int] | None] = field(default_factory=dict, init=False)
     _incident: dict[str, list[Edge]] = field(default_factory=dict, init=False)
+    _entry_costs: dict[tuple[str, str], float] = field(default_factory=dict, init=False)
 
     def __post_init__(self) -> None:
         if not (is_qid(self.source) and is_qid(self.target)):
@@ -65,6 +67,18 @@ class _Search:
         if self.source == self.target:
             raise ValueError("source and target must differ")
         self.pids = self.policy.active_pids(self.groups)
+        self._strength_costs = {pid: self.policy.strength_cost(pid) for pid in self.pids}
+
+    def profile(self, qid: str) -> tuple[str, int] | None:
+        """(kind, degree) of a node; uses the store's label-free fast path when it has one."""
+        if qid not in self._profiles:
+            fast = getattr(self.graph, "node_profile", None)
+            if fast is not None:
+                self._profiles[qid] = fast(qid)
+            else:
+                node = self.node(qid)
+                self._profiles[qid] = None if node is None else (node.kind, node.degree)
+        return self._profiles[qid]
 
     @property
     def max_hops(self) -> int:
@@ -83,8 +97,8 @@ class _Search:
         if self.is_endpoint(qid):
             return False
         cap = self.policy.pathfinding.max_intermediate_degree
-        node = self.node(qid)
-        return cap is not None and node is not None and node.kind != "person" and node.degree > cap
+        prof = self.profile(qid)
+        return cap is not None and prof is not None and prof[0] != "person" and prof[1] > cap
 
     def incident(self, qid: str) -> list[Edge]:
         cached = self._incident.get(qid)
@@ -92,15 +106,26 @@ class _Search:
             cached = self._incident[qid] = self.graph.incident(qid, self.pids)
         return cached
 
+    def _hub(self, into: str) -> float:
+        if self.is_endpoint(into):
+            return 0.0
+        prof = self.profile(into)
+        return self.policy.hub_penalty(prof[1]) if prof is not None and prof[0] != "person" else 0.0
+
+    def step_total(self, edge: Edge, into: str) -> float:
+        """``step_cost(edge, into).total`` without building the breakdown (search inner loop)."""
+        key = (edge.pid, into)
+        total = self._entry_costs.get(key)
+        if total is None:
+            total = self._entry_costs[key] = (
+                self._strength_costs[edge.pid] + self.policy.ranking.hop_penalty + self._hub(into))
+        return total
+
     def step_cost(self, edge: Edge, into: str) -> CostBreakdown:
         prop = self.policy.properties[edge.pid]
         strength_cost = self.policy.strength_cost(edge.pid)
         hop = self.policy.ranking.hop_penalty
-        hub = 0.0
-        if not self.is_endpoint(into):
-            node = self.node(into)
-            if node is not None and node.kind != "person":
-                hub = self.policy.hub_penalty(node.degree)
+        hub = self._hub(into)
         return CostBreakdown(
             strength=prop.strength,
             strength_cost=strength_cost,
@@ -249,10 +274,10 @@ def compute_shortest_path(
         for u, edge in preds[side][v]:
             c_u, seq_u, path_u = best(side, u)
             if side == 0:  # source ... u -> v
-                cost = c_u + s.step_cost(edge, v).total
+                cost = c_u + s.step_total(edge, v)
                 candidates.append((round(cost, _ROUND), seq_u + (edge.edge_id,), cost, path_u + (edge,)))
             else:  # v -> u ... target
-                cost = c_u + s.step_cost(edge, u).total
+                cost = c_u + s.step_total(edge, u)
                 candidates.append((round(cost, _ROUND), (edge.edge_id,) + seq_u, cost, (edge,) + path_u))
         _, seq, cost, path = min(candidates, key=lambda c: (c[0], c[1]))
         memo[key] = (cost, seq, path)
@@ -347,7 +372,7 @@ def compute_strongest_path(
             if w in nodes or s.blocked(w):
                 continue
             # Forward: entering w. Backward (w -> v -> ... target): entering v.
-            step = s.step_cost(edge, w if side == 0 else v).total
+            step = s.step_total(edge, w if side == 0 else v)
             new_cost = cost + step
             # Complete across this edge with settled labels of the other side at w. Needed for
             # the stopping rule to be exact when the two frontiers are adjacent.

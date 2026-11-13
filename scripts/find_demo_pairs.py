@@ -1,7 +1,7 @@
 """Find candidate demo pairs on the people graph. It SUGGESTS; a human picks and records them.
 
 For each candidate pair of well-connected humans (or of the people in --seeds):
-1. exact shortest/strongest on the complete graph (SqliteGraph, complete_configured_scope);
+1. exact shortest/strongest on the complete graph (in-memory indexed people graph, complete_configured_scope);
 2. keep 2-4 hop connections whose path nodes all have English labels;
 3. run the budgeted deterministic investigation and record whether it finds a path live;
 4. rank by demo value: live-findable, strongest != shortest (a longer, stronger route),
@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT))
 from src.config import load_policy, load_search_config  # noqa: E402
 from src.graph.model import is_qid  # noqa: E402
 from src.graph.paths import compare_paths  # noqa: E402
-from src.graph.store import SqliteGraph  # noqa: E402
+from src.graph.store import open_people_graph  # noqa: E402
 from src.investigations.baseline import run_deterministic  # noqa: E402
 from src.investigations.service import DEFAULT_GRAPH_PATH  # noqa: E402
 from src.investigations.state import InvestigationState  # noqa: E402
@@ -78,6 +78,9 @@ def score(row: dict) -> float:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # names, arrows: never crash on a cp1252 pipe (Windows)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--db", type=Path, default=DEFAULT_GRAPH_PATH)
     ap.add_argument("--seeds", type=Path, help="file with QIDs or exact English names")
@@ -90,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     policy, search = load_policy(), load_search_config()
-    graph, provider = SqliteGraph(args.db), SqlitePeopleGraphProvider(args.db)
+    graph, provider = open_people_graph(args.db), SqlitePeopleGraphProvider(args.db)
     if args.seeds:
         people = seeds_from_file(args.seeds, provider)
         pairs = list(itertools.combinations(people, 2))
