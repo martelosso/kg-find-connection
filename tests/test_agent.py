@@ -205,6 +205,10 @@ def test_plain_text_reply_finishes_and_model_errors_are_honest(provider):
     assert failed.status == "partial" and failed.stop_reason == "agent_error"
     last = failed.events.events[-1].payload
     assert last["error"]["code"] == "agent_error" and last["answer"]["summary_source"] == "backend"
+    # The answer must say the model was unreachable, not read like a search result.
+    assert last["answer"]["model_unreachable"] is True
+    assert "could not be reached" in last["answer"]["summary"] and "upstream timed out" in last["answer"]["summary"]
+    assert "within the budget" not in last["answer"]["summary"]
 
 
 def test_verify_summary_rules():

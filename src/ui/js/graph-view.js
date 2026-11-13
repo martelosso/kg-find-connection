@@ -227,6 +227,9 @@ export class GraphView {
 
   fitTo(nodeIds) {
     const ids = (nodeIds ? [...nodeIds] : []).filter((id) => this.nodesDS.get(id) && !this.hidden.has(id));
-    this.network.fit({ nodes: ids.length ? ids : undefined, animation: { duration: 500, easingFunction: "easeInOutQuad" } });
+    // vis-network throws "Nodes has to be an array of ids" for `nodes: undefined`: omit the key to fit all.
+    const options = { animation: { duration: 500, easingFunction: "easeInOutQuad" } };
+    if (ids.length) options.nodes = ids;
+    this.network.fit(options);
   }
 }

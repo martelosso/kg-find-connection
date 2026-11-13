@@ -32,7 +32,8 @@ Say these out loud, because the UI says them too:
 3. Configure an LLM in `.env` (only needed for live AI-agent runs):
    - `DEEPSEEK_API_KEY=...` (DeepSeek, OpenAI-compatible), **or**
    - `OPENROUTER_API_KEY=sk-or-...` (OpenRouter).
-   - Optionally set `LLM_PROVIDER=deepseek|openrouter` and `DEEPSEEK_MODEL` / `OPENROUTER_MODEL`.
+   - Optionally set `LLM_PROVIDER=deepseek|openrouter` and `DEEPSEEK_MODEL` / `OPENROUTER_MODEL` (DeepSeek default: `deepseek-flash`).
+   - `DEEPSEEK_THINKING=disabled` (default) keeps agent turns at 1–3 s. `enabled` makes the model reason first: smarter on hard pairs, but 15–70 s per turn, so a live run needs a higher `wall_time_seconds` than 90.
 4. Choose the hub cap (organisations above it can't be intermediate path nodes):
    ```bash
    uv run python scripts/analyze_hubs.py --out hubs.json            # degree distribution + cap sweep
@@ -67,7 +68,8 @@ Say these out loud, because the UI says them too:
    - that the port is free.
 2. Rehearse once with the network **disconnected**:
    - replays and deterministic exploration must work;
-   - AI-agent mode needs network access to the LLM provider.
+   - AI-agent mode needs network access to the LLM provider. Without it, an agent run stops within seconds and the result panel says the language model could not be reached; switch to **Deterministic (no AI)** or a replay.
+   - Rehearsed 2026-11-13 with outbound network blocked: all replays, a live deterministic Neymar–Snoop Dogg run (path in 7 s, ~1,450 nodes explored, 250 drawn) and the agent-unreachable message all worked.
 3. Projector: aim for 1366×768 or larger. If the screen is narrow, hide the source pane with **Source** in the graph bar.
 4. Disable sleep and notifications; close other heavy apps (the people graph is a large SQLite file).
 
@@ -103,17 +105,31 @@ Tip: a deep link pre-fills a pair, for example `http://localhost:5000/?source=Q�
 
 **Replay instead of live:** pick a case in **Replay a demo case…**. The badge reads **REPLAY · recorded <time>**. Say it is a recording.
 
+### Prepared cases (`config/demo_cases.yaml`, snapshot 2026-11-04)
+
+| Case | Mode | Story |
+|---|---|---|
+| `lula-snoop-agent` | AI agent | **Headliner.** Lula → *South of the Border* → Oliver Stone → *Any Given Sunday* → Jamie Foxx → *Day Shift* → Snoop Dogg (6 hops, all film credits). Recorded with DeepSeek reasoning on; live without reasoning it is usually **not** found, so replay it. |
+| `beyonce-alice-braga-agent` | AI agent | **Strongest ≠ shortest.** Solange → *Ghost Whisperer* → Sônia Braga → Alice (4 hops, "relative") vs. the same route through Ana Braga, Alice's mother (5 hops, stronger). Also found live, deterministic or agent. |
+| `diana-churchill-agent` | AI agent | **Strongest ≠ shortest.** Through her father and Sandhurst (3 hops) vs. Charles III → Cheam School ← Lord Randolph Churchill → Winston (4 hops, family at both ends). |
+| `coelho-senna-agent` | AI agent | **Strongest ≠ shortest.** United Nations ← Pelé → Xuxa (4 hops) vs. Renata Sorrah → telenovela → Luciano Szafir → Xuxa (5 hops). |
+| `neymar-snoop-agent` | AI agent | Neymar → *xXx: Return of Xander Cage* → Ice Cube → *I Got the Hook Up* → Snoop Dogg. Also found **live** in deterministic mode (~7 s). |
+| `neymar-icecube-agent`, `kanye-gisele-agent` | AI agent | 2-hop warm-ups (*xXx*; the documentary *Mademoiselle C.*). |
+| `diana-churchill`, `coelho-senna`, `charles-bohr` | Deterministic | No-AI fallbacks; shortest = strongest. |
+
+Before the workshop, check on Wikidata: Charles III's and Bohr's "Trinity College" are the same item, and Coelho's "employer: United Nations".
+
 ## If something goes wrong
 
 | Symptom | What to do |
 |---|---|
-| AI agent is slow, errors, or the mode is greyed out ("no API key") | Switch the mode to **Deterministic (no AI)** and click **Explore**, or use **Replay**. Both work offline. |
+| AI agent is slow, errors, the mode is greyed out ("no API key"), or the result says the language model **could not be reached** | Switch the mode to **Deterministic (no AI)** and click **Explore**, or use **Replay**. Both work offline. |
 | No internet at the venue | Replay and deterministic exploration are fully local. Only AI-agent mode needs the LLM provider. |
 | Status bar says **Server offline** | In the terminal: `uv run python -m src.server`, then reload the page. The previous result stays on screen until a new run starts. |
 | "Could not start: …" | Read the message. Usually the people weren't picked from the suggestions (pick them from the list), or no relationship group is on. |
 | The result says **Partial result** | That is honest behaviour: a budget (time, requests, nodes) ran out. Say so; show the explored graph and any path found so far, or use the prepared replay. |
 | "No connection found" | No path among the explored relationships within the budget. It is not a claim that none exists. Use a prepared pair. |
-| The graph is too busy | Click **Fit**. Click a path tab to dim the rest. **Show all** reveals hidden leaf nodes; by default they are capped. |
+| The graph is too busy, or the path is off-screen | Click **Fit** (whole graph). Click a path tab (**Shortest** / **Strongest**) to dim the rest. **Show all** reveals hidden leaf nodes; by default only 250 nodes are drawn. |
 | Wrong person picked | Click **Reset**. |
 | The run takes too long | Click **Cancel**. The partial result stays. |
 | People graph missing on this laptop | Only replays are available; the status bar says so. Use the prepared cases. |
@@ -124,7 +140,7 @@ Tip: a deep link pre-fills a pair, for example `http://localhost:5000/?source=Q�
 - Environment variables:
   - `PEOPLE_GRAPH_PATH` (default `data/wikidata/people_graph.sqlite`);
   - `DEMO_CASES_PATH` (default `config/demo_cases.yaml`);
-  - `LLM_PROVIDER`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`.
-- Budgets (`config/search.yaml`): 25 neighbour requests, 400 nodes, 1500 edges, 18 agent tool calls, 90 s. The UI shows at most 250 nodes at once.
+  - `LLM_PROVIDER`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_THINKING`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`.
+- Budgets (`config/search.yaml` v3): 40 neighbour requests, 2,000 nodes, 7,000 edges, 30 agent tool calls, 90 s. The frontier prefers well-connected nodes (`docs/search-tuning.md`). The UI shows at most 250 nodes at once.
 - Relationship policy (`config/relationships.yaml`): groups, strengths and the hub cap (organisations above it can't be intermediate path nodes).
-- Data: the Wikidata truthy dump of the snapshot date. Only statements whose subject is a human; English and Spanish labels.
+- Data: the Wikidata truthy dump of the snapshot date. Statements whose subject is a human, plus film/music credits and founders pointing at a human; English and Spanish labels (falling back to Wikidata's language-independent label).

@@ -104,6 +104,21 @@ def _wrap_up(chat: ChatClient, messages: list[dict[str, Any]], definitions: list
     return text or None
 
 
+def _model_unreachable_answer(state: InvestigationState, search: SearchConfig, message: str) -> dict[str, Any]:
+    """The final answer when the language model call failed (no network, bad key, provider down).
+
+    Without this the answer was the generic "no connection ... within the budget", which reads as a
+    search result; at a venue without internet the presenter could not tell the AI was unreachable.
+    """
+    answer = verify_summary(None, state.comparison, search.agent.max_summary_chars)
+    note = (f"The AI agent's language model could not be reached ({message}), so the run stopped early. "
+            "Switch to Deterministic (no AI) or use a replay.")
+    has_path = bool(state.comparison and state.comparison.shortest.result)
+    answer["summary"] = f"{note} So far: {answer['summary']}" if has_path else note
+    answer["model_unreachable"] = True
+    return answer
+
+
 def run_agent(
     state: InvestigationState,
     provider: KnowledgeProvider,
@@ -132,9 +147,10 @@ def run_agent(
                 reply = chat.complete(messages, definitions)
             except Exception as exc:  # network, auth, rate limit, malformed response
                 log.warning("agent model call failed: %s", exc)
+                message = f"{type(exc).__name__}: {str(exc)[:300]}"
                 return finish(state, "agent_error", completed=False, extra={
-                    "error": {"code": "agent_error", "message": f"{type(exc).__name__}: {str(exc)[:300]}"},
-                    "answer": verify_summary(None, state.comparison, search.agent.max_summary_chars)})
+                    "error": {"code": "agent_error", "message": message},
+                    "answer": _model_unreachable_answer(state, search, message)})
             decision = " ".join((reply.content or "").split())[:MAX_DECISION_CHARS]
             if decision:
                 state.events.emit("agent.decision", {"turn": turn, "summary": decision,
