@@ -290,7 +290,8 @@ ranking:
 pathfinding:
   max_hops: 6
   # Non-person nodes with degree above this cannot be intermediate path nodes (null = no cap).
-  # PROVISIONAL: set from the measured degree distribution of the full people graph.
+  # Set from the cap sweep on the full v5 graph (docs/wikidata-ingestion-decision.md): 10,000 lets
+  # 10k-member academies dominate shortest paths; 2,000 loses connectivity.
   max_intermediate_degree: 5000
   # Per-kind overrides (kinds: organization, work, position, place, other). Places get a lower cap:
   # a shared birth town is a weak link, and only small ones say anything about the two people.

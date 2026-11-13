@@ -161,8 +161,18 @@ Same 100 seed pairs (recent × historical, seed 5), place cap 1,000, v4 graph:
 
 - **The sweep exposed a classification bug.** Kinds were assigned by precedence (organization > work > position > place), so a city with a single employer, school or team link became an `organization` and fell under the 5,000 cap instead of the place cap. 3,129 "organizations" were mostly birthplaces, holding 1.46M of the 4.35M P19 edges; 225 of them (Washington D.C., Bucharest, Melbourne, Heidelberg, "England", …) had 1,000–5,000 links and could connect people. This also explains why the v4 place-cap sweep barely moved between 250 and 2,000.
 - **Fix (policy v5):** a node whose birthplace links are at least half of its links is a `place`, whatever else points at it. Requires a rebuild.
-- **Provisional choice: keep the global cap at 5,000.** 2,000 → 5,000 gains 6 points of connectivity and many more strongest ≠ shortest pairs; 10,000 adds nothing and admits mega-academies. To be confirmed by re-running this sweep on the v5 graph.
-- The work caps cut off ~11% of searches at every cap except 1,000; decide on them after the v5 re-run.
+
+Re-run on the rebuilt v5 graph (place fix + mul labels; same command, but the seed list had changed and more seeds resolve, so the pairs differ from the table above; timings are inflated by another job running in parallel):
+
+| Global cap | Connected | Strongest ≠ shortest | Cut off by work caps | Median / max time | Busiest hubs on shortest paths |
+|---|---|---|---|---|---|
+| 2,000 | 86% | 34% | 5 | 4.3 s / 58 s | United Nations (1.4k) ×4, Romanian Academy ×3, NYU Grossman ×3 |
+| **5,000** | **88%** | **41%** | **4** | **6.7 s / 67 s** | American Philosophical Society (2.9k) ×7, Trinity College (4.7k) ×5 |
+| 10,000 | 91% | 46% | 3 | 7.8 s / 73 s | American Academy of Arts and Sciences (9.9k) ×14, Royal Society ×6 |
+
+Decisions:
+- **Global hub cap: 5,000 (decided, no longer provisional).** 10,000 gains 3 points of connectivity, but its shortest paths then lean on the American Academy of Arts and Sciences and the Royal Society: "both are fellows of a 10,000-member academy" is exactly the weak hub association the cap exists to block. 2,000 loses 2 points and a sixth of the strongest ≠ shortest pairs.
+- **Work caps: unchanged (250,000).** With cities typed correctly, only 4 of 100 exact searches hit them (11 on the v4 graph): big birthplaces no longer let the search fan out. The rest is not worth slower worst cases in the prep scripts.
 
 ### Labels: the mul fallback (2026-11-13)
 
@@ -194,8 +204,8 @@ The original extraction was one `gzip -dc | grep -F | awk` pipeline: 29 min for 
 ## Open follow-ups
 
 - ~~Runtime pathfinding store~~: decided, SQLite plus a memory-mapped CSR adjacency (`IndexedPeopleGraph`, 424 MiB on the full graph).
-- Global hub cap (5,000) and `hub_penalty_weight`: still provisional. Run the cap sweep on the full graph (`analyze_hubs.py --seeds … --cross recent historical`) and set it before recording demo cases.
-- Work caps (`max_visited_nodes`, `max_expanded_states`): decide whether to raise them now that birthplace is on (10–11% of seed-pair searches are cut off).
+- ~~Global hub cap~~: decided, 5,000 (v5 sweep above). `hub_penalty_weight` and the strengths are still provisional.
+- ~~Work caps~~: decided, unchanged at 250,000 (4% of seed-pair searches cut off on the v5 graph).
 - Whether to also keep `P31`-based `kind` refinement, e.g. university vs. company vs. academy, for display.
 
 ## Build speed (2026-11-13)
