@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
+# Reasoning turns take 15-70 s, so a 30 s timeout turns them into agent_error.
+REASONING_TIMEOUT_SECONDS = 120.0
 
 
 @dataclass(frozen=True)
@@ -125,7 +127,9 @@ def chat_client_from_env() -> ChatClient | None:
         return None
     from openai import OpenAI
 
+    reasoning = settings.extra_body.get("thinking", {}).get("type") == "enabled"
     client = OpenRouterChatClient(OpenAI(base_url=settings.base_url, api_key=settings.api_key), settings.model,
+                                  timeout=REASONING_TIMEOUT_SECONDS if reasoning else DEFAULT_TIMEOUT_SECONDS,
                                   extra_body=settings.extra_body)
     client.provider = settings.provider
     return client
