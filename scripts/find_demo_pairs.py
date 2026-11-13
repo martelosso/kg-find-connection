@@ -8,7 +8,9 @@ For each candidate pair of well-connected humans (or of the people in --seeds):
    interpersonal hops (family / teacher-student), fewer anonymous nodes.
 
     uv run python scripts/find_demo_pairs.py --pairs 40
-    uv run python scripts/find_demo_pairs.py --seeds seeds.txt     # one QID or exact name per line
+    uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --resolve-only   # check names
+    uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --out pairs.json  # every seed pair
+    uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --cross recent historical --pairs 400
 
 Record the chosen ones with scripts/investigate.py SRC TGT --record <id> [--agent].
 """
@@ -37,23 +39,84 @@ from src.investigations.state import InvestigationState  # noqa: E402
 from src.wikidata.offline import SqlitePeopleGraphProvider  # noqa: E402
 
 INTERPERSONAL = {"family", "mentorship"}
+LOW_DEGREE = 5  # a famous person usually has more links; fewer suggests a namesake
 
 
-def seeds_from_file(path: Path, provider: SqlitePeopleGraphProvider) -> list[str]:
-    qids = []
+def read_seed_lines(path: Path) -> list[tuple[str, str]]:
+    """(entry, group) pairs: one entry per line, '#' starts a comment, blank lines ignored.
+
+    A line ``[name]`` starts a group (default group: ``default``); ``--cross A B`` pairs only
+    people of group A with people of group B, e.g. today's celebrities with historical figures.
+    """
+    out, group = [], "default"
     for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
+        entry = " ".join(line.split("#", 1)[0].split())
+        if entry.startswith("[") and entry.endswith("]"):
+            group = entry[1:-1].strip() or "default"
+        elif entry:
+            out.append((entry, group))
+    return out
+
+
+def seed_pairs(resolved: list[dict], cross: tuple[str, str] | None) -> list[tuple[str, str]]:
+    """All distinct pairs of resolved seeds; with ``cross``, only pairs across the two groups."""
+    found = [r for r in resolved if r["qid"]]
+    if cross is None:
+        people = list(dict.fromkeys(r["qid"] for r in found))
+        return list(itertools.combinations(people, 2))
+    a = list(dict.fromkeys(r["qid"] for r in found if r["group"] == cross[0]))
+    b = list(dict.fromkeys(r["qid"] for r in found if r["group"] == cross[1]))
+    return list(dict.fromkeys((s, t) for s in a for t in b if s != t))
+
+
+def resolve_seed(con: sqlite3.Connection, entry: str) -> dict:
+    """Resolve one seed to a human QID by QID or EXACT label (en, then es; case-insensitive).
+
+    Exact lookup, not the UI's prefix search: a prefix search ranked by degree can crowd out the
+    exact name ("John Adams" behind "John Adams Dix"). Several humans with the same label are
+    reported as ambiguous; the best-connected (then lowest QID) is taken.
+    """
+    if is_qid(entry.upper()):
+        rows = con.execute("SELECT qid, label_en, label_es, out_degree + in_degree FROM entity "
+                           "WHERE qid = ? AND is_human", (int(entry[1:]),)).fetchall()
+        via = "qid"
+    else:
+        rows, via = [], None
+        for lang in ("en", "es"):
+            rows = con.execute(
+                f"SELECT qid, label_en, label_es, out_degree + in_degree AS deg FROM entity "
+                f"WHERE is_human AND label_{lang} = ? COLLATE NOCASE ORDER BY deg DESC, qid", (entry,)).fetchall()
+            if rows:
+                via = lang
+                break
+    if not rows:
+        return {"entry": entry, "qid": None, "label": None, "degree": 0, "matches": 0, "via": None}
+    q, l_en, l_es, deg = rows[0]
+    return {"entry": entry, "qid": f"Q{q}", "label": l_en or l_es or f"Q{q}", "degree": deg,
+            "matches": len(rows), "via": via, "others": [f"Q{r[0]}" for r in rows[1:6]]}
+
+
+def resolve_seeds(db: Path, entries: list[tuple[str, str]]) -> list[dict]:
+    con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    try:
+        return [{**resolve_seed(con, e), "group": g} for e, g in entries]
+    finally:
+        con.close()
+
+
+def print_resolution(resolved: list[dict]) -> None:
+    for r in resolved:
+        if r["qid"] is None:
+            print(f"  ✗ [{r.get('group', 'default')}] {r['entry']}: not found (no human with this exact en/es label)", file=sys.stderr)
             continue
-        if is_qid(line.upper()):
-            qids.append(line.upper())
-            continue
-        exact = [m for m in provider.search_people(line, 5) if (m.label_en or "").casefold() == line.casefold()]
-        if exact:
-            qids.append(exact[0].qid)
-        else:
-            print(f"  seed not found exactly: {line!r}", file=sys.stderr)
-    return list(dict.fromkeys(qids))
+        notes = []
+        if r["matches"] > 1:
+            notes.append(f"AMBIGUOUS: {r['matches']} humans, others {', '.join(r['others'])}")
+        if r["via"] != "qid" and r["degree"] < LOW_DEGREE:
+            notes.append("low degree: is this the famous one? pin a QID if not")
+        note = ("  " + "; ".join(notes)) if notes else ""
+        print(f"  {'!' if note else '✓'} [{r.get('group', 'default')}] {r['entry']} → {r['qid']} {r['label']} (degree {r['degree']}){note}",
+              file=sys.stderr)
 
 
 def well_connected(db: Path, limit: int, min_family: int) -> list[str]:
@@ -86,28 +149,50 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seeds", type=Path, help="file with QIDs or exact English names")
     ap.add_argument("--pool", type=int, default=400, help="well-connected people to sample from")
     ap.add_argument("--min-family", type=int, default=2, help="min family/mentorship links per candidate")
-    ap.add_argument("--pairs", type=int, default=40, help="pairs to evaluate")
+    ap.add_argument("--pairs", type=int, default=None,
+                    help="pairs to keep (default 40; with --seeds: every seed pair, or a random sample of this many)")
     ap.add_argument("--max-hops", type=int, default=4)
     ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--cross", nargs=2, metavar=("GROUP_A", "GROUP_B"),
+                    help="with --seeds: only pair people of seed group A with people of group B")
+    ap.add_argument("--resolve-only", action="store_true", help="with --seeds: print the name → QID resolution and stop")
     ap.add_argument("--out", type=Path, default=None, help="write all evaluated rows as JSON")
     args = ap.parse_args(argv)
 
-    policy, search = load_policy(), load_search_config()
-    graph, provider = open_people_graph(args.db), SqlitePeopleGraphProvider(args.db)
+    rng = random.Random(args.seed)
     if args.seeds:
-        people = seeds_from_file(args.seeds, provider)
-        pairs = list(itertools.combinations(people, 2))
+        resolved = resolve_seeds(args.db, read_seed_lines(args.seeds))
+        print_resolution(resolved)
+        if args.resolve_only:
+            return 0 if all(r["qid"] for r in resolved) else 1
+        if args.cross:
+            groups = {r["group"] for r in resolved}
+            missing = [g for g in args.cross if g not in groups]
+            if missing:
+                ap.error(f"--cross: no seed group {missing} in {args.seeds} (groups: {sorted(groups)})")
+        people = list(dict.fromkeys(r["qid"] for r in resolved if r["qid"]))
+        pairs = seed_pairs(resolved, tuple(args.cross) if args.cross else None)
+        if args.pairs is not None and args.pairs < len(pairs):
+            pairs = rng.sample(pairs, args.pairs)
+        wanted = len(pairs)
+    elif args.resolve_only or args.cross:
+        ap.error("--resolve-only and --cross need --seeds")
     else:
         people = well_connected(args.db, args.pool, args.min_family)
-        rng = random.Random(args.seed)
-        pairs = [tuple(rng.sample(people, 2)) for _ in range(args.pairs * 3)]
-    print(f"{len(people)} candidate people, evaluating up to {args.pairs if not args.seeds else len(pairs)} pairs",
-          file=sys.stderr)
+        wanted = args.pairs or 40
+        pairs = [tuple(rng.sample(people, 2)) for _ in range(wanted * 3)]
+
+    policy, search = load_policy(), load_search_config()
+    graph, provider = open_people_graph(args.db), SqlitePeopleGraphProvider(args.db)
+    print(f"{len(people)} candidate people, {len(pairs)} pairs to try, keeping up to {wanted} "
+          f"with a 2-{args.max_hops} hop connection", file=sys.stderr)
 
     rows = []
-    for s, t in pairs:
-        if len(rows) >= (len(pairs) if args.seeds else args.pairs):
+    for i, (s, t) in enumerate(pairs, 1):
+        if len(rows) >= wanted:
             break
+        if i % 25 == 0:
+            print(f"  … {i}/{len(pairs)} pairs tried, {len(rows)} kept", file=sys.stderr, flush=True)
         t0 = time.time()
         exact = compare_paths(graph, s, t, policy)
         exact_s = time.time() - t0

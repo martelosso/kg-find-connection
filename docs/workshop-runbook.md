@@ -35,11 +35,15 @@ Say these out loud, because the UI says them too:
    - Optionally set `LLM_PROVIDER=deepseek|openrouter` and `DEEPSEEK_MODEL` / `OPENROUTER_MODEL`.
 4. Choose and record the demo pairs:
    ```bash
-   uv run python scripts/find_demo_pairs.py --pairs 60 --out candidates.json   # suggestions only
+   uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --resolve-only    # check names → QIDs
+   uv run python scripts/find_demo_pairs.py --seeds config/demo_seeds.txt --cross recent historical        --pairs 400 --out candidates.json                                                    # suggestions only
+   uv run python scripts/find_demo_pairs.py --pairs 60                                     # or: random well-connected people
    uv run python scripts/investigate.py --search "Marie Curie"                   # look up QIDs
    uv run python scripts/investigate.py <SRC> <TGT> --record <id>                # deterministic replay
    uv run python scripts/investigate.py <SRC> <TGT> --record <id>-agent --agent  # AI-agent replay
    ```
+   - `config/demo_seeds.txt` has two groups: `[historical]` (~58: Latin America, Brazil, physics, computing, music, painting, philosophy, politics) and `[recent]` (~77 people everyone knows today: Brazilian football, music, TV and influencers, Medellín reggaetón, global pop culture). `--cross recent historical` pairs only across the groups (influencer ↔ historical figure is the fun demo). Without `--cross` every pair is tried (~9,000); `--pairs N` takes a random sample.
+   - Lines marked `!` in `--resolve-only` are ambiguous names or low-degree matches (possibly a namesake): replace the name with the right QID.
    - Each `--record` checks its output before writing. A deterministic run must be reproduced exactly from its fixture; an agent trace must rebuild the same graph and paths. Runs that find no path are not recorded.
    - Paste the printed entry into `config/demo_cases.yaml`.
    - Aim for **at least 3** pairs. At least one should have **Strongest ≠ Shortest** (a longer family or mentorship chain that beats a shared institution), if the data supports it.

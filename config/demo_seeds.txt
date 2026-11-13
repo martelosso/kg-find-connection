@@ -1,0 +1,187 @@
+# Seed people for scripts/find_demo_pairs.py --seeds config/demo_seeds.txt
+#
+# One person per line: an exact English (or Spanish) Wikidata label, or a QID. Text after '#'
+# is a comment. A line [group] starts a group; --cross recent historical pairs only today's
+# famous people with historical figures (the most fun demos).
+#
+# Names are resolved against the people graph. Ambiguous names (several humans with the same
+# label) take the best-connected one, and low-degree matches may be namesakes: both are flagged
+# by --resolve-only, so pin a QID where it picks the wrong person.
+#
+# Why these people: recognisable to a general audience (with a strong Brazilian and Colombian
+# selection), and chosen where family, teacher/student, team or institutional links are
+# plausible. Whether Wikidata actually records any given link is NOT assumed here; the finder
+# checks it on the graph. Influencers mostly connect through family and spouses.
+
+[historical]
+
+# Colombia and Latin America
+Gabriel García Márquez
+Fernando Botero
+Simón Bolívar
+Francisco de Paula Santander
+Frida Kahlo
+Diego Rivera
+Pablo Neruda
+Gabriela Mistral
+Jorge Luis Borges
+Octavio Paz
+
+# Brazil
+Pedro II of Brazil
+Alberto Santos-Dumont
+Machado de Assis
+Oscar Niemeyer
+Heitor Villa-Lobos
+Antônio Carlos Jobim    # Tom Jobim
+Carmen Miranda
+Getúlio Vargas
+Pelé
+Ayrton Senna
+
+# Physics: dense teacher/student and family links
+Marie Curie
+Pierre Curie
+Irène Joliot-Curie
+Ernest Rutherford
+J. J. Thomson
+Niels Bohr
+Max Planck
+Albert Einstein
+Werner Heisenberg
+Enrico Fermi
+Richard Feynman
+Isaac Newton
+
+# Computing and mathematics
+Alan Turing
+Alonzo Church
+John von Neumann
+Ada Lovelace
+Lord Byron
+Charles Babbage
+
+# Biology and a scientific family
+Charles Darwin
+Erasmus Darwin
+Francis Galton
+
+# Music: teacher/student and family
+Johann Sebastian Bach
+Joseph Haydn
+Wolfgang Amadeus Mozart
+Ludwig van Beethoven
+
+# Painting
+Pablo Picasso
+Henri Matisse
+Vincent van Gogh
+Paul Gauguin
+
+# Philosophy: the classic teacher/student chain
+Socrates
+Plato
+Aristotle
+Alexander the Great
+
+# Politics and royalty
+Abraham Lincoln
+Winston Churchill
+Queen Victoria
+Elizabeth II
+Napoleon
+
+[recent]
+
+# Brazil: football
+Neymar
+Vinícius Júnior
+Ronaldinho
+Ronaldo                 # likely ambiguous: pin Ronaldo Nazário's QID if needed
+Kaká
+Endrick
+Marta                   # likely ambiguous: pin the footballer's QID if needed
+Alisson Becker
+
+# Brazil: other sport
+Rayssa Leal
+Rebeca Andrade
+João Fonseca
+Gabriel Medina
+Bruno Senna             # Ayrton Senna's nephew
+
+# Brazil: music
+Anitta
+Ludmilla
+Pabllo Vittar
+Ivete Sangalo
+Gilberto Gil
+Preta Gil               # Gilberto Gil's daughter
+Caetano Veloso
+Zé Felipe
+
+# Brazil: TV, film, internet
+Virginia Fonseca        # married Zé Felipe
+Whindersson Nunes
+Felipe Neto
+Luccas Neto             # Felipe Neto's brother
+Casimiro Miguel
+Xuxa
+Sasha Meneghel          # Xuxa's daughter
+Luciano Huck
+Silvio Santos
+Larissa Manoela
+Bruna Marquezine
+Fernanda Torres
+Fernanda Montenegro     # Fernanda Torres's mother
+Walter Salles
+Wagner Moura
+Rodrigo Santoro
+Gisele Bündchen
+Paulo Coelho
+
+# Brazil: politics
+Luiz Inácio Lula da Silva
+Dilma Rousseff
+Jair Bolsonaro
+Flávio Bolsonaro        # Jair Bolsonaro's son
+Eduardo Bolsonaro       # Jair Bolsonaro's son
+
+# Colombia (Medellín and beyond)
+Shakira
+Karol G
+Maluma
+J Balvin
+Feid
+Sofía Vergara
+James Rodríguez
+Rodolfo Llinás
+
+# Latin America
+Lionel Messi
+Bad Bunny
+Lin-Manuel Miranda
+Mario Vargas Llosa
+
+# Global pop culture and internet
+MrBeast
+Taylor Swift
+Travis Kelce
+Kim Kardashian
+Kylie Jenner
+Kanye West
+Beyoncé
+Jay-Z
+Rihanna
+Selena Gomez
+Zendaya
+Tom Holland
+Cristiano Ronaldo
+Kylian Mbappé
+Tom Brady               # married Gisele Bündchen
+Elon Musk
+Mark Zuckerberg
+Barack Obama
+Michelle Obama
+Donald Trump
+Pope Leo XIV
