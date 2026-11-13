@@ -127,3 +127,57 @@ def test_workbench_parser_module_equals_legacy_editor_parser(root, tmp_path):
               "console.log(JSON.stringify({ same: JSON.stringify(a) === JSON.stringify(b), n: a.length }));\n")
     out = run_node(root, tmp_path, script, {"text": proj.text, "legacy": legacy})
     assert out == {"same": True, "n": proj.triple_count}
+
+
+def test_step_book_groups_recorded_traces_into_presenter_steps(root, tmp_path):
+    """Step-through (plan §2): every event lands in exactly one step, in order; agent steps start at
+    decisions, deterministic steps at expansions, and the terminal event is its own last step."""
+    traces = {name: json.loads((root / "data" / "fixtures" / "event_traces" / f"{name}.json").read_text(encoding="utf-8"))["events"]
+              for name in ("lula-snoop-agent", "diana-churchill")}
+    script = """
+const { StepBook, describeStep, toolTarget } = await mod('steps.js');
+const { InvestigationModel } = await mod('investigation.js');
+const out = {};
+for (const [name, events] of Object.entries(data)) {
+  const book = new StepBook();
+  const progress = [];
+  for (const ev of events) { book.push(ev); progress.push(book.lastComplete); }
+  book.push(events[3]);  // a duplicate (SSE reconnect) is ignored
+  const desc = book.steps.map(describeStep);
+  // Rewinding = folding the steps' events up to k; the last step must equal the full fold.
+  const full = new InvestigationModel(); events.forEach((e) => full.apply(e));
+  const upTo = new InvestigationModel(); book.steps.forEach((s) => s.events.forEach((e) => upTo.apply(e)));
+  out[name] = {
+    kinds: book.steps.map((s) => s.kind),
+    firstTypes: book.steps.map((s) => s.events[0].type),
+    ids: book.steps.flatMap((s) => s.events.map((e) => e.event_id)),
+    done: book.done, count: book.count, lastComplete: book.lastComplete, progress,
+    addedEdges: desc.reduce((n, d) => n + d.tools.reduce((m, t) => m + t.addedEdges, 0), 0),
+    edgeIds: desc.reduce((n, d) => n + d.edgeIds.length, 0),
+    decisions: desc.filter((d) => d.decision).length,
+    rules: desc.filter((d) => d.rule).length,
+    result: desc[desc.length - 1].result,
+    sameFold: full.nodes.size === upTo.nodes.size && full.edges.size === upTo.edges.size,
+    edgesTotal: full.edges.size,
+    target: toolTarget(desc.find((d) => d.tools.some((t) => t.qid)).tools.find((t) => t.qid)),
+  };
+}
+console.log(JSON.stringify(out));
+"""
+    out = run_node(root, tmp_path, script, traces)
+    for name, events in traces.items():
+        r = out[name]
+        assert r["ids"] == [e["event_id"] for e in events]          # nothing lost, duplicated or reordered
+        assert r["kinds"][0] == "setup" and r["kinds"][-1] == "result" and r["done"]
+        assert r["firstTypes"][-1] == events[-1]["type"] and r["lastComplete"] == r["count"] - 1
+        assert r["sameFold"] and r["addedEdges"] == r["edgeIds"] == r["edgesTotal"] - 0
+        assert r["result"]["outcome"] == events[-1]["payload"]["outcome"]
+        # While streaming, a step only becomes showable once the next one has started.
+        assert r["progress"] == sorted(r["progress"]) and r["progress"][0] == -1
+        assert "side" in r["target"]
+    agent = out["lula-snoop-agent"]
+    n_decisions = sum(e["type"] == "agent.decision" for e in traces["lula-snoop-agent"])
+    assert set(agent["kinds"][1:-1]) == {"decision"} and agent["decisions"] == n_decisions
+    det = out["diana-churchill"]
+    n_expansions = sum(e["type"] == "tool.started" for e in traces["diana-churchill"])
+    assert det["kinds"][1:-1] == ["expansion"] * n_expansions and det["rules"] == n_expansions

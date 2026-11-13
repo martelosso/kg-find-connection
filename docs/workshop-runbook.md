@@ -103,6 +103,12 @@ Tip: a deep link pre-fills a pair, for example `http://localhost:5000/?source=Q�
 | 10 | Optional: open **Weak links**, turn on e.g. **Birthplace (weak)** or **Awards (weak)**, and click **Explore** again. | Shows how the relationship policy changes the answer ("both born in Medellín" is a fun but weak link). |
 | 11 | Close. | Enterprise analogy: beneficial-ownership investigations, cross-domain entity discovery. The same pattern (typed relationships, a bounded agentic search, verified paths, provenance per edge) applies. |
 
+**Step-through (presenter-paced):** switch on **Step-through** in the toolbar *before* clicking **Explore** or choosing a replay. The run is then revealed one step at a time: one agent decision with the tool calls it led to and their results (or, without AI, one expansion with the backend's rule). A card over the graph shows the step; the graph, timeline, Turtle and paths show only what was known at that step, and the step's new edges are highlighted.
+- **Next ▶** / **◀ Back**, or →, Space, Page Down / ←, Page Up (a presenter remote works). **×** hides the card until the next step.
+- Live runs keep running in the background; the card says how many steps are ready ("3 more ready") or that the agent is still working.
+- The card quotes only what the agent actually wrote, plus backend facts (arguments, results, budgets). "(no text…)" means the model called tools without writing a decision.
+- Switching Step-through off mid-run reveals everything at once and continues normally.
+
 **Replay instead of live:** pick a case in **Replay a demo case…**. The badge reads **REPLAY · recorded <time>**. Say it is a recording.
 
 ### Prepared cases (`config/demo_cases.yaml`, snapshot 2026-11-04)

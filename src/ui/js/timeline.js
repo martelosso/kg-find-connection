@@ -28,6 +28,20 @@ export class Timeline {
     node.scrollIntoView({ block: "nearest" });
   }
 
+  /** Re-render from scratch (step-through: going back a step). */
+  renderAll(rows) {
+    this.clear();
+    for (const r of rows) this.render(r);
+  }
+
+  /** Mark the rows of the step being presented (no graph side effects, unlike select()). */
+  markCurrent(eventIds) {
+    for (const n of this.root.querySelectorAll(".current")) n.classList.remove("current");
+    let last = null;
+    for (const id of eventIds) { const n = this.rows.get(id); if (n) { n.classList.add("current"); last = n; } }
+    last?.scrollIntoView({ block: "nearest" });
+  }
+
   _build(row) {
     const clickable = row.edgeIds?.length > 0;
     const li = el("li", { class: `row ${row.kind}${row.status === "error" ? " error" : ""}${row.parent ? " nested" : ""}${clickable ? " clickable" : ""}${this.selected === row.eventId ? " sel" : ""}`,

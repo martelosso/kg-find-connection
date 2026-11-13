@@ -139,6 +139,21 @@ export class GraphView {
     this.edgesDS.remove(ids);
   }
 
+  /**
+   * Step back: keep only these nodes/edges (removing what later steps added) and reset the expanded
+   * set. Remaining nodes keep their positions; the network itself is never rebuilt.
+   */
+  retainOnly(nodeIds, edgeIds, expanded) {
+    const dropEdges = [...this.edges.keys()].filter((id) => !edgeIds.has(id) && this.edges.get(id).origin !== "sandbox");
+    const dropNodes = [...this.nodes.keys()].filter((id) => !nodeIds.has(id));
+    this.removeEdges(dropEdges);
+    for (const id of dropNodes) { this.nodes.delete(id); this.hidden.delete(id); }
+    this.nodesDS.remove(dropNodes);
+    this.expanded = new Set(expanded);
+    this.focus = null;
+    this.restyleAll();
+  }
+
   markExpanded(qid) {
     this.expanded.add(qid);
     const n = this.nodes.get(qid);

@@ -171,3 +171,20 @@ body.no-src #epane, body.no-src #drag { display: none; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
 
 @media (max-width: 1200px) { #side { width: 330px; } .picker input { width: 160px; } }
+
+/* ---- step-through presentation (plan §2) ---- */
+#step-card { position: absolute; left: 12px; right: 12px; top: 12px; max-width: 760px; margin: 0 auto; padding: 10px 14px 12px;
+             display: grid; gap: 8px; font-size: 14px; z-index: 5; max-height: 45%; overflow: auto; }
+#step-card .step-head { display: flex; align-items: center; gap: 8px; }
+#step-title { font-weight: 700; font-size: 15px; }
+#step-card .who { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+#step-card .decision { font-size: 15.5px; line-height: 1.4; }
+#step-card .rule { font-size: 14px; }
+#step-card ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+#step-card li .res { color: var(--muted); font-size: 12.5px; }
+#step-card li .res.warn { color: #b45309; }
+#step-card li .res.err { color: #b91c1c; }
+#step-card .paths { font-weight: 600; color: var(--c-fresh); }
+#step-card .foot { font-size: 12px; color: var(--muted); }
+#timeline .row.current { box-shadow: inset 3px 0 0 var(--c-fresh); background: #f0fdf4; }
+#step-mode.on { background: var(--c-fresh); border-color: var(--c-fresh); color: #fff; }

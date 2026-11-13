@@ -8,6 +8,7 @@ import { GraphView } from "./graph-view.js";
 import { InvestigationModel, label } from "./investigation.js";
 import { PathComparison } from "./path-comparison.js";
 import { PeoplePicker } from "./people-picker.js";
+import { StepBook, describeStep, toolTarget } from "./steps.js";
 import { Timeline } from "./timeline.js";
 import { TurtleEditor } from "./turtle-editor.js";
 
@@ -24,6 +25,12 @@ let pathMode = "both";
 let turtleTimer = null;
 let turtleStale = false;
 let shownEdgeIds = null;     // Wikidata edges in the Turtle the editor was given (null = all)
+// Step-through presentation (plan §2): events of a stepped run are buffered in `book` and revealed
+// one step at a time with Next / Back.
+let stepMode = false;        // toolbar toggle: applies to the next run started
+let stepRun = false;         // the current run is being stepped through
+let stepIndex = -1;          // last revealed step (-1 = none yet)
+const book = new StepBook();
 
 // ---- views ----------------------------------------------------------------------------------
 const graph = new GraphView($("#network"), { onSelect: onGraphSelect });
@@ -117,6 +124,7 @@ $("#reset").addEventListener("click", () => { resetAll(); pickSource.clear(); pi
 function resetAll() {
   es?.close(); es = null;
   model.reset(); graph.reset(); timeline.clear();
+  book.reset(); stepRun = false; stepIndex = -1; $("#step-card").hidden = true;
   sandbox = null; pathMode = "both"; turtleStale = false;
   paths.update({ comparison: null, sandbox: null, answer: null, status: "idle" });
   editor.setText("", []);
@@ -127,7 +135,7 @@ function resetAll() {
 
 async function start(replayCase) {
   let body;
-  if (replayCase) body = { mode: "replay", case_id: replayCase, replay_delay_seconds: 0.7 };
+  if (replayCase) body = { mode: "replay", case_id: replayCase, replay_delay_seconds: stepMode ? 0 : 0.7 };
   else {
     if (!pickSource.value || !pickTarget.value) { setStatus("error", "Pick both people from the suggestions first."); return; }
     const groups = [...document.querySelectorAll("#groups .tog.on")].map((b) => b.dataset.group);
@@ -141,6 +149,8 @@ async function start(replayCase) {
     // agent unavailable, bad input) must leave the previous result visible for the presenter.
     resetAll();
     model.id = inv.investigation_id;
+    stepRun = stepMode;
+    if (stepRun) renderStepCard();
     setRunning(true);
     es = streamEvents(inv.investigation_id, onEvent, () => { if (model.status === "running") setStatus("error", "Event stream lost; the server may be offline."); });
   } catch (err) {
@@ -158,6 +168,17 @@ function setRunning(on) {
 
 // ---- events -------------------------------------------------------------------------------------
 function onEvent(ev) {
+  if (stepRun) {
+    if (book.push(ev)) {
+      if (stepIndex < 0 && book.isComplete(0)) nextStep();  // the setup step shows on its own
+      else renderStepCard();
+    }
+    return;
+  }
+  applyEvent(ev);
+}
+
+function applyEvent(ev) {
   const change = model.apply(ev);
   if (change.type === "duplicate") return;
   const p = ev.payload;
@@ -209,6 +230,135 @@ function finish() {
   loadTurtle();
 }
 
+// ---- step-through ---------------------------------------------------------------------------------
+function nextStep() {
+  if (!stepRun || stepIndex >= book.lastComplete) return;
+  stepIndex += 1;
+  for (const ev of book.steps[stepIndex].events) applyEvent(ev);
+  afterStep();
+}
+
+/** Back one step: re-fold the model up to that step and trim the views (no network rebuild). */
+function backStep() {
+  if (!stepRun || stepIndex <= 0) return;
+  stepIndex -= 1;
+  model.reset();
+  for (const s of book.steps.slice(0, stepIndex + 1)) for (const ev of s.events) model.apply(ev);
+  graph.retainOnly(new Set(model.nodes.keys()), new Set(model.edges.keys()), model.expanded);
+  graph.setPaths(model.comparison);
+  timeline.renderAll(model.timeline);
+  paths.update({ comparison: model.comparison, answer: model.final?.answer || null,
+                 status: model.final ? model.status : "running" });
+  if (!model.final) setRunning(true);
+  updateCounts();
+  scheduleTurtle();
+  afterStep();
+}
+
+/** Step-through switched off mid-run: show everything buffered so far and keep streaming normally. */
+function flushSteps() {
+  for (let i = stepIndex + 1; i < book.count; i++) for (const ev of book.steps[i].events) applyEvent(ev);
+  stepIndex = book.count - 1;
+  stepRun = false;
+  graph.setFocus(null);
+  timeline.markCurrent([]);
+  $("#step-card").hidden = true;
+}
+
+function afterStep() {
+  const step = book.steps[stepIndex];
+  const d = describeStep(step);
+  // The step's new edges stand out (path edges stay lit); the result step shows the paths alone.
+  graph.setFocus(step.kind !== "result" && d.edgeIds.length ? { edges: d.edgeIds } : null);
+  timeline.markCurrent(step.events.map((e) => e.event_id));
+  if (step.kind !== "result") {
+    setStatus("busy", `Step-through: ${stepIndex <= 0 ? "start" : `step ${stepIndex} of ${book.count - 1}${book.done ? "" : "+"}`}`
+      + " · Next ▶ (→, Space, Page Down) · ◀ Back (←, Page Up)");
+  }
+  renderStepCard();
+}
+
+function renderStepCard() {
+  const card = $("#step-card");
+  card.hidden = !stepRun;
+  if (!stepRun) return;
+  const waiting = stepIndex >= book.lastComplete && !book.done;
+  $("#step-back").disabled = stepIndex <= 0;
+  $("#step-next").disabled = stepIndex >= book.lastComplete;
+  $("#step-next").textContent = waiting && stepIndex >= 0 ? "Waiting…" : "Next ▶";
+  if (stepIndex < 0) {
+    $("#step-title").textContent = "Step-through";
+    $("#step-sub").textContent = "waiting for the run to start…";
+    $("#step-body").replaceChildren();
+    return;
+  }
+  const step = book.steps[stepIndex];
+  $("#step-title").textContent = stepIndex === 0 ? "Start" : `Step ${stepIndex} / ${book.count - 1}${book.done ? "" : "+"}`;
+  $("#step-sub").textContent = waiting ? (model.isAgent ? "the agent is still working…" : "the search is still running…")
+    : book.done || stepIndex >= book.lastComplete ? "" : `${book.lastComplete - stepIndex} more ready`;
+  $("#step-body").replaceChildren(...stepBody(step, describeStep(step)).filter(Boolean));
+}
+
+function stepBody(step, d) {
+  const b = model.meta?.budgets || {};
+  const toolRows = model.timeline.filter((r) => r.kind === "tool").length;
+  const foot = el("div", { class: "foot" }, [
+    `requests ${model.expanded.size}/${b.max_provider_requests ?? "?"}`,
+    `nodes ${model.nodes.size}/${b.max_explored_nodes ?? "?"}`,
+    model.isAgent ? `tool calls ${toolRows}/${b.max_agent_tool_calls ?? "?"}` : null,
+  ].filter(Boolean).join(" · "));
+  const tools = d.tools.length ? el("ul", {}, ...d.tools.map((t) => {
+    const bits = [];
+    if (t.returned !== null) bits.push(`${t.returned} returned`, `+${t.addedNodes} nodes`, `+${t.addedEdges} edges`);
+    if (t.truncated) bits.push(t.capHit ? `cut at ${t.capHit.replaceAll("_", " ")}` : "truncated");
+    const res = t.error ? el("div", { class: "res err" }, `✗ ${t.error.code}: ${t.error.message}`)
+      : bits.length ? el("div", { class: `res${t.truncated ? " warn" : ""}` }, bits.join(" · ")) : null;
+    return el("li", {}, el("b", {}, t.tool), " ", toolTarget(t), res);
+  })) : null;
+  const paths = d.paths ? el("div", { class: "paths" }, d.paths) : null;
+  switch (step.kind) {
+    case "setup": {
+      const m = model.meta || {};
+      return [el("div", { class: "who" }, m.strategy === "agent" ? `AI agent · ${m.model || "model"}` : "Deterministic exploration (no AI)"),
+        el("div", { class: "decision" }, `Find a connection between ${label(model.source)} and ${label(model.target)}.`),
+        el("div", { class: "small muted" }, `Relationship groups: ${(m.groups || []).join(", ")} · at most ${m.max_hops} hops`), foot];
+    }
+    case "decision":
+      return [el("div", { class: "who" }, "The agent wrote"),
+        el("div", { class: "decision" }, d.decision ? `“${d.decision}”` : "(no text: the model called tools without writing a decision)"),
+        tools, paths, foot];
+    case "expansion":
+      return [el("div", { class: "who" }, "Backend rule (no AI): expand the best-ranked frontier node"),
+        el("div", { class: "rule" }, d.rule || ""), tools, paths, foot];
+    default: {
+      const r = d.result || {};
+      const found = r.outcome === "path_found";
+      const head = r.type === "investigation.failed" ? "Failed" : r.type === "investigation.completed" ? "Completed" : "Partial result";
+      return [el("div", { class: "who" }, head),
+        el("div", { class: "decision" }, r.error && !found ? `${r.error.code}: ${r.error.message}`
+          : found ? r.paths : "No connection among the explored relationships."),
+        r.answer ? el("div", { class: "small" }, r.answer) : null,
+        el("div", { class: "small muted" }, `stop: ${String(r.stop || "?").replaceAll("_", " ")} · among explored relationships only`), foot];
+    }
+  }
+}
+
+$("#step-next").addEventListener("click", nextStep);
+$("#step-hide").addEventListener("click", () => { $("#step-card").hidden = true; });
+$("#step-back").addEventListener("click", backStep);
+$("#step-mode").addEventListener("click", () => {
+  stepMode = !stepMode;
+  $("#step-mode").classList.toggle("on", stepMode);
+  if (!stepMode && stepRun) flushSteps();
+  else if (stepMode && model.status === "running") setStatus("busy", "Step-through applies to the next run you start.");
+});
+document.addEventListener("keydown", (e) => {
+  if (!stepRun || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.target.closest?.("input, textarea, select, .CodeMirror")) return;  // typing in a picker or the editor
+  if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); nextStep(); }
+  else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); backStep(); }
+});
+
 // ---- Turtle --------------------------------------------------------------------------------------
 function scheduleTurtle() {
   clearTimeout(turtleTimer);
@@ -220,7 +370,8 @@ async function loadTurtle(force = false) {
   if (editor.isDirty && !force) { turtleStale = true; $("#src-stale").hidden = false; return; }
   try {
     const hiddenCount = graph.hidden.size;
-    const ids = hiddenCount ? graph.visibleEdgeIds() : null;
+    // While stepping, the server already holds later steps' edges: ask only for what is revealed.
+    const ids = hiddenCount || stepRun ? graph.visibleEdgeIds() : null;
     const proj = await api.turtle(model.id, ids);
     shownEdgeIds = ids;
     editor.setText(proj.text, allEdges());
@@ -395,4 +546,5 @@ $("#toggle-src").addEventListener("click", () => {
   window.addEventListener("mouseup", () => { if (on) { on = false; drag.classList.remove("on"); editor.refresh(); } });
 })();
 
-window.__workbench = { model, graph, editor, timeline, paths };  // handy for debugging and E2E checks
+window.__workbench = { model, graph, editor, timeline, paths, book, nextStep, backStep,
+                       get stepIndex() { return stepIndex; } };  // handy for debugging and E2E checks

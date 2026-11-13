@@ -23,6 +23,7 @@
     <option value="deterministic" selected>Deterministic (no AI)</option>
   </select>
   <div class="groups" id="groups" title="Relationship groups the search may use"></div>
+  <button class="tog" id="step-mode" type="button" title="Step-through: reveal the run one decision at a time (Next / Back, or the arrow keys and a presenter remote)">Step-through</button>
   <button class="btn primary" id="go" type="button">Explore</button>
   <button class="btn" id="cancel" type="button" disabled>Cancel</button>
   <button class="btn" id="reset" type="button">Reset</button>
@@ -64,6 +65,17 @@
     <div id="net-wrap">
       <div id="network"></div>
       <div id="inspector" class="card" hidden></div>
+      <div id="step-card" class="card" hidden aria-live="polite">
+        <div class="step-head">
+          <span id="step-title">Step</span>
+          <span class="muted small" id="step-sub"></span>
+          <span class="spacer"></span>
+          <button class="btn" id="step-back" type="button" title="Previous step (← or Page Up)">◀ Back</button>
+          <button class="btn primary" id="step-next" type="button" title="Next step (→, Space or Page Down)">Next ▶</button>
+          <button class="mini" id="step-hide" type="button" title="Hide this card (it comes back on Next or Back)">×</button>
+        </div>
+        <div id="step-body"></div>
+      </div>
       <div id="legend">
         <span><i class="dot" style="background:var(--c-source)"></i>source</span>
         <span><i class="dot" style="background:var(--c-target)"></i>target</span>
