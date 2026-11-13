@@ -8,8 +8,9 @@
 # label) take the best-connected one, and low-degree matches may be namesakes: both are flagged
 # by --resolve-only, so pin a QID where it picks the wrong person.
 #
-# Why these people: recognisable to a general audience (with a strong Brazilian and Colombian
-# selection), and chosen where family, teacher/student, team or institutional links are
+# Why these people: recognisable to a general audience (a strong Brazilian and Colombian
+# selection plus international creators and figures of the last 10, 20 and 30 years),
+# chosen where family, teacher/student, team or institutional links are
 # plausible. Whether Wikidata actually records any given link is NOT assumed here; the finder
 # checks it on the graph. Influencers mostly connect through family and spouses.
 
@@ -185,3 +186,140 @@ Barack Obama
 Michelle Obama
 Donald Trump
 Pope Leo XIV
+
+# International creators and streamers
+PewDiePie
+Markiplier
+Jacksepticeye
+KSI
+Logan Paul
+Jake Paul               # Logan Paul's brother
+Charli D'Amelio
+Dixie D'Amelio          # Charli D'Amelio's sister
+Addison Rae
+Khaby Lame
+IShowSpeed
+Kai Cenat
+Ninja                   # likely ambiguous: pin the streamer's QID if needed
+Emma Chamberlain
+Lilly Singh
+Casey Neistat
+Ibai Llanos
+El Rubius               # Spanish YouTuber; label may differ, check --resolve-only
+Auronplay
+
+# Famous in the last 10 years
+Billie Eilish
+Finneas O'Connell       # Billie Eilish's brother
+Dua Lipa
+Olivia Rodrigo
+Sabrina Carpenter
+Ariana Grande
+Harry Styles
+Ed Sheeran
+Jungkook
+Timothée Chalamet
+Margot Robbie
+Ryan Gosling
+Pedro Pascal
+Greta Thunberg
+Volodymyr Zelenskyy
+Erling Haaland
+Jude Bellingham
+Lamine Yamal
+Simone Biles
+Carlos Alcaraz
+Jannik Sinner
+Max Verstappen
+Jos Verstappen          # Max Verstappen's father
+Lewis Hamilton
+Prince Harry, Duke of Sussex
+Meghan, Duchess of Sussex
+William, Prince of Wales
+Catherine, Princess of Wales
+Charles III
+Sam Altman
+Jensen Huang
+Joe Biden
+Kamala Harris
+Emmanuel Macron
+Narendra Modi
+Pope Francis
+
+# Famous in the last 20 years
+Lady Gaga
+Justin Bieber
+Hailey Bieber           # married Justin Bieber; Stephen Baldwin's daughter
+Stephen Baldwin
+Alec Baldwin            # Stephen Baldwin's brother
+Adele                   # possibly ambiguous: pin the singer's QID if needed
+Katy Perry
+Bruno Mars
+Drake                   # likely ambiguous: pin the rapper's QID if needed
+Miley Cyrus
+Billy Ray Cyrus         # Miley Cyrus's father
+Paris Hilton
+Usain Bolt
+Michael Phelps
+Serena Williams
+Venus Williams          # Serena Williams's sister
+Roger Federer
+Rafael Nadal
+Novak Djokovic
+LeBron James
+Bronny James            # LeBron James's son
+Zlatan Ibrahimović
+Steve Jobs
+Angela Merkel
+Malala Yousafzai
+Leonardo DiCaprio
+Emma Watson
+Daniel Radcliffe
+Jennifer Lawrence
+
+# Famous in the last 30 years
+David Beckham
+Victoria Beckham        # married David Beckham
+Brooklyn Beckham        # their son
+Michael Jordan
+Kobe Bryant
+Tiger Woods
+Zinedine Zidane
+Britney Spears
+Jennifer Lopez
+Ben Affleck             # married Jennifer Lopez
+Matt Damon
+Brad Pitt
+Angelina Jolie
+Jon Voight              # Angelina Jolie's father
+Tom Cruise
+Nicole Kidman
+Keith Urban             # married Nicole Kidman
+Will Smith
+Jada Pinkett Smith
+Jaden Smith
+Willow Smith
+Keanu Reeves
+Francis Ford Coppola
+Sofia Coppola           # Francis Ford Coppola's daughter
+Nicolas Cage            # Francis Ford Coppola's nephew
+Steven Spielberg
+J. K. Rowling
+Oprah Winfrey
+Bill Gates
+Melinda French Gates
+Jeff Bezos
+Madonna                 # likely ambiguous: pin the singer's QID if needed
+Michael Jackson
+Janet Jackson           # Michael Jackson's sister
+Céline Dion
+Mariah Carey
+Eminem
+Tupac Shakur
+Diana, Princess of Wales
+Bill Clinton
+Hillary Clinton
+Chelsea Clinton
+George W. Bush
+George H. W. Bush
+Nelson Mandela
