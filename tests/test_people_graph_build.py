@@ -200,6 +200,57 @@ def test_v3_work_and_founder_statements_point_at_people(root, tmp_path):
         g.close()
 
 
+def test_parallel_scan_ranges_give_the_same_result_as_one_range(root, tmp_path):
+    """Workers scan newline-aligned byte ranges; merged in file order they must equal one scan."""
+    import numpy as np
+
+    from .graph_helpers import random_people_graph, write_slice
+
+    build = _load_build_module(root)
+    people, orgs, triples = random_people_graph(seed=4, n_people=80, n_orgs=10, n_edges=400)
+    path = tmp_path / "slice.nt"
+    write_slice(path, people, orgs, triples)
+    size = path.stat().st_size
+    one = build.assemble([build.scan_edges(str(path), 0, size)])
+    for parts in (2, 3, 7, 50):
+        rng = build.ranges(path, parts)
+        assert rng[0][0] == 0 and rng[-1][1] == size
+        assert all(a < b for a, b in rng) and all(b == a2 for (_, b), (a2, _) in zip(rng, rng[1:]))
+        data = path.read_bytes()
+        assert all(a == 0 or data[a - 1:a] == b"\n" for a, _ in rng)  # every range starts a line
+        many = build.assemble([build.scan_edges(str(path), a, b) for a, b in rng])
+        assert all(np.array_equal(x, y) for x, y in zip(one[0], many[0]))
+        assert np.array_equal(one[1], many[1]) and one[2] == many[2]
+
+
+def test_first_label_wins_within_and_across_chunks(root, tmp_path):
+    build = _load_build_module(root)
+    lines = [
+        '<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q5> .',
+        '<http://www.wikidata.org/entity/Q900001> <http://www.wikidata.org/prop/direct/P26> <http://www.wikidata.org/entity/Q900002> .',
+        '<http://www.wikidata.org/entity/Q900001> <http://www.w3.org/2000/01/rdf-schema#label> "First"@en .',
+        '<http://www.wikidata.org/entity/Q900001> <http://www.w3.org/2000/01/rdf-schema#label> "Second"@en .',
+        '<http://www.wikidata.org/entity/Q900002> <http://www.w3.org/2000/01/rdf-schema#label> "Tab\\there \\u00e9"@es .',
+    ]
+    path = tmp_path / "slice.nt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    out = tmp_path / "g.sqlite"
+    assert build.main([str(path), "--out", str(out), "--workers", "1"]) == 0
+    g = SqliteGraph(out)
+    try:
+        assert g.node("Q900001").label_en == "First"
+        assert g.node("Q900002").label_es == "Tab\there é" and g.node("Q900002").kind == "other"
+    finally:
+        g.close()
+    # Across chunks the writer receives rows in file order and never overwrites a label.
+    w = build.Writer(tmp_path / "w.sqlite")
+    w.db.execute("INSERT INTO entity (qid, is_human, kind) VALUES (1, 1, 'person')")
+    w.labels([(1, "en", "chunk one")])
+    w.labels([(1, "en", "chunk two"), (1, "es", "uno")])
+    assert w.db.execute("SELECT label_en, label_es FROM entity WHERE qid = 1").fetchone() == ("chunk one", "uno")
+    w.finish([])
+
+
 def test_extraction_script_and_builder_cover_every_policy_property(root):
     """Adding a PID to the policy without re-extracting would silently find nothing."""
     pids = set(policy().properties)

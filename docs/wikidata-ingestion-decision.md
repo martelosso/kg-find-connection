@@ -91,3 +91,12 @@ _Pending. Record: extraction time, slice size, build time, DB size, final counts
 - Runtime pathfinding store: SQLite with neighbor queries, or SQLite plus an in-memory compact adjacency (CSR) for complete bidirectional search. Decide in Milestone 2 using the measured size.
 - Hub threshold and `hub_penalty` values: set from the measured degree distribution.
 - Whether to also keep `P31`-based `kind` refinement, e.g. university vs. company vs. academy, for display.
+
+## Build speed (2026-11-13)
+
+`build_people_graph.py` originally loaded every slice line into raw SQLite tables (regex per line) and joined them. About 95% of the slice is P31 and labels for entities that never enter the graph (in a 20M-line prefix: 9.66M P31, 9.27M labels, 1.08M relationship edges). The builder now scans twice with byte-level parsing in parallel processes, filters in numpy, and loads only graph nodes' labels and types. Output is identical to the old builder (all tables compared on a 20M-line prefix, with 1 and 8 workers).
+
+| Input | Old builder | New, 1 worker | New, 8 workers |
+|---|---|---|---|
+| 20M lines (2.7 GB) | 81 s | 50 s | 19 s |
+| 60M lines (8.2 GB) | - | - | 61 s, ~2.5 GB peak RAM |
