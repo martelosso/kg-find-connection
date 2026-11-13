@@ -1,0 +1,4786 @@
+{
+ "format": "six-degrees-event-trace",
+ "version": 1,
+ "case_id": "neymar-icecube-agent",
+ "recorded_at": "2026-11-13T19:27:53.199+00:00",
+ "recorded_with": {
+  "provider": "people-graph-sqlite",
+  "snapshot": "20261104",
+  "strategy": "agent",
+  "model": "deepseek-flash",
+  "policy_version": 5,
+  "search_version": 2
+ },
+ "events": [
+  {
+   "event_id": 1,
+   "investigation_id": "0ba98fce7a75",
+   "type": "investigation.started",
+   "timestamp": "2026-11-13T19:27:53.199+00:00",
+   "payload": {
+    "source_qid": "Q142794",
+    "target_qid": "Q173637",
+    "strategy": "agent",
+    "run_mode": "live",
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "properties": [
+     "P19",
+     "P22",
+     "P25",
+     "P26",
+     "P40",
+     "P54",
+     "P57",
+     "P58",
+     "P69",
+     "P86",
+     "P108",
+     "P112",
+     "P161",
+     "P175",
+     "P184",
+     "P185",
+     "P451",
+     "P463",
+     "P802",
+     "P1038",
+     "P1066",
+     "P3373"
+    ],
+    "policy_version": 5,
+    "search_config_version": 2,
+    "budgets": {
+     "max_explored_nodes": 600,
+     "max_explored_edges": 2000,
+     "max_edges_per_expansion": 100,
+     "max_provider_requests": 30,
+     "max_agent_tool_calls": 30,
+     "wall_time_seconds": 90.0
+    },
+    "max_hops": 6,
+    "max_intermediate_degree": 5000,
+    "max_intermediate_degree_by_kind": {
+     "place": 1000
+    },
+    "model": "deepseek-flash"
+   }
+  },
+  {
+   "event_id": 2,
+   "investigation_id": "0ba98fce7a75",
+   "type": "identity.resolved",
+   "timestamp": "2026-11-13T19:27:53.199+00:00",
+   "payload": {
+    "source": {
+     "id": "Q142794",
+     "label": "Neymar",
+     "label_en": "Neymar",
+     "label_es": "Neymar",
+     "kind": "person",
+     "degree": 18,
+     "url": "https://www.wikidata.org/wiki/Q142794"
+    },
+    "target": {
+     "id": "Q173637",
+     "label": "Ice Cube",
+     "label_en": "Ice Cube",
+     "label_es": "Ice Cube",
+     "kind": "person",
+     "degree": 138,
+     "url": "https://www.wikidata.org/wiki/Q173637"
+    },
+    "added_nodes": [
+     {
+      "id": "Q142794",
+      "label": "Neymar",
+      "label_en": "Neymar",
+      "label_es": "Neymar",
+      "kind": "person",
+      "degree": 18,
+      "url": "https://www.wikidata.org/wiki/Q142794"
+     },
+     {
+      "id": "Q173637",
+      "label": "Ice Cube",
+      "label_en": "Ice Cube",
+      "label_es": "Ice Cube",
+      "kind": "person",
+      "degree": 138,
+      "url": "https://www.wikidata.org/wiki/Q173637"
+     }
+    ],
+    "added_edges": []
+   }
+  },
+  {
+   "event_id": 3,
+   "investigation_id": "0ba98fce7a75",
+   "type": "agent.decision",
+   "timestamp": "2026-11-13T19:27:54.417+00:00",
+   "payload": {
+    "turn": 1,
+    "summary": "I'll start by checking the search status and expanding both people to see their direct relationships.",
+    "tool_calls": [
+     "get_search_status",
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 4,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:54.417+00:00",
+   "payload": {
+    "tool": "get_search_status",
+    "step": 1,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 5,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:54.417+00:00",
+   "payload": {
+    "tool": "get_search_status",
+    "step": 1,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 6,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:54.418+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 2,
+    "qid": "Q142794",
+    "label": "Neymar",
+    "side": "source",
+    "reason": "I'll start by checking the search status and expanding both people to see their direct relationships.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q142794"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 7,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:27:54.422+00:00",
+   "payload": {
+    "step": 2,
+    "expanded_qid": "Q142794",
+    "side": "source",
+    "added_nodes": [
+     {
+      "id": "Q123172171",
+      "label": "Mavie Biancardi da Silva",
+      "label_en": "Mavie Biancardi da Silva",
+      "label_es": "Mavie Biancardi da Silva",
+      "kind": "person",
+      "degree": 5,
+      "url": "https://www.wikidata.org/wiki/Q123172171"
+     },
+     {
+      "id": "Q116274013",
+      "label": "Davi Lucca",
+      "label_en": "Davi Lucca",
+      "label_es": null,
+      "kind": "person",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q116274013"
+     },
+     {
+      "id": "Q80457071",
+      "label": "Neymar da Silva Santos",
+      "label_en": "Neymar da Silva Santos",
+      "label_es": "Neymar da Silva Santos",
+      "kind": "person",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q80457071"
+     },
+     {
+      "id": "Q4281880",
+      "label": "Bruna Marquezine",
+      "label_en": "Bruna Marquezine",
+      "label_es": "Bruna Marquezine",
+      "kind": "person",
+      "degree": 22,
+      "url": "https://www.wikidata.org/wiki/Q4281880"
+     },
+     {
+      "id": "Q108111650",
+      "label": "Bruna Biancardi",
+      "label_en": "Bruna Biancardi",
+      "label_es": "Bruna Biancardi",
+      "kind": "person",
+      "degree": 5,
+      "url": "https://www.wikidata.org/wiki/Q108111650"
+     },
+     {
+      "id": "Q138806701",
+      "label": "Gabriella Lenzi",
+      "label_en": "Gabriella Lenzi",
+      "label_es": "Gabriella Lenzi",
+      "kind": "person",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q138806701"
+     },
+     {
+      "id": "Q80444381",
+      "label": "Rafaella Santos",
+      "label_en": "Rafaella Santos",
+      "label_es": "Rafaella Santos",
+      "kind": "person",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q80444381"
+     },
+     {
+      "id": "Q22075020",
+      "label": "xXx Return of Xander Cage",
+      "label_en": "xXx Return of Xander Cage",
+      "label_es": "XXx: The Return of Xander Cage",
+      "kind": "work",
+      "degree": 24,
+      "url": "https://www.wikidata.org/wiki/Q22075020"
+     },
+     {
+      "id": "Q80955",
+      "label": "Santos F.C.",
+      "label_en": "Santos F.C.",
+      "label_es": "Santos Futebol Clube",
+      "kind": "organization",
+      "degree": 754,
+      "url": "https://www.wikidata.org/wiki/Q80955"
+     },
+     {
+      "id": "Q194332",
+      "label": "Mogi das Cruzes",
+      "label_en": "Mogi das Cruzes",
+      "label_es": "Mogi das Cruzes",
+      "kind": "place",
+      "degree": 113,
+      "url": "https://www.wikidata.org/wiki/Q194332"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-820dc89af702330b",
+      "subject": "Q123172171",
+      "predicate": "P22",
+      "object": "Q142794",
+      "label": "father",
+      "label_es": "padre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P22"
+     },
+     {
+      "id": "e-35c69500a4958de0",
+      "subject": "Q116274013",
+      "predicate": "P22",
+      "object": "Q142794",
+      "label": "father",
+      "label_es": "padre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P22"
+     },
+     {
+      "id": "e-9e1eff7d13dd9521",
+      "subject": "Q142794",
+      "predicate": "P22",
+      "object": "Q80457071",
+      "label": "father",
+      "label_es": "padre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P22"
+     },
+     {
+      "id": "e-9d1bbaade17b74b2",
+      "subject": "Q142794",
+      "predicate": "P40",
+      "object": "Q123172171",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     },
+     {
+      "id": "e-2d6ba364f82964cc",
+      "subject": "Q142794",
+      "predicate": "P40",
+      "object": "Q116274013",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     },
+     {
+      "id": "e-bf93b02dd2e5cf58",
+      "subject": "Q80457071",
+      "predicate": "P40",
+      "object": "Q142794",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     },
+     {
+      "id": "e-3eba07593e0995d2",
+      "subject": "Q142794",
+      "predicate": "P451",
+      "object": "Q4281880",
+      "label": "unmarried partner",
+      "label_es": "pareja",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P451"
+     },
+     {
+      "id": "e-e8d8528bcc3e636b",
+      "subject": "Q4281880",
+      "predicate": "P451",
+      "object": "Q142794",
+      "label": "unmarried partner",
+      "label_es": "pareja",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P451"
+     },
+     {
+      "id": "e-4697b4ebf7dd65ba",
+      "subject": "Q142794",
+      "predicate": "P451",
+      "object": "Q108111650",
+      "label": "unmarried partner",
+      "label_es": "pareja",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P451"
+     },
+     {
+      "id": "e-944a9c20caade6a8",
+      "subject": "Q108111650",
+      "predicate": "P451",
+      "object": "Q142794",
+      "label": "unmarried partner",
+      "label_es": "pareja",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P451"
+     },
+     {
+      "id": "e-5e86a54e3c0a7703",
+      "subject": "Q138806701",
+      "predicate": "P451",
+      "object": "Q142794",
+      "label": "unmarried partner",
+      "label_es": "pareja",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P451"
+     },
+     {
+      "id": "e-1256a9a0ed70a73b",
+      "subject": "Q142794",
+      "predicate": "P3373",
+      "object": "Q80444381",
+      "label": "sibling",
+      "label_es": "hermano/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P3373"
+     },
+     {
+      "id": "e-db2832daeb58a14f",
+      "subject": "Q80444381",
+      "predicate": "P3373",
+      "object": "Q142794",
+      "label": "sibling",
+      "label_es": "hermano/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P3373"
+     },
+     {
+      "id": "e-ac1be1e0781acb07",
+      "subject": "Q22075020",
+      "predicate": "P161",
+      "object": "Q142794",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-d773ff6420452639",
+      "subject": "Q142794",
+      "predicate": "P54",
+      "object": "Q80955",
+      "label": "member of sports team",
+      "label_es": "miembro del equipo deportivo",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P54"
+     },
+     {
+      "id": "e-989e9b931897a718",
+      "subject": "Q142794",
+      "predicate": "P19",
+      "object": "Q194332",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-820dc89af702330b",
+     "e-35c69500a4958de0",
+     "e-9e1eff7d13dd9521",
+     "e-9d1bbaade17b74b2",
+     "e-2d6ba364f82964cc",
+     "e-bf93b02dd2e5cf58",
+     "e-3eba07593e0995d2",
+     "e-e8d8528bcc3e636b",
+     "e-4697b4ebf7dd65ba",
+     "e-944a9c20caade6a8",
+     "e-5e86a54e3c0a7703",
+     "e-1256a9a0ed70a73b",
+     "e-db2832daeb58a14f",
+     "e-ac1be1e0781acb07",
+     "e-d773ff6420452639",
+     "e-989e9b931897a718"
+    ],
+    "returned": 16,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q142794"
+    ]
+   }
+  },
+  {
+   "event_id": 8,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:54.422+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 2,
+    "qid": "Q142794",
+    "ok": true,
+    "returned": 16,
+    "added_node_count": 10,
+    "added_edge_count": 16,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 9,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:54.422+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 3,
+    "qid": "Q173637",
+    "label": "Ice Cube",
+    "side": "target",
+    "reason": "I'll start by checking the search status and expanding both people to see their direct relationships.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q173637"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 10,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:27:54.431+00:00",
+   "payload": {
+    "step": 3,
+    "expanded_qid": "Q173637",
+    "side": "target",
+    "added_nodes": [
+     {
+      "id": "Q19667862",
+      "label": "O'Shea Jackson Jr.",
+      "label_en": "O'Shea Jackson Jr.",
+      "label_es": "O'Shea Jackson Jr.",
+      "kind": "person",
+      "degree": 17,
+      "url": "https://www.wikidata.org/wiki/Q19667862"
+     },
+     {
+      "id": "Q123017445",
+      "label": "Jordan R. Jackson",
+      "label_en": "Jordan R. Jackson",
+      "label_es": "Jordan R. Jackson",
+      "kind": "person",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q123017445"
+     },
+     {
+      "id": "Q29079022",
+      "label": "Straight Outta L.A.",
+      "label_en": "Straight Outta L.A.",
+      "label_es": "Straight Outta L.A.",
+      "kind": "work",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q29079022"
+     },
+     {
+      "id": "Q921936",
+      "label": "The Players Club",
+      "label_en": "The Players Club",
+      "label_es": "El club de las strippers",
+      "kind": "work",
+      "degree": 16,
+      "url": "https://www.wikidata.org/wiki/Q921936"
+     },
+     {
+      "id": "Q5503472",
+      "label": "Friday: The Animated Series",
+      "label_en": "Friday: The Animated Series",
+      "label_es": null,
+      "kind": "work",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q5503472"
+     },
+     {
+      "id": "Q5503479",
+      "label": "Friday",
+      "label_en": "Friday",
+      "label_es": null,
+      "kind": "work",
+      "degree": 5,
+      "url": "https://www.wikidata.org/wiki/Q5503479"
+     },
+     {
+      "id": "Q6154990",
+      "label": "Janky Promoters",
+      "label_en": "Janky Promoters",
+      "label_es": null,
+      "kind": "work",
+      "degree": 12,
+      "url": "https://www.wikidata.org/wiki/Q6154990"
+     },
+     {
+      "id": "Q2030817",
+      "label": "All About the Benjamins",
+      "label_en": "All About the Benjamins",
+      "label_es": "All About the Benjamins",
+      "kind": "work",
+      "degree": 13,
+      "url": "https://www.wikidata.org/wiki/Q2030817"
+     },
+     {
+      "id": "Q912672",
+      "label": "Next Friday",
+      "label_en": "Next Friday",
+      "label_es": "Next Friday",
+      "kind": "work",
+      "degree": 17,
+      "url": "https://www.wikidata.org/wiki/Q912672"
+     },
+     {
+      "id": "Q673486",
+      "label": "Friday",
+      "label_en": "Friday",
+      "label_es": "Friday",
+      "kind": "work",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q673486"
+     },
+     {
+      "id": "Q580006",
+      "label": "Friday After Next",
+      "label_en": "Friday After Next",
+      "label_es": "Viernes infernal",
+      "kind": "work",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q580006"
+     },
+     {
+      "id": "Q7775985",
+      "label": "The World Is Mine",
+      "label_en": "The World Is Mine",
+      "label_es": "The World Is Mine",
+      "kind": "work",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q7775985"
+     },
+     {
+      "id": "Q7045153",
+      "label": "No Vaseline",
+      "label_en": "No Vaseline",
+      "label_es": "No Vaseline",
+      "kind": "work",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q7045153"
+     },
+     {
+      "id": "Q7261790",
+      "label": "Pushin' Weight",
+      "label_en": "Pushin' Weight",
+      "label_es": "Pushin' Weight",
+      "kind": "work",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q7261790"
+     },
+     {
+      "id": "Q3499682",
+      "label": "Natural Born Killaz",
+      "label_en": "Natural Born Killaz",
+      "label_es": "Natural Born Killaz",
+      "kind": "work",
+      "degree": 5,
+      "url": "https://www.wikidata.org/wiki/Q3499682"
+     },
+     {
+      "id": "Q125446155",
+      "label": "Kobe Bryant/Ice Cube",
+      "label_en": "Kobe Bryant/Ice Cube",
+      "label_es": null,
+      "kind": "work",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q125446155"
+     },
+     {
+      "id": "Q20001206",
+      "label": "Barbershop",
+      "label_en": "Barbershop",
+      "label_es": "La barbería",
+      "kind": "work",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q20001206"
+     },
+     {
+      "id": "Q749110",
+      "label": "Dangerous Ground",
+      "label_en": "Dangerous Ground",
+      "label_es": "Tierra de odios",
+      "kind": "work",
+      "degree": 6,
+      "url": "https://www.wikidata.org/wiki/Q749110"
+     },
+     {
+      "id": "Q3714008",
+      "label": "Donnie's Story: The Life of Donald Goines",
+      "label_en": "Donnie's Story: The Life of Donald Goines",
+      "label_es": null,
+      "kind": "work",
+      "degree": 6,
+      "url": "https://www.wikidata.org/wiki/Q3714008"
+     },
+     {
+      "id": "Q1509855",
+      "label": "Are We Done Yet?",
+      "label_en": "Are We Done Yet?",
+      "label_es": "Are We Done Yet?",
+      "kind": "work",
+      "degree": 8,
+      "url": "https://www.wikidata.org/wiki/Q1509855"
+     },
+     {
+      "id": "Q6519679",
+      "label": "Thicker than Water",
+      "label_en": "Thicker than Water",
+      "label_es": null,
+      "kind": "work",
+      "degree": 8,
+      "url": "https://www.wikidata.org/wiki/Q6519679"
+     },
+     {
+      "id": "Q96378044",
+      "label": "The Fire Inside",
+      "label_en": "The Fire Inside",
+      "label_es": "The Fire Inside",
+      "kind": "work",
+      "degree": 9,
+      "url": "https://www.wikidata.org/wiki/Q96378044"
+     },
+     {
+      "id": "Q4879742",
+      "label": "Beef II",
+      "label_en": "Beef II",
+      "label_es": null,
+      "kind": "work",
+      "degree": 9,
+      "url": "https://www.wikidata.org/wiki/Q4879742"
+     },
+     {
+      "id": "Q4072742",
+      "label": "I Got the Hook Up",
+      "label_en": "I Got the Hook Up",
+      "label_es": "Conectados",
+      "kind": "work",
+      "degree": 9,
+      "url": "https://www.wikidata.org/wiki/Q4072742"
+     },
+     {
+      "id": "Q135458343",
+      "label": "War of the Worlds",
+      "label_en": "War of the Worlds",
+      "label_es": "La guerra de los mundos",
+      "kind": "work",
+      "degree": 11,
+      "url": "https://www.wikidata.org/wiki/Q135458343"
+     },
+     {
+      "id": "Q749899",
+      "label": "Tupac: Resurrection",
+      "label_en": "Tupac: Resurrection",
+      "label_es": "Tupac: Resurrection",
+      "kind": "work",
+      "degree": 13,
+      "url": "https://www.wikidata.org/wiki/Q749899"
+     },
+     {
+      "id": "Q283696",
+      "label": "XXX: State of the Union",
+      "label_en": "XXX: State of the Union",
+      "label_es": "XXX: State of the Union",
+      "kind": "work",
+      "degree": 13,
+      "url": "https://www.wikidata.org/wiki/Q283696"
+     },
+     {
+      "id": "Q121091587",
+      "label": "The Killer's Game",
+      "label_en": "The Killer's Game",
+      "label_es": "The Killer's Game",
+      "kind": "work",
+      "degree": 14,
+      "url": "https://www.wikidata.org/wiki/Q121091587"
+     },
+     {
+      "id": "Q1304144",
+      "label": "First Sunday",
+      "label_en": "First Sunday",
+      "label_es": "First Sunday",
+      "kind": "work",
+      "degree": 14,
+      "url": "https://www.wikidata.org/wiki/Q1304144"
+     },
+     {
+      "id": "Q807818",
+      "label": "Barbershop",
+      "label_en": "Barbershop",
+      "label_es": "La barbería",
+      "kind": "work",
+      "degree": 14,
+      "url": "https://www.wikidata.org/wiki/Q807818"
+     },
+     {
+      "id": "Q1422782",
+      "label": "Trespass",
+      "label_en": "Trespass",
+      "label_es": "El tiempo de los intrusos",
+      "kind": "work",
+      "degree": 14,
+      "url": "https://www.wikidata.org/wiki/Q1422782"
+     },
+     {
+      "id": "Q582120",
+      "label": "Are We There Yet?",
+      "label_en": "Are We There Yet?",
+      "label_es": "Are We There Yet?",
+      "kind": "work",
+      "degree": 15,
+      "url": "https://www.wikidata.org/wiki/Q582120"
+     },
+     {
+      "id": "Q64990050",
+      "label": "The High Note",
+      "label_en": "The High Note",
+      "label_es": null,
+      "kind": "work",
+      "degree": 15,
+      "url": "https://www.wikidata.org/wiki/Q64990050"
+     },
+     {
+      "id": "Q896103",
+      "label": "Boyz n the Hood",
+      "label_en": "Boyz n the Hood",
+      "label_es": "Los chicos del barrio",
+      "kind": "work",
+      "degree": 15,
+      "url": "https://www.wikidata.org/wiki/Q896103"
+     },
+     {
+      "id": "Q464042",
+      "label": "Anaconda",
+      "label_en": "Anaconda",
+      "label_es": "Anaconda",
+      "kind": "work",
+      "degree": 15,
+      "url": "https://www.wikidata.org/wiki/Q464042"
+     },
+     {
+      "id": "Q807816",
+      "label": "Barbershop 2: Back in Business",
+      "label_en": "Barbershop 2: Back in Business",
+      "label_es": "La barbería 2",
+      "kind": "work",
+      "degree": 15,
+      "url": "https://www.wikidata.org/wiki/Q807816"
+     },
+     {
+      "id": "Q2621314",
+      "label": "The Longshots",
+      "label_en": "The Longshots",
+      "label_es": "The Longshots",
+      "kind": "work",
+      "degree": 16,
+      "url": "https://www.wikidata.org/wiki/Q2621314"
+     },
+     {
+      "id": "Q3179389",
+      "label": "Murder Was the Case",
+      "label_en": "Murder Was the Case",
+      "label_es": "Murder Was the Case",
+      "kind": "work",
+      "degree": 19,
+      "url": "https://www.wikidata.org/wiki/Q3179389"
+     },
+     {
+      "id": "Q20001218",
+      "label": "Barbershop: The Next Cut",
+      "label_en": "Barbershop: The Next Cut",
+      "label_es": "La barbería 3",
+      "kind": "work",
+      "degree": 19,
+      "url": "https://www.wikidata.org/wiki/Q20001218"
+     },
+     {
+      "id": "Q6684966",
+      "label": "Lottery Ticket",
+      "label_en": "Lottery Ticket",
+      "label_es": "Lottery Ticket",
+      "kind": "work",
+      "degree": 19,
+      "url": "https://www.wikidata.org/wiki/Q6684966"
+     },
+     {
+      "id": "Q12127154",
+      "label": "Ride Along",
+      "label_en": "Ride Along",
+      "label_es": "Ride Along",
+      "kind": "work",
+      "degree": 20,
+      "url": "https://www.wikidata.org/wiki/Q12127154"
+     },
+     {
+      "id": "Q670055",
+      "label": "Torque",
+      "label_en": "Torque",
+      "label_es": "Torque",
+      "kind": "work",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q670055"
+     },
+     {
+      "id": "Q21527653",
+      "label": "Fist Fight",
+      "label_en": "Fist Fight",
+      "label_es": "Fist Fight",
+      "kind": "work",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q21527653"
+     },
+     {
+      "id": "Q4441559",
+      "label": "The Glass Shield",
+      "label_en": "The Glass Shield",
+      "label_es": "La placa de hielo",
+      "kind": "work",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q4441559"
+     },
+     {
+      "id": "Q261700",
+      "label": "Ghosts of Mars",
+      "label_en": "Ghosts of Mars",
+      "label_es": "Ghosts of Mars",
+      "kind": "work",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q261700"
+     },
+     {
+      "id": "Q138084",
+      "label": "Rampart",
+      "label_en": "Rampart",
+      "label_es": "Rampart",
+      "kind": "work",
+      "degree": 22,
+      "url": "https://www.wikidata.org/wiki/Q138084"
+     },
+     {
+      "id": "Q1357016",
+      "label": "Three Kings",
+      "label_en": "Three Kings",
+      "label_es": "Tres reyes",
+      "kind": "work",
+      "degree": 23,
+      "url": "https://www.wikidata.org/wiki/Q1357016"
+     },
+     {
+      "id": "Q3985698",
+      "label": "Something from Nothing: The Art of Rap",
+      "label_en": "Something from Nothing: The Art of Rap",
+      "label_es": "Something from Nothing: The Art of Rap",
+      "kind": "work",
+      "degree": 24,
+      "url": "https://www.wikidata.org/wiki/Q3985698"
+     },
+     {
+      "id": "Q17903453",
+      "label": "Ride Along 2",
+      "label_en": "Ride Along 2",
+      "label_es": "Ride Along 2",
+      "kind": "work",
+      "degree": 24,
+      "url": "https://www.wikidata.org/wiki/Q17903453"
+     },
+     {
+      "id": "Q1617908",
+      "label": "Higher Learning",
+      "label_en": "Higher Learning",
+      "label_es": "Higher Learning",
+      "kind": "work",
+      "degree": 25,
+      "url": "https://www.wikidata.org/wiki/Q1617908"
+     },
+     {
+      "id": "Q214014",
+      "label": "21 Jump Street",
+      "label_en": "21 Jump Street",
+      "label_es": "21 Jump Street",
+      "kind": "work",
+      "degree": 30,
+      "url": "https://www.wikidata.org/wiki/Q214014"
+     },
+     {
+      "id": "Q15040917",
+      "label": "22 Jump Street",
+      "label_en": "22 Jump Street",
+      "label_es": "22 Jump Street",
+      "kind": "work",
+      "degree": 39,
+      "url": "https://www.wikidata.org/wiki/Q15040917"
+     },
+     {
+      "id": "Q18154625",
+      "label": "Straight Outta Compton",
+      "label_en": "Straight Outta Compton",
+      "label_es": "Letras Expícitas",
+      "kind": "work",
+      "degree": 51,
+      "url": "https://www.wikidata.org/wiki/Q18154625"
+     },
+     {
+      "id": "Q17151201",
+      "label": "Sic Them Youngins On 'Em",
+      "label_en": "Sic Them Youngins On 'Em",
+      "label_es": "Sic Them Youngins On 'Em",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q17151201"
+     },
+     {
+      "id": "Q1916322",
+      "label": "$100 Bill Y'all",
+      "label_en": "$100 Bill Y'all",
+      "label_es": "$100 Bill Y'all",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1916322"
+     },
+     {
+      "id": "Q7847588",
+      "label": "True to the Game",
+      "label_en": "True to the Game",
+      "label_es": "True to the Game",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q7847588"
+     },
+     {
+      "id": "Q5478945",
+      "label": "Gangsta Rap Made Me Do It",
+      "label_en": "Gangsta Rap Made Me Do It",
+      "label_es": "Gangsta Rap Made Me Do It",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q5478945"
+     },
+     {
+      "id": "Q2523119",
+      "label": "Death Certificate",
+      "label_en": "Death Certificate",
+      "label_es": "Death Certificate",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q2523119"
+     },
+     {
+      "id": "Q1255024",
+      "label": "I Am the West",
+      "label_en": "I Am the West",
+      "label_es": "I Am the West",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1255024"
+     },
+     {
+      "id": "Q10286145",
+      "label": "Fuck Dying",
+      "label_en": "Fuck Dying",
+      "label_es": "Fuck Dyin",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q10286145"
+     },
+     {
+      "id": "Q2019664",
+      "label": "Raw Footage",
+      "label_en": "Raw Footage",
+      "label_es": "Raw Footage",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q2019664"
+     },
+     {
+      "id": "Q1904894",
+      "label": "Do Ya Thang",
+      "label_en": "Do Ya Thang",
+      "label_es": "Do Ya Thang",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1904894"
+     },
+     {
+      "id": "Q1065348",
+      "label": "The Predator",
+      "label_en": "The Predator",
+      "label_es": "The Predator",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1065348"
+     },
+     {
+      "id": "Q3296650",
+      "label": "Check Yo Self",
+      "label_en": "Check Yo Self",
+      "label_es": "Check Yo Self",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q3296650"
+     },
+     {
+      "id": "Q4006089",
+      "label": "Until We Rich",
+      "label_en": "Until We Rich",
+      "label_es": "Until We Rich",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q4006089"
+     },
+     {
+      "id": "Q18469914",
+      "label": "Drop Girl",
+      "label_en": "Drop Girl",
+      "label_es": "Drop Girl",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q18469914"
+     },
+     {
+      "id": "Q121007318",
+      "label": "Superfly",
+      "label_en": "Superfly",
+      "label_es": "Superfly",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q121007318"
+     },
+     {
+      "id": "Q1808585",
+      "label": "Kill at Will",
+      "label_en": "Kill at Will",
+      "label_es": "Kill at Will",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1808585"
+     },
+     {
+      "id": "Q5375944",
+      "label": "Endangered Species (Tales from the Darkside)",
+      "label_en": "Endangered Species (Tales from the Darkside)",
+      "label_es": "Endangered Species (Tales from the Darkside)",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q5375944"
+     },
+     {
+      "id": "Q19248194",
+      "label": "Everythang's Corrupt",
+      "label_en": "Everythang's Corrupt",
+      "label_es": "Everythang's Corrupt",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q19248194"
+     },
+     {
+      "id": "Q7732525",
+      "label": "The Essentials",
+      "label_en": "The Essentials",
+      "label_es": "The Essentials",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q7732525"
+     },
+     {
+      "id": "Q5439700",
+      "label": "Featuring...Ice Cube",
+      "label_en": "Featuring...Ice Cube",
+      "label_es": null,
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q5439700"
+     },
+     {
+      "id": "Q17417474",
+      "label": "Icon",
+      "label_en": "Icon",
+      "label_es": "Icon",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q17417474"
+     },
+     {
+      "id": "Q8057313",
+      "label": "You Know How We Do It",
+      "label_en": "You Know How We Do It",
+      "label_es": "You Know How We Do It",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q8057313"
+     },
+     {
+      "id": "Q5978815",
+      "label": "I Rep That West",
+      "label_en": "I Rep That West",
+      "label_es": "I Rep That West",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q5978815"
+     },
+     {
+      "id": "Q20049949",
+      "label": "Only in California",
+      "label_en": "Only in California",
+      "label_es": "Only in California",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q20049949"
+     },
+     {
+      "id": "Q42529507",
+      "label": "Good Cop, Bad Cop",
+      "label_en": "Good Cop, Bad Cop",
+      "label_es": "Good Cop, Bad Cop",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q42529507"
+     },
+     {
+      "id": "Q7998270",
+      "label": "Wicked",
+      "label_en": "Wicked",
+      "label_es": "Wicked",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q7998270"
+     },
+     {
+      "id": "Q689666",
+      "label": "AmeriKKKa's Most Wanted",
+      "label_en": "AmeriKKKa's Most Wanted",
+      "label_es": "AmeriKKKa's Most Wanted",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q689666"
+     },
+     {
+      "id": "Q3280354",
+      "label": "Ice Cube - Greatest Hits",
+      "label_en": "Ice Cube - Greatest Hits",
+      "label_es": "Greatest Hits",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q3280354"
+     },
+     {
+      "id": "Q43765197",
+      "label": "Black Korea",
+      "label_en": "Black Korea",
+      "label_es": "Black Korea",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q43765197"
+     },
+     {
+      "id": "Q10374101",
+      "label": "Steady Mobbin'",
+      "label_en": "Steady Mobbin'",
+      "label_es": "Steady Mobbin'",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q10374101"
+     },
+     {
+      "id": "Q7301008",
+      "label": "Real Nigga Roll Call",
+      "label_en": "Real Nigga Roll Call",
+      "label_es": "Real Nigga Roll Call",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q7301008"
+     },
+     {
+      "id": "Q141301893",
+      "label": "Man Up",
+      "label_en": "Man Up",
+      "label_es": null,
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q141301893"
+     },
+     {
+      "id": "Q7991000",
+      "label": "What Can I Do?",
+      "label_en": "What Can I Do?",
+      "label_es": "What Can I Do?",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q7991000"
+     },
+     {
+      "id": "Q7301306",
+      "label": "Really Doe",
+      "label_en": "Really Doe",
+      "label_es": "Really Doe",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q7301306"
+     },
+     {
+      "id": "Q1082341",
+      "label": "War & Peace Vol. 1",
+      "label_en": "War & Peace Vol. 1",
+      "label_es": "War & Peace Vol. 1",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1082341"
+     },
+     {
+      "id": "Q1625391",
+      "label": "Bootlegs & B-Sides",
+      "label_en": "Bootlegs & B-Sides",
+      "label_es": null,
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q1625391"
+     },
+     {
+      "id": "Q3564254",
+      "label": "We Be Clubbin'",
+      "label_en": "We Be Clubbin'",
+      "label_es": "We Be Clubbin'",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q3564254"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-5241bcc07dd9af43",
+      "subject": "Q19667862",
+      "predicate": "P22",
+      "object": "Q173637",
+      "label": "father",
+      "label_es": "padre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P22"
+     },
+     {
+      "id": "e-6b726273f962a037",
+      "subject": "Q173637",
+      "predicate": "P40",
+      "object": "Q19667862",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     },
+     {
+      "id": "e-32e22f33e838d617",
+      "subject": "Q123017445",
+      "predicate": "P1038",
+      "object": "Q173637",
+      "label": "relative",
+      "label_es": "pariente",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P1038"
+     },
+     {
+      "id": "e-269e0a72bf36bb5e",
+      "subject": "Q29079022",
+      "predicate": "P57",
+      "object": "Q173637",
+      "label": "director",
+      "label_es": "dirección",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P57"
+     },
+     {
+      "id": "e-f8259cce27ea6138",
+      "subject": "Q921936",
+      "predicate": "P57",
+      "object": "Q173637",
+      "label": "director",
+      "label_es": "dirección",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P57"
+     },
+     {
+      "id": "e-4fdbe120978c45dc",
+      "subject": "Q5503472",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-773e2ebbb66f33b1",
+      "subject": "Q5503479",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-9a0e03948bd5d9db",
+      "subject": "Q6154990",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-19ae2d17ca47e949",
+      "subject": "Q2030817",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-3da4e0029dc64486",
+      "subject": "Q921936",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-f749c7228d3bde19",
+      "subject": "Q912672",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-2c81ca9b4deceee8",
+      "subject": "Q673486",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-e7c9a7f69cf22ed6",
+      "subject": "Q580006",
+      "predicate": "P58",
+      "object": "Q173637",
+      "label": "screenwriter",
+      "label_es": "guion",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P58"
+     },
+     {
+      "id": "e-82939565915a53c3",
+      "subject": "Q7775985",
+      "predicate": "P86",
+      "object": "Q173637",
+      "label": "composer",
+      "label_es": "compositor/a",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P86"
+     },
+     {
+      "id": "e-f8be74791f4882fd",
+      "subject": "Q7045153",
+      "predicate": "P86",
+      "object": "Q173637",
+      "label": "composer",
+      "label_es": "compositor/a",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P86"
+     },
+     {
+      "id": "e-a7d958cc60325099",
+      "subject": "Q7261790",
+      "predicate": "P86",
+      "object": "Q173637",
+      "label": "composer",
+      "label_es": "compositor/a",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P86"
+     },
+     {
+      "id": "e-3edaa495906b2017",
+      "subject": "Q3499682",
+      "predicate": "P86",
+      "object": "Q173637",
+      "label": "composer",
+      "label_es": "compositor/a",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P86"
+     },
+     {
+      "id": "e-25c7d1050c9067a9",
+      "subject": "Q125446155",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-d504aa5823d6879f",
+      "subject": "Q29079022",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-0c996270639b116a",
+      "subject": "Q20001206",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-36de8f181248d865",
+      "subject": "Q5503479",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-b0e1ceee42bb8c45",
+      "subject": "Q749110",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-c7b0f17999becaeb",
+      "subject": "Q3714008",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-7229ef633827553d",
+      "subject": "Q1509855",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-c2ef83249c649277",
+      "subject": "Q6519679",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-44dbaebd10017417",
+      "subject": "Q96378044",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-d549238c434ec446",
+      "subject": "Q4879742",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-fe2daf846dd4d1f3",
+      "subject": "Q4072742",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-361b70676e1530cc",
+      "subject": "Q135458343",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-aff7a90e6c417430",
+      "subject": "Q6154990",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-06a79eae17ffdc63",
+      "subject": "Q2030817",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-41f713ed7906e8ad",
+      "subject": "Q749899",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-6109177bba1ff41a",
+      "subject": "Q283696",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-24bcc59841533b35",
+      "subject": "Q121091587",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-a5038972584b7a6f",
+      "subject": "Q1304144",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-df7b47fae2c756ad",
+      "subject": "Q807818",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-e352629efa409059",
+      "subject": "Q1422782",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-4375afb4f2ba1298",
+      "subject": "Q582120",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-610a3b418d6c76f9",
+      "subject": "Q64990050",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-a32dacb97327abfa",
+      "subject": "Q896103",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-a5596e653cf693b6",
+      "subject": "Q464042",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-daf75f9784fd361d",
+      "subject": "Q807816",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-7eeaabca5bb5cc48",
+      "subject": "Q921936",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-959662c4ced4b0ea",
+      "subject": "Q2621314",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-e5ab4ccd20cc6194",
+      "subject": "Q912672",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-340029545fbe3b15",
+      "subject": "Q3179389",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-851c22cba2dda9fc",
+      "subject": "Q20001218",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-9c5061146adca6c7",
+      "subject": "Q6684966",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-6da46c57d9c079c0",
+      "subject": "Q12127154",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-70dfe6b4d6558371",
+      "subject": "Q673486",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-91f560607d709d20",
+      "subject": "Q670055",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-9914e82fe16d4c3e",
+      "subject": "Q21527653",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-aa5a89ce5331b4dc",
+      "subject": "Q580006",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-b60467aad7381fa2",
+      "subject": "Q4441559",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-fdae52def7edd851",
+      "subject": "Q261700",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-808c17d2adab25b0",
+      "subject": "Q138084",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-014a38a9fef0a3fc",
+      "subject": "Q1357016",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-76a5cb89d4108eb5",
+      "subject": "Q3985698",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-947597eb923f82ee",
+      "subject": "Q22075020",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-d393a28f4836d5bd",
+      "subject": "Q17903453",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-59770d290f67d92f",
+      "subject": "Q1617908",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-1441d9fe42a427cc",
+      "subject": "Q214014",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-e618f8e1bb19e1a8",
+      "subject": "Q15040917",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-46e5e173030287ae",
+      "subject": "Q18154625",
+      "predicate": "P161",
+      "object": "Q173637",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-08fc5d494061226b",
+      "subject": "Q17151201",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-0bd692c64b392704",
+      "subject": "Q1916322",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-0fdbb0664ff50740",
+      "subject": "Q7847588",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-170064d0d98b9c23",
+      "subject": "Q5478945",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-296147379b735039",
+      "subject": "Q2523119",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-3a7e4d09a609ab3c",
+      "subject": "Q1255024",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-3d6d2224748ab74f",
+      "subject": "Q10286145",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-41168a1672116674",
+      "subject": "Q2019664",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-4f36141fe1330eba",
+      "subject": "Q1904894",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-540430d48308bb6b",
+      "subject": "Q1065348",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-55f19368a1f2089d",
+      "subject": "Q3296650",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-5e11b67eff8c8128",
+      "subject": "Q4006089",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-6827bc113c8dff7e",
+      "subject": "Q18469914",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-723d636d3bdcbf19",
+      "subject": "Q121007318",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-7248b1c72d55493d",
+      "subject": "Q1808585",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-792522955c56ebf9",
+      "subject": "Q5375944",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-8089f97d50cda10d",
+      "subject": "Q19248194",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-814e5888a7e91ae5",
+      "subject": "Q7732525",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-89359ef112f9201d",
+      "subject": "Q5439700",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-8f6207575ebfed58",
+      "subject": "Q17417474",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-9486913c986be9b3",
+      "subject": "Q8057313",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-96f45e4d073fd645",
+      "subject": "Q5978815",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-9c2c3e7533f11c4d",
+      "subject": "Q20049949",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-a15ce1f0da7b3795",
+      "subject": "Q42529507",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-a509e1d7b8deac04",
+      "subject": "Q7998270",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-a790e861bf76883d",
+      "subject": "Q689666",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-ae8d53ddbf0be6c9",
+      "subject": "Q3280354",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-b01f36643b9a6df2",
+      "subject": "Q43765197",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-b30a46b14d14d448",
+      "subject": "Q10374101",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-b92b8b61d7ab480e",
+      "subject": "Q7301008",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-bb17d3f6cf4899c9",
+      "subject": "Q141301893",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-bcf0c01408f7dc61",
+      "subject": "Q7991000",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-c0463457bb840080",
+      "subject": "Q7301306",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-c105e8ba3f423057",
+      "subject": "Q1082341",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-c60bed5ae8ff4337",
+      "subject": "Q1625391",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-c83cd79a05ed476e",
+      "subject": "Q3564254",
+      "predicate": "P175",
+      "object": "Q173637",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-5241bcc07dd9af43",
+     "e-6b726273f962a037",
+     "e-32e22f33e838d617",
+     "e-269e0a72bf36bb5e",
+     "e-f8259cce27ea6138",
+     "e-4fdbe120978c45dc",
+     "e-773e2ebbb66f33b1",
+     "e-9a0e03948bd5d9db",
+     "e-19ae2d17ca47e949",
+     "e-3da4e0029dc64486",
+     "e-f749c7228d3bde19",
+     "e-2c81ca9b4deceee8",
+     "e-e7c9a7f69cf22ed6",
+     "e-82939565915a53c3",
+     "e-f8be74791f4882fd",
+     "e-a7d958cc60325099",
+     "e-3edaa495906b2017",
+     "e-25c7d1050c9067a9",
+     "e-d504aa5823d6879f",
+     "e-0c996270639b116a",
+     "e-36de8f181248d865",
+     "e-b0e1ceee42bb8c45",
+     "e-c7b0f17999becaeb",
+     "e-7229ef633827553d",
+     "e-c2ef83249c649277",
+     "e-44dbaebd10017417",
+     "e-d549238c434ec446",
+     "e-fe2daf846dd4d1f3",
+     "e-361b70676e1530cc",
+     "e-aff7a90e6c417430",
+     "e-06a79eae17ffdc63",
+     "e-41f713ed7906e8ad",
+     "e-6109177bba1ff41a",
+     "e-24bcc59841533b35",
+     "e-a5038972584b7a6f",
+     "e-df7b47fae2c756ad",
+     "e-e352629efa409059",
+     "e-4375afb4f2ba1298",
+     "e-610a3b418d6c76f9",
+     "e-a32dacb97327abfa",
+     "e-a5596e653cf693b6",
+     "e-daf75f9784fd361d",
+     "e-7eeaabca5bb5cc48",
+     "e-959662c4ced4b0ea",
+     "e-e5ab4ccd20cc6194",
+     "e-340029545fbe3b15",
+     "e-851c22cba2dda9fc",
+     "e-9c5061146adca6c7",
+     "e-6da46c57d9c079c0",
+     "e-70dfe6b4d6558371",
+     "e-91f560607d709d20",
+     "e-9914e82fe16d4c3e",
+     "e-aa5a89ce5331b4dc",
+     "e-b60467aad7381fa2",
+     "e-fdae52def7edd851",
+     "e-808c17d2adab25b0",
+     "e-014a38a9fef0a3fc",
+     "e-76a5cb89d4108eb5",
+     "e-947597eb923f82ee",
+     "e-d393a28f4836d5bd",
+     "e-59770d290f67d92f",
+     "e-1441d9fe42a427cc",
+     "e-e618f8e1bb19e1a8",
+     "e-46e5e173030287ae",
+     "e-08fc5d494061226b",
+     "e-0bd692c64b392704",
+     "e-0fdbb0664ff50740",
+     "e-170064d0d98b9c23",
+     "e-296147379b735039",
+     "e-3a7e4d09a609ab3c",
+     "e-3d6d2224748ab74f",
+     "e-41168a1672116674",
+     "e-4f36141fe1330eba",
+     "e-540430d48308bb6b",
+     "e-55f19368a1f2089d",
+     "e-5e11b67eff8c8128",
+     "e-6827bc113c8dff7e",
+     "e-723d636d3bdcbf19",
+     "e-7248b1c72d55493d",
+     "e-792522955c56ebf9",
+     "e-8089f97d50cda10d",
+     "e-814e5888a7e91ae5",
+     "e-89359ef112f9201d",
+     "e-8f6207575ebfed58",
+     "e-9486913c986be9b3",
+     "e-96f45e4d073fd645",
+     "e-9c2c3e7533f11c4d",
+     "e-a15ce1f0da7b3795",
+     "e-a509e1d7b8deac04",
+     "e-a790e861bf76883d",
+     "e-ae8d53ddbf0be6c9",
+     "e-b01f36643b9a6df2",
+     "e-b30a46b14d14d448",
+     "e-b92b8b61d7ab480e",
+     "e-bb17d3f6cf4899c9",
+     "e-bcf0c01408f7dc61",
+     "e-c0463457bb840080",
+     "e-c105e8ba3f423057",
+     "e-c60bed5ae8ff4337",
+     "e-c83cd79a05ed476e"
+    ],
+    "returned": 100,
+    "complete": false,
+    "truncated": true,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q173637"
+    ]
+   }
+  },
+  {
+   "event_id": 11,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:54.431+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 3,
+    "qid": "Q173637",
+    "ok": true,
+    "returned": 100,
+    "added_node_count": 89,
+    "added_edge_count": 100,
+    "complete": false
+   }
+  },
+  {
+   "event_id": 12,
+   "investigation_id": "0ba98fce7a75",
+   "type": "paths.updated",
+   "timestamp": "2026-11-13T19:27:54.432+00:00",
+   "payload": {
+    "step": 3,
+    "trigger_qid": "Q173637",
+    "comparison": {
+     "source_qid": "Q142794",
+     "target_qid": "Q173637",
+     "shortest": {
+      "mode": "shortest",
+      "status": "found",
+      "result": {
+       "path_id": "p-2c0883283516",
+       "mode": "shortest",
+       "source_qid": "Q142794",
+       "target_qid": "Q173637",
+       "nodes": [
+        {
+         "qid": "Q142794",
+         "label_en": "Neymar",
+         "label_es": "Neymar",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q142794"
+        },
+        {
+         "qid": "Q22075020",
+         "label_en": "xXx Return of Xander Cage",
+         "label_es": "XXx: The Return of Xander Cage",
+         "kind": "work",
+         "url": "https://www.wikidata.org/wiki/Q22075020"
+        },
+        {
+         "qid": "Q173637",
+         "label_en": "Ice Cube",
+         "label_es": "Ice Cube",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q173637"
+        }
+       ],
+       "hops": [
+        {
+         "edge_id": "e-ac1be1e0781acb07",
+         "from_qid": "Q142794",
+         "to_qid": "Q22075020",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q142794",
+         "direction": "reverse",
+         "relation_group": "works",
+         "label": "acted in",
+         "label_es": "actuó en",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.3218875824868201,
+          "total": 1.2150347630467655
+         }
+        },
+        {
+         "edge_id": "e-947597eb923f82ee",
+         "from_qid": "Q22075020",
+         "to_qid": "Q173637",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q173637",
+         "direction": "forward",
+         "relation_group": "works",
+         "label": "cast member",
+         "label_es": "reparto",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.0,
+          "total": 0.8931471805599454
+         }
+        }
+       ],
+       "hop_count": 2,
+       "total_cost": 2.108181944,
+       "scope": "explored_graph",
+       "policy_version": 5,
+       "enabled_groups": [
+        "birthplace",
+        "family",
+        "institutional",
+        "mentorship",
+        "works"
+       ],
+       "snapshot": "20261104"
+      },
+      "scope": "explored_graph",
+      "stats": {
+       "visited_nodes": 102,
+       "expanded_states": 2,
+       "truncated_reason": null
+      }
+     },
+     "strongest": {
+      "mode": "strongest",
+      "status": "found",
+      "result": {
+       "path_id": "p-2c0883283516",
+       "mode": "strongest",
+       "source_qid": "Q142794",
+       "target_qid": "Q173637",
+       "nodes": [
+        {
+         "qid": "Q142794",
+         "label_en": "Neymar",
+         "label_es": "Neymar",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q142794"
+        },
+        {
+         "qid": "Q22075020",
+         "label_en": "xXx Return of Xander Cage",
+         "label_es": "XXx: The Return of Xander Cage",
+         "kind": "work",
+         "url": "https://www.wikidata.org/wiki/Q22075020"
+        },
+        {
+         "qid": "Q173637",
+         "label_en": "Ice Cube",
+         "label_es": "Ice Cube",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q173637"
+        }
+       ],
+       "hops": [
+        {
+         "edge_id": "e-ac1be1e0781acb07",
+         "from_qid": "Q142794",
+         "to_qid": "Q22075020",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q142794",
+         "direction": "reverse",
+         "relation_group": "works",
+         "label": "acted in",
+         "label_es": "actuó en",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.3218875824868201,
+          "total": 1.2150347630467655
+         }
+        },
+        {
+         "edge_id": "e-947597eb923f82ee",
+         "from_qid": "Q22075020",
+         "to_qid": "Q173637",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q173637",
+         "direction": "forward",
+         "relation_group": "works",
+         "label": "cast member",
+         "label_es": "reparto",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.0,
+          "total": 0.8931471805599454
+         }
+        }
+       ],
+       "hop_count": 2,
+       "total_cost": 2.108181944,
+       "scope": "explored_graph",
+       "policy_version": 5,
+       "enabled_groups": [
+        "birthplace",
+        "family",
+        "institutional",
+        "mentorship",
+        "works"
+       ],
+       "snapshot": "20261104"
+      },
+      "scope": "explored_graph",
+      "stats": {
+       "visited_nodes": 60,
+       "expanded_states": 60,
+       "truncated_reason": null
+      }
+     },
+     "same_path": true,
+     "scope": "explored_graph"
+    }
+   }
+  },
+  {
+   "event_id": 13,
+   "investigation_id": "0ba98fce7a75",
+   "type": "agent.decision",
+   "timestamp": "2026-11-13T19:27:55.716+00:00",
+   "payload": {
+    "turn": 2,
+    "summary": "A path already exists. Let me inspect it and check the current paths to understand the structure.",
+    "tool_calls": [
+     "compute_paths"
+    ]
+   }
+  },
+  {
+   "event_id": 14,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:55.716+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 4,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 15,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:55.717+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 4,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 16,
+   "investigation_id": "0ba98fce7a75",
+   "type": "agent.decision",
+   "timestamp": "2026-11-13T19:27:58.013+00:00",
+   "payload": {
+    "turn": 3,
+    "summary": "A 2-hop path exists via the film xXx. The backend says a stronger path is possible. Let me expand the top improvement leads, starting with the lowest best_possible_cost ones.",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors",
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 17,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:58.013+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 5,
+    "qid": "Q19667862",
+    "label": "O'Shea Jackson Jr.",
+    "side": "target",
+    "reason": "A 2-hop path exists via the film xXx. The backend says a stronger path is possible. Let me expand the top improvement leads, starting with the lowest best_possible_cost ones.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q19667862"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 18,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:27:58.017+00:00",
+   "payload": {
+    "step": 5,
+    "expanded_qid": "Q19667862",
+    "side": "target",
+    "added_nodes": [
+     {
+      "id": "Q133042771",
+      "label": "Lone Wolf",
+      "label_en": "Lone Wolf",
+      "label_es": null,
+      "kind": "work",
+      "degree": 7,
+      "url": "https://www.wikidata.org/wiki/Q133042771"
+     },
+     {
+      "id": "Q56419916",
+      "label": "Just Mercy",
+      "label_en": "Just Mercy",
+      "label_es": "Just Mercy",
+      "kind": "work",
+      "degree": 7,
+      "url": "https://www.wikidata.org/wiki/Q56419916"
+     },
+     {
+      "id": "Q137356276",
+      "label": "Idiots",
+      "label_en": "Idiots",
+      "label_es": null,
+      "kind": "work",
+      "degree": 9,
+      "url": "https://www.wikidata.org/wiki/Q137356276"
+     },
+     {
+      "id": "Q26720603",
+      "label": "Ingrid Goes West",
+      "label_en": "Ingrid Goes West",
+      "label_es": "Ingrid Goes West",
+      "kind": "work",
+      "degree": 9,
+      "url": "https://www.wikidata.org/wiki/Q26720603"
+     },
+     {
+      "id": "Q17501972",
+      "label": "Godzilla: King of the Monsters",
+      "label_en": "Godzilla: King of the Monsters",
+      "label_es": "Godzilla: King of the Monsters",
+      "kind": "work",
+      "degree": 16,
+      "url": "https://www.wikidata.org/wiki/Q17501972"
+     },
+     {
+      "id": "Q44491815",
+      "label": "Long Shot",
+      "label_en": "Long Shot",
+      "label_es": "Long Shot",
+      "kind": "work",
+      "degree": 16,
+      "url": "https://www.wikidata.org/wiki/Q44491815"
+     },
+     {
+      "id": "Q104154217",
+      "label": "Obi-Wan Kenobi",
+      "label_en": "Obi-Wan Kenobi",
+      "label_es": "Obi-Wan Kenobi",
+      "kind": "work",
+      "degree": 19,
+      "url": "https://www.wikidata.org/wiki/Q104154217"
+     },
+     {
+      "id": "Q121085761",
+      "label": "Den of Thieves 2: Pantera",
+      "label_en": "Den of Thieves 2: Pantera",
+      "label_es": "Den of Thieves 2: Pantera",
+      "kind": "work",
+      "degree": 20,
+      "url": "https://www.wikidata.org/wiki/Q121085761"
+     },
+     {
+      "id": "Q28860130",
+      "label": "Den of Thieves",
+      "label_en": "Den of Thieves",
+      "label_es": "Den of Thieves",
+      "kind": "work",
+      "degree": 22,
+      "url": "https://www.wikidata.org/wiki/Q28860130"
+     },
+     {
+      "id": "Q105840301",
+      "label": "Cocaine Bear",
+      "label_en": "Cocaine Bear",
+      "label_es": "Cocaine Bear",
+      "kind": "work",
+      "degree": 25,
+      "url": "https://www.wikidata.org/wiki/Q105840301"
+     },
+     {
+      "id": "Q20813537",
+      "label": "Jackin' for Beats",
+      "label_en": "Jackin' for Beats",
+      "label_es": "Jackin' for Beats",
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q20813537"
+     },
+     {
+      "id": "Q4614",
+      "label": "University of Southern California",
+      "label_en": "University of Southern California",
+      "label_es": "Universidad del Sur de California",
+      "kind": "organization",
+      "degree": 9723,
+      "url": "https://www.wikidata.org/wiki/Q4614"
+     },
+     {
+      "id": "Q65",
+      "label": "Los Angeles",
+      "label_en": "Los Angeles",
+      "label_es": "Los Ángeles",
+      "kind": "place",
+      "degree": 10133,
+      "url": "https://www.wikidata.org/wiki/Q65"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-b4fbca13de7ff72a",
+      "subject": "Q123017445",
+      "predicate": "P22",
+      "object": "Q19667862",
+      "label": "father",
+      "label_es": "padre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P22"
+     },
+     {
+      "id": "e-2101e737ecf60427",
+      "subject": "Q133042771",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-d86c2b00f8da185e",
+      "subject": "Q56419916",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-31da5ecf8e435780",
+      "subject": "Q137356276",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-6a4c60a0803f98cc",
+      "subject": "Q26720603",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-37dda53630389574",
+      "subject": "Q17501972",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-c8461ac2f2c66964",
+      "subject": "Q44491815",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-55524e69dacec35e",
+      "subject": "Q104154217",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-3a4750d4c45d3340",
+      "subject": "Q121085761",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-1a77546e3aeb4024",
+      "subject": "Q28860130",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-ae0acb0578a84116",
+      "subject": "Q105840301",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-eafd3683d4d3ac28",
+      "subject": "Q18154625",
+      "predicate": "P161",
+      "object": "Q19667862",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-74406032680cc6d9",
+      "subject": "Q20813537",
+      "predicate": "P175",
+      "object": "Q19667862",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-2c11f81b3d00ced2",
+      "subject": "Q19667862",
+      "predicate": "P69",
+      "object": "Q4614",
+      "label": "educated at",
+      "label_es": "educado/a en",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P69"
+     },
+     {
+      "id": "e-926a1165077f6a93",
+      "subject": "Q19667862",
+      "predicate": "P19",
+      "object": "Q65",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-b4fbca13de7ff72a",
+     "e-2101e737ecf60427",
+     "e-d86c2b00f8da185e",
+     "e-31da5ecf8e435780",
+     "e-6a4c60a0803f98cc",
+     "e-37dda53630389574",
+     "e-c8461ac2f2c66964",
+     "e-55524e69dacec35e",
+     "e-3a4750d4c45d3340",
+     "e-1a77546e3aeb4024",
+     "e-ae0acb0578a84116",
+     "e-eafd3683d4d3ac28",
+     "e-74406032680cc6d9",
+     "e-2c11f81b3d00ced2",
+     "e-926a1165077f6a93"
+    ],
+    "returned": 17,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q19667862"
+    ]
+   }
+  },
+  {
+   "event_id": 19,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:58.017+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 5,
+    "qid": "Q19667862",
+    "ok": true,
+    "returned": 17,
+    "added_node_count": 13,
+    "added_edge_count": 15,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 20,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:58.019+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 6,
+    "qid": "Q80457071",
+    "label": "Neymar da Silva Santos",
+    "side": "source",
+    "reason": "A 2-hop path exists via the film xXx. The backend says a stronger path is possible. Let me expand the top improvement leads, starting with the lowest best_possible_cost ones.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q80457071"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 21,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:27:58.022+00:00",
+   "payload": {
+    "step": 6,
+    "expanded_qid": "Q80457071",
+    "side": "source",
+    "added_nodes": [],
+    "added_edges": [
+     {
+      "id": "e-017e56b48cad98a8",
+      "subject": "Q80457071",
+      "predicate": "P40",
+      "object": "Q80444381",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-017e56b48cad98a8"
+    ],
+    "returned": 3,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q80457071"
+    ]
+   }
+  },
+  {
+   "event_id": 22,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:58.022+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 6,
+    "qid": "Q80457071",
+    "ok": true,
+    "returned": 3,
+    "added_node_count": 0,
+    "added_edge_count": 1,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 23,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:58.024+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 7,
+    "qid": "Q116274013",
+    "label": "Davi Lucca",
+    "side": "source",
+    "reason": "A 2-hop path exists via the film xXx. The backend says a stronger path is possible. Let me expand the top improvement leads, starting with the lowest best_possible_cost ones.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q116274013"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 24,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:27:58.027+00:00",
+   "payload": {
+    "step": 7,
+    "expanded_qid": "Q116274013",
+    "side": "source",
+    "added_nodes": [
+     {
+      "id": "Q174",
+      "label": "São Paulo",
+      "label_en": "São Paulo",
+      "label_es": "São Paulo",
+      "kind": "place",
+      "degree": 9220,
+      "url": "https://www.wikidata.org/wiki/Q174"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-4d6e87b9364887d6",
+      "subject": "Q116274013",
+      "predicate": "P19",
+      "object": "Q174",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-4d6e87b9364887d6"
+    ],
+    "returned": 3,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q116274013"
+    ]
+   }
+  },
+  {
+   "event_id": 25,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:58.027+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 7,
+    "qid": "Q116274013",
+    "ok": true,
+    "returned": 3,
+    "added_node_count": 1,
+    "added_edge_count": 1,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 26,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:27:58.029+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 8,
+    "qid": "Q123172171",
+    "label": "Mavie Biancardi da Silva",
+    "side": "source",
+    "reason": "A 2-hop path exists via the film xXx. The backend says a stronger path is possible. Let me expand the top improvement leads, starting with the lowest best_possible_cost ones.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q123172171"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 27,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:27:58.032+00:00",
+   "payload": {
+    "step": 8,
+    "expanded_qid": "Q123172171",
+    "side": "source",
+    "added_nodes": [],
+    "added_edges": [
+     {
+      "id": "e-7fd087a97ce6dfa9",
+      "subject": "Q123172171",
+      "predicate": "P25",
+      "object": "Q108111650",
+      "label": "mother",
+      "label_es": "madre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P25"
+     },
+     {
+      "id": "e-690e0a02b60bf27b",
+      "subject": "Q108111650",
+      "predicate": "P40",
+      "object": "Q123172171",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     },
+     {
+      "id": "e-2eaf45ef05a7b845",
+      "subject": "Q123172171",
+      "predicate": "P19",
+      "object": "Q174",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-7fd087a97ce6dfa9",
+     "e-690e0a02b60bf27b",
+     "e-2eaf45ef05a7b845"
+    ],
+    "returned": 5,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q123172171"
+    ]
+   }
+  },
+  {
+   "event_id": 28,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:27:58.032+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 8,
+    "qid": "Q123172171",
+    "ok": true,
+    "returned": 5,
+    "added_node_count": 0,
+    "added_edge_count": 3,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 29,
+   "investigation_id": "0ba98fce7a75",
+   "type": "agent.decision",
+   "timestamp": "2026-11-13T19:28:00.392+00:00",
+   "payload": {
+    "turn": 4,
+    "summary": "The best_possible_cost is rising (0.754 → 1.005 → 1.116), meaning the leads aren't yielding stronger paths. Let me expand the remaining top leads: Jordan R. Jackson and the Bruna leads.",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors",
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 30,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:28:00.393+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 9,
+    "qid": "Q123017445",
+    "label": "Jordan R. Jackson",
+    "side": "target",
+    "reason": "The best_possible_cost is rising (0.754 → 1.005 → 1.116), meaning the leads aren't yielding stronger paths. Let me expand the remaining top leads: Jordan R. Jackson and the Bruna leads.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q123017445"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 31,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:28:00.396+00:00",
+   "payload": {
+    "step": 9,
+    "expanded_qid": "Q123017445",
+    "side": "target",
+    "added_nodes": [],
+    "added_edges": [
+     {
+      "id": "e-3523865378c49aad",
+      "subject": "Q123017445",
+      "predicate": "P19",
+      "object": "Q65",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-3523865378c49aad"
+    ],
+    "returned": 3,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q123017445"
+    ]
+   }
+  },
+  {
+   "event_id": 32,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:28:00.396+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 9,
+    "qid": "Q123017445",
+    "ok": true,
+    "returned": 3,
+    "added_node_count": 0,
+    "added_edge_count": 1,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 33,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:28:00.398+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 10,
+    "qid": "Q4281880",
+    "label": "Bruna Marquezine",
+    "side": "source",
+    "reason": "The best_possible_cost is rising (0.754 → 1.005 → 1.116), meaning the leads aren't yielding stronger paths. Let me expand the remaining top leads: Jordan R. Jackson and the Bruna leads.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q4281880"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 34,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:28:00.402+00:00",
+   "payload": {
+    "step": 10,
+    "expanded_qid": "Q4281880",
+    "side": "source",
+    "added_nodes": [
+     {
+      "id": "Q19897719",
+      "label": "I Love Paraisópolis",
+      "label_en": "I Love Paraisópolis",
+      "label_es": "I Love Paraisópolis",
+      "kind": "work",
+      "degree": 2,
+      "url": "https://www.wikidata.org/wiki/Q19897719"
+     },
+     {
+      "id": "Q44782202",
+      "label": "Deus Salve o Rei",
+      "label_en": "Deus Salve o Rei",
+      "label_es": "Deus Salve o Rei",
+      "kind": "work",
+      "degree": 6,
+      "url": "https://www.wikidata.org/wiki/Q44782202"
+     },
+     {
+      "id": "Q132063588",
+      "label": "Velhos Bandidos",
+      "label_en": "Velhos Bandidos",
+      "label_es": null,
+      "kind": "work",
+      "degree": 11,
+      "url": "https://www.wikidata.org/wiki/Q132063588"
+     },
+     {
+      "id": "Q10336002",
+      "label": "Negócio da China",
+      "label_en": "Negócio da China",
+      "label_es": "Negócio da China",
+      "kind": "work",
+      "degree": 13,
+      "url": "https://www.wikidata.org/wiki/Q10336002"
+     },
+     {
+      "id": "Q107808351",
+      "label": "Blue Beetle",
+      "label_en": "Blue Beetle",
+      "label_es": "Blue Beetle",
+      "kind": "work",
+      "degree": 14,
+      "url": "https://www.wikidata.org/wiki/Q107808351"
+     },
+     {
+      "id": "Q27915975",
+      "label": "Nada Será Como Antes",
+      "label_en": "Nada Será Como Antes",
+      "label_es": "Nada Será Como Antes",
+      "kind": "work",
+      "degree": 18,
+      "url": "https://www.wikidata.org/wiki/Q27915975"
+     },
+     {
+      "id": "Q1247400",
+      "label": "América",
+      "label_en": "América",
+      "label_es": "América",
+      "kind": "work",
+      "degree": 58,
+      "url": "https://www.wikidata.org/wiki/Q1247400"
+     },
+     {
+      "id": "Q112856769",
+      "label": "Beatriz de Souza",
+      "label_en": "Beatriz de Souza",
+      "label_es": null,
+      "kind": "work",
+      "degree": 1,
+      "url": "https://www.wikidata.org/wiki/Q112856769"
+     },
+     {
+      "id": "Q907311",
+      "label": "Netflix",
+      "label_en": "Netflix",
+      "label_es": "Netflix",
+      "kind": "organization",
+      "degree": 72,
+      "url": "https://www.wikidata.org/wiki/Q907311"
+     },
+     {
+      "id": "Q3587",
+      "label": "TV Globo",
+      "label_en": "TV Globo",
+      "label_es": "TV Globo",
+      "kind": "organization",
+      "degree": 101,
+      "url": "https://www.wikidata.org/wiki/Q3587"
+     },
+     {
+      "id": "Q126399",
+      "label": "Warner Bros. Entertainment",
+      "label_en": "Warner Bros. Entertainment",
+      "label_es": "Warner Bros.",
+      "kind": "organization",
+      "degree": 222,
+      "url": "https://www.wikidata.org/wiki/Q126399"
+     },
+     {
+      "id": "Q193021",
+      "label": "Duque de Caxias",
+      "label_en": "Duque de Caxias",
+      "label_es": "Duque de Caxias",
+      "kind": "place",
+      "degree": 168,
+      "url": "https://www.wikidata.org/wiki/Q193021"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-3e53481e2b000375",
+      "subject": "Q19897719",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-4a2835ce30ce5364",
+      "subject": "Q44782202",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-4f804edb14e868d8",
+      "subject": "Q132063588",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-16298a59f50174e0",
+      "subject": "Q10336002",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-2d36353fc07b0bc0",
+      "subject": "Q107808351",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-89f124d92c316c6b",
+      "subject": "Q27915975",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-b7c30e4cfe6e870e",
+      "subject": "Q1247400",
+      "predicate": "P161",
+      "object": "Q4281880",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-f9422028dbc8b48b",
+      "subject": "Q112856769",
+      "predicate": "P175",
+      "object": "Q4281880",
+      "label": "performer",
+      "label_es": "intérprete",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P175"
+     },
+     {
+      "id": "e-fc22e06182f8eea6",
+      "subject": "Q4281880",
+      "predicate": "P108",
+      "object": "Q907311",
+      "label": "employer",
+      "label_es": "empleador",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P108"
+     },
+     {
+      "id": "e-3e71a688f915a611",
+      "subject": "Q4281880",
+      "predicate": "P108",
+      "object": "Q3587",
+      "label": "employer",
+      "label_es": "empleador",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P108"
+     },
+     {
+      "id": "e-95465e432a36075b",
+      "subject": "Q4281880",
+      "predicate": "P108",
+      "object": "Q126399",
+      "label": "employer",
+      "label_es": "empleador",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P108"
+     },
+     {
+      "id": "e-2d202b24e35f3fa4",
+      "subject": "Q4281880",
+      "predicate": "P19",
+      "object": "Q193021",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-3e53481e2b000375",
+     "e-4a2835ce30ce5364",
+     "e-4f804edb14e868d8",
+     "e-16298a59f50174e0",
+     "e-2d36353fc07b0bc0",
+     "e-89f124d92c316c6b",
+     "e-b7c30e4cfe6e870e",
+     "e-f9422028dbc8b48b",
+     "e-fc22e06182f8eea6",
+     "e-3e71a688f915a611",
+     "e-95465e432a36075b",
+     "e-2d202b24e35f3fa4"
+    ],
+    "returned": 14,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q4281880"
+    ]
+   }
+  },
+  {
+   "event_id": 35,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:28:00.402+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 10,
+    "qid": "Q4281880",
+    "ok": true,
+    "returned": 14,
+    "added_node_count": 12,
+    "added_edge_count": 12,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 36,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:28:00.404+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 11,
+    "qid": "Q108111650",
+    "label": "Bruna Biancardi",
+    "side": "source",
+    "reason": "The best_possible_cost is rising (0.754 → 1.005 → 1.116), meaning the leads aren't yielding stronger paths. Let me expand the remaining top leads: Jordan R. Jackson and the Bruna leads.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q108111650"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 37,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:28:00.407+00:00",
+   "payload": {
+    "step": 11,
+    "expanded_qid": "Q108111650",
+    "side": "source",
+    "added_nodes": [
+     {
+      "id": "Q155",
+      "label": "Brazil",
+      "label_en": "Brazil",
+      "label_es": "Brasil",
+      "kind": "place",
+      "degree": 1194,
+      "url": "https://www.wikidata.org/wiki/Q155"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-76fb442126295f2a",
+      "subject": "Q108111650",
+      "predicate": "P19",
+      "object": "Q155",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-76fb442126295f2a"
+    ],
+    "returned": 5,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q108111650"
+    ]
+   }
+  },
+  {
+   "event_id": 38,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:28:00.407+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 11,
+    "qid": "Q108111650",
+    "ok": true,
+    "returned": 5,
+    "added_node_count": 1,
+    "added_edge_count": 1,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 39,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:28:00.409+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 12,
+    "qid": "Q138806701",
+    "label": "Gabriella Lenzi",
+    "side": "source",
+    "reason": "The best_possible_cost is rising (0.754 → 1.005 → 1.116), meaning the leads aren't yielding stronger paths. Let me expand the remaining top leads: Jordan R. Jackson and the Bruna leads.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q138806701"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 40,
+   "investigation_id": "0ba98fce7a75",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-13T19:28:00.412+00:00",
+   "payload": {
+    "step": 12,
+    "expanded_qid": "Q138806701",
+    "side": "source",
+    "added_nodes": [
+     {
+      "id": "Q598016",
+      "label": "Balneário Camboriú",
+      "label_en": "Balneário Camboriú",
+      "label_es": "Balneario Camboriú",
+      "kind": "place",
+      "degree": 21,
+      "url": "https://www.wikidata.org/wiki/Q598016"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-b5dd88d36a317c24",
+      "subject": "Q138806701",
+      "predicate": "P19",
+      "object": "Q598016",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-b5dd88d36a317c24"
+    ],
+    "returned": 2,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q138806701"
+    ]
+   }
+  },
+  {
+   "event_id": 41,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:28:00.412+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 12,
+    "qid": "Q138806701",
+    "ok": true,
+    "returned": 2,
+    "added_node_count": 1,
+    "added_edge_count": 1,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 42,
+   "investigation_id": "0ba98fce7a75",
+   "type": "agent.decision",
+   "timestamp": "2026-11-13T19:28:01.741+00:00",
+   "payload": {
+    "turn": 5,
+    "summary": "`stronger_path_possible` is now **false** and there are no improvement leads. The backend has confirmed the current path is optimal. Let me verify the final path evidence.",
+    "tool_calls": [
+     "inspect_path"
+    ]
+   }
+  },
+  {
+   "event_id": 43,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:28:01.741+00:00",
+   "payload": {
+    "tool": "inspect_path",
+    "step": 13,
+    "arguments": {
+     "path_id": "p-2c0883283516"
+    }
+   }
+  },
+  {
+   "event_id": 44,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:28:01.741+00:00",
+   "payload": {
+    "tool": "inspect_path",
+    "step": 13,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 45,
+   "investigation_id": "0ba98fce7a75",
+   "type": "agent.decision",
+   "timestamp": "2026-11-13T19:28:03.621+00:00",
+   "payload": {
+    "turn": 6,
+    "summary": "The backend confirms the path is optimal and no stronger path is possible.",
+    "tool_calls": [
+     "finish"
+    ]
+   }
+  },
+  {
+   "event_id": 46,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.started",
+   "timestamp": "2026-11-13T19:28:03.621+00:00",
+   "payload": {
+    "tool": "finish",
+    "step": 14,
+    "arguments": {
+     "summary": "Neymar and Ice Cube are connected in 2 hops: both are cast members of the film xXx: Return of Xander Cage. This is both the shortest and the strongest path the backend found, and it confirmed no stronger path was possible within the explored graph — though it's a shared film credit, an association rather than proof the two ever met."
+    }
+   }
+  },
+  {
+   "event_id": 47,
+   "investigation_id": "0ba98fce7a75",
+   "type": "tool.completed",
+   "timestamp": "2026-11-13T19:28:03.621+00:00",
+   "payload": {
+    "tool": "finish",
+    "step": 14,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 48,
+   "investigation_id": "0ba98fce7a75",
+   "type": "investigation.completed",
+   "timestamp": "2026-11-13T19:28:03.621+00:00",
+   "payload": {
+    "outcome": "path_found",
+    "stop_reason": "agent_finished",
+    "scope": "explored_graph",
+    "comparison": {
+     "source_qid": "Q142794",
+     "target_qid": "Q173637",
+     "shortest": {
+      "mode": "shortest",
+      "status": "found",
+      "result": {
+       "path_id": "p-2c0883283516",
+       "mode": "shortest",
+       "source_qid": "Q142794",
+       "target_qid": "Q173637",
+       "nodes": [
+        {
+         "qid": "Q142794",
+         "label_en": "Neymar",
+         "label_es": "Neymar",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q142794"
+        },
+        {
+         "qid": "Q22075020",
+         "label_en": "xXx Return of Xander Cage",
+         "label_es": "XXx: The Return of Xander Cage",
+         "kind": "work",
+         "url": "https://www.wikidata.org/wiki/Q22075020"
+        },
+        {
+         "qid": "Q173637",
+         "label_en": "Ice Cube",
+         "label_es": "Ice Cube",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q173637"
+        }
+       ],
+       "hops": [
+        {
+         "edge_id": "e-ac1be1e0781acb07",
+         "from_qid": "Q142794",
+         "to_qid": "Q22075020",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q142794",
+         "direction": "reverse",
+         "relation_group": "works",
+         "label": "acted in",
+         "label_es": "actuó en",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.3218875824868201,
+          "total": 1.2150347630467655
+         }
+        },
+        {
+         "edge_id": "e-947597eb923f82ee",
+         "from_qid": "Q22075020",
+         "to_qid": "Q173637",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q173637",
+         "direction": "forward",
+         "relation_group": "works",
+         "label": "cast member",
+         "label_es": "reparto",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.0,
+          "total": 0.8931471805599454
+         }
+        }
+       ],
+       "hop_count": 2,
+       "total_cost": 2.108181944,
+       "scope": "explored_graph",
+       "policy_version": 5,
+       "enabled_groups": [
+        "birthplace",
+        "family",
+        "institutional",
+        "mentorship",
+        "works"
+       ],
+       "snapshot": "20261104"
+      },
+      "scope": "explored_graph",
+      "stats": {
+       "visited_nodes": 102,
+       "expanded_states": 2,
+       "truncated_reason": null
+      }
+     },
+     "strongest": {
+      "mode": "strongest",
+      "status": "found",
+      "result": {
+       "path_id": "p-2c0883283516",
+       "mode": "strongest",
+       "source_qid": "Q142794",
+       "target_qid": "Q173637",
+       "nodes": [
+        {
+         "qid": "Q142794",
+         "label_en": "Neymar",
+         "label_es": "Neymar",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q142794"
+        },
+        {
+         "qid": "Q22075020",
+         "label_en": "xXx Return of Xander Cage",
+         "label_es": "XXx: The Return of Xander Cage",
+         "kind": "work",
+         "url": "https://www.wikidata.org/wiki/Q22075020"
+        },
+        {
+         "qid": "Q173637",
+         "label_en": "Ice Cube",
+         "label_es": "Ice Cube",
+         "kind": "person",
+         "url": "https://www.wikidata.org/wiki/Q173637"
+        }
+       ],
+       "hops": [
+        {
+         "edge_id": "e-ac1be1e0781acb07",
+         "from_qid": "Q142794",
+         "to_qid": "Q22075020",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q142794",
+         "direction": "reverse",
+         "relation_group": "works",
+         "label": "acted in",
+         "label_es": "actuó en",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.3218875824868201,
+          "total": 1.2150347630467655
+         }
+        },
+        {
+         "edge_id": "e-947597eb923f82ee",
+         "from_qid": "Q22075020",
+         "to_qid": "Q173637",
+         "subject": "Q22075020",
+         "pid": "P161",
+         "object": "Q173637",
+         "direction": "forward",
+         "relation_group": "works",
+         "label": "cast member",
+         "label_es": "reparto",
+         "property_url": "https://www.wikidata.org/wiki/Property:P161",
+         "source": "wikidata-truthy:20261104",
+         "origin": "wikidata",
+         "cost": {
+          "strength": 0.5,
+          "strength_cost": 0.6931471805599453,
+          "hop_penalty": 0.2,
+          "hub_penalty": 0.0,
+          "total": 0.8931471805599454
+         }
+        }
+       ],
+       "hop_count": 2,
+       "total_cost": 2.108181944,
+       "scope": "explored_graph",
+       "policy_version": 5,
+       "enabled_groups": [
+        "birthplace",
+        "family",
+        "institutional",
+        "mentorship",
+        "works"
+       ],
+       "snapshot": "20261104"
+      },
+      "scope": "explored_graph",
+      "stats": {
+       "visited_nodes": 60,
+       "expanded_states": 61,
+       "truncated_reason": null
+      }
+     },
+     "same_path": true,
+     "scope": "explored_graph"
+    },
+    "stats": {
+     "expanded_nodes": 10,
+     "truncated_expansions": 1,
+     "failed_expansions": 0,
+     "explored_nodes": 129,
+     "explored_edges": 151,
+     "provider_requests": 10
+    },
+    "note": "Paths are shortest/strongest among the explored relationships only; Wikidata statements are what Wikidata records, not verified facts.",
+    "answer": {
+     "summary": "Neymar and Ice Cube are connected in 2 hops: both are cast members of the film xXx: Return of Xander Cage. This is both the shortest and the strongest path the backend found, and it confirmed no stronger path was possible within the explored graph — though it's a shared film credit, an association rather than proof the two ever met.",
+     "summary_source": "agent",
+     "summary_verified": true,
+     "unverified_mentions": [],
+     "cited_path_ids": [
+      "p-2c0883283516"
+     ],
+     "backend_summary": "Shortest (2 edges): Neymar —acted in→ xXx Return of Xander Cage —cast member→ Ice Cube. It is also the strongest path. (Among explored relationships only.)"
+    },
+    "tool_calls": 14
+   }
+  }
+ ]
+}

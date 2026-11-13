@@ -57,3 +57,43 @@ cases:
     trace: data/fixtures/event_traces/diana-churchill-agent.json
     notes: "Recorded AI agent run."
     verified_on: "20261104"
+  - id: beyonce-alice-braga-agent
+    title: "Beyoncé and Alice Braga (AI agent)"
+    source_qid: Q36153
+    source_label: "Beyoncé"
+    target_qid: Q230903
+    target_label: "Alice Braga"
+    fixture: data/fixtures/cases/beyonce-alice-braga-agent.json
+    trace: data/fixtures/event_traces/beyonce-alice-braga-agent.json
+    notes: "Recorded AI agent run."
+    verified_on: "20261104"
+  - id: neymar-snoop-agent
+    title: "Neymar and Snoop Dogg (AI agent)"
+    source_qid: Q142794
+    source_label: "Neymar"
+    target_qid: Q6096
+    target_label: "Snoop Dogg"
+    fixture: data/fixtures/cases/neymar-snoop-agent.json
+    trace: data/fixtures/event_traces/neymar-snoop-agent.json
+    notes: "Recorded AI agent run."
+    verified_on: "20261104"
+  - id: neymar-icecube-agent
+    title: "Neymar and Ice Cube (AI agent)"
+    source_qid: Q142794
+    source_label: "Neymar"
+    target_qid: Q173637
+    target_label: "Ice Cube"
+    fixture: data/fixtures/cases/neymar-icecube-agent.json
+    trace: data/fixtures/event_traces/neymar-icecube-agent.json
+    notes: "Recorded AI agent run."
+    verified_on: "20261104"
+  - id: kanye-gisele-agent
+    title: "Kanye West and Gisele Bündchen (AI agent)"
+    source_qid: Q15935
+    source_label: "Kanye West"
+    target_qid: Q152208
+    target_label: "Gisele Bündchen"
+    fixture: data/fixtures/cases/kanye-gisele-agent.json
+    trace: data/fixtures/event_traces/kanye-gisele-agent.json
+    notes: "Recorded AI agent run."
+    verified_on: "20261104"

@@ -285,6 +285,31 @@ def test_llm_provider_resolution():
         resolve_llm_settings({"LLM_PROVIDER": "nope"})
 
 
+def test_deepseek_thinking_is_off_by_default_and_reaches_the_request():
+    from src.agent.client import resolve_llm_settings
+
+    assert resolve_llm_settings({"DEEPSEEK_API_KEY": "k"}).extra_body == {"thinking": {"type": "disabled"}}
+    on = resolve_llm_settings({"DEEPSEEK_API_KEY": "k", "DEEPSEEK_THINKING": "Enabled"})
+    assert on.extra_body == {"thinking": {"type": "enabled"}}
+    assert resolve_llm_settings({"OPENROUTER_API_KEY": "sk-or-x"}).extra_body == {}
+    with pytest.raises(ValueError):
+        resolve_llm_settings({"DEEPSEEK_API_KEY": "k", "DEEPSEEK_THINKING": "maybe"})
+    sent = {}
+
+    class Completions:
+        def create(self, **kw):
+            sent.update(kw)
+            msg = SimpleNamespace(content="ok", tool_calls=None)
+            return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+    fake = SimpleNamespace(with_options=lambda **_: SimpleNamespace(chat=SimpleNamespace(completions=Completions())))
+    OpenRouterChatClient(fake, "m", extra_body={"thinking": {"type": "disabled"}}).complete([], [])
+    assert sent["extra_body"] == {"thinking": {"type": "disabled"}}
+    sent.clear()
+    OpenRouterChatClient(fake, "m").complete([], [])
+    assert "extra_body" not in sent
+
+
 def test_improvement_leads_point_to_the_stronger_route(provider):
     # After expanding both endpoints, A-U-B (2 hops, institutional) exists; A's spouse C and B's
     # spouse D are unexpanded and could still give a stronger route.

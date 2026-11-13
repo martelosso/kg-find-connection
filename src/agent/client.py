@@ -47,13 +47,16 @@ class OpenRouterChatClient:
 
     provider = "openrouter"
 
-    def __init__(self, client: Any, model: str, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(self, client: Any, model: str, timeout: float = DEFAULT_TIMEOUT_SECONDS,
+                 extra_body: dict[str, Any] | None = None) -> None:
         self._client = client.with_options(timeout=timeout, max_retries=2)
         self.model = model
+        self.extra_body = dict(extra_body or {})
 
     def complete(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> AssistantTurn:
+        extra = {"extra_body": self.extra_body} if self.extra_body else {}
         response = self._client.chat.completions.create(
-            model=self.model, messages=messages, tools=tools, tool_choice="auto", temperature=0,
+            model=self.model, messages=messages, tools=tools, tool_choice="auto", temperature=0, **extra,
         )
         msg = response.choices[0].message
         calls = [ToolCall(tc.id, tc.function.name, tc.function.arguments or "{}") for tc in (msg.tool_calls or [])]
@@ -66,7 +69,13 @@ class LLMSettings:
     base_url: str
     api_key: str = field(repr=False)
     model: str
+    extra_body: dict[str, Any] = field(default_factory=dict)
 
+
+# DeepSeek's current models reason before answering unless told not to. On the agent's harder turns
+# that took 15-70 s per call (2-3k hidden reasoning tokens), so runs blew the 90 s wall time; with
+# thinking disabled a turn takes 1-3 s. DEEPSEEK_THINKING=enabled turns it back on.
+DEEPSEEK_THINKING_VALUES = ("disabled", "enabled")
 
 # provider -> (base URL, key variable, model variable, default model). All are OpenAI-compatible.
 PROVIDERS: dict[str, tuple[str, str, str, str]] = {
@@ -88,7 +97,13 @@ def resolve_llm_settings(env: Mapping[str, str]) -> LLMSettings | None:
         base_url, key_var, model_var, default_model = PROVIDERS[name]
         key = (env.get(key_var) or "").strip()
         if key:
-            return LLMSettings(name, base_url, key, (env.get(model_var) or "").strip() or default_model)
+            extra: dict[str, Any] = {}
+            if name == "deepseek":
+                thinking = (env.get("DEEPSEEK_THINKING") or "disabled").strip().lower()
+                if thinking not in DEEPSEEK_THINKING_VALUES:
+                    raise ValueError(f"DEEPSEEK_THINKING must be one of {DEEPSEEK_THINKING_VALUES}, got {thinking!r}")
+                extra = {"thinking": {"type": thinking}}
+            return LLMSettings(name, base_url, key, (env.get(model_var) or "").strip() or default_model, extra)
     return None
 
 
@@ -110,6 +125,7 @@ def chat_client_from_env() -> ChatClient | None:
         return None
     from openai import OpenAI
 
-    client = OpenRouterChatClient(OpenAI(base_url=settings.base_url, api_key=settings.api_key), settings.model)
+    client = OpenRouterChatClient(OpenAI(base_url=settings.base_url, api_key=settings.api_key), settings.model,
+                                  extra_body=settings.extra_body)
     client.provider = settings.provider
     return client
