@@ -284,13 +284,19 @@ def node_table(edges, humans):
         m[index[sel]] = True
         return m
 
-    # Same precedence as before: person, organization, work, position, place, other.
+    # Precedence: person, then place if birthplace links are at least half its links, then
+    # organization, work, position, place, other. The majority rule exists because cities also
+    # collect a few employer/school/team links (Berlin: 42,278 births, 15 employees); by plain
+    # precedence they became organizations and escaped the place hub cap.
+    births = np.bincount(oi[c == RELATION_PIDS.index("P19")], minlength=n)
+    birthplace_majority = 2 * births >= out_deg + in_deg
     kind = np.full(n, "other", dtype=object)
     for name, mask in reversed([
+        ("place", (births > 0) & birthplace_majority),
         ("organization", marked(oi, INSTITUTION_PIDS) | marked(si, ("P112",))),
         ("work", marked(si, WORK_PIDS)),
         ("position", marked(oi, ("P39",))),
-        ("place", marked(oi, ("P19",))),
+        ("place", births > 0),
     ]):
         kind[mask] = name
     kind[human] = "person"
@@ -373,6 +379,8 @@ def write_meta(db_path: Path, args: argparse.Namespace, stats: dict[str, int]) -
         "dump": dump_meta,
         "relation_pids": list(RELATION_PIDS),
         "subject_filter": "P31 Q5 (human); object is human for " + " ".join(OBJECT_SIDE_PIDS),
+        "kind_rule": "person > place if P19 links >= half of all links > organization > work "
+                     "> position > place > other",
         "label_languages": ["en", "es"],
         "load_stats": stats,
         "counts": counts,

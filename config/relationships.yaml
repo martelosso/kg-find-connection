@@ -10,7 +10,7 @@
 # Every allowlisted property is traversable in both directions for connectivity; the original
 # Wikidata direction is preserved and shown (reverse hops use `inverse_label`).
 
-version: 4
+version: 5
 # v2 (2026-11-13): + P40 child, P451 unmarried partner, P1038 relative, P54 sports team.
 # v3 (2026-11-13): + works group (film/music credits, stored on the WORK and pointing at the
 #   person), doctoral advisor/student and "student" in mentorship, "founded by" in institutional,
@@ -18,6 +18,10 @@ version: 4
 # v4 (2026-11-13): birthplace ON by default (connects ~half of all people; strength 0.10 keeps it
 #   out of strongest paths when anything better exists), with a lower hub cap for places
 #   (max_intermediate_degree_by_kind.place) so only small towns can act as connectors.
+# v5 (2026-11-13): no value changed here, but the graph build now classifies a node as a place
+#   when birthplace links are at least half its links. Before, any city with one employer/school/
+#   team link became an "organization" and escaped the place cap (225 cities with 1,000–5,000
+#   links could connect people). Needs a rebuild of data/wikidata/people_graph.sqlite.
 
 groups:
   family:

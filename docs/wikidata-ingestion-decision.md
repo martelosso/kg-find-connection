@@ -147,6 +147,23 @@ Decisions:
 - **The global cap stays 5,000 (provisional).** Organizations above it: 239.
 - **Known cost:** with birthplace on, 10–11 of 100 exact searches hit the work caps (`max_visited_nodes` and `max_expanded_states`, 250,000) and return partial results, against 3 before. The extra edges hang on people, so the place cap does not fix this. Raising the work caps would make those searches exact at the price of slower worst cases. This affects the offline prep tools (`find_demo_pairs.py`, `analyze_hubs.py`), not live investigations, which search their small explored graph.
 
+### Global hub cap sweep and the city-kind fix (policy v5)
+
+Same 100 seed pairs (recent × historical, seed 5), place cap 1,000, v4 graph:
+
+| Global cap | Connected | Strongest ≠ shortest | Cut off by work caps | Median / max time | Busiest hubs on shortest paths |
+|---|---|---|---|---|---|
+| 1,000 | 70% | 34% | 6 | 3.1 s / 78 s | none ≥ 1,000 |
+| 2,000 | 83% | 35% | 12 | 5.6 s / 81 s | NYU Tisch, United Nations, Barnard (~1.3k) |
+| 5,000 | 89% | 48% | 11 | 7.5 s / 106 s | Trinity College (4.7k) ×8, American Philosophical Society ×5 |
+| 10,000 | 88% | 51% | 13 | 9.9 s / 110 s | American Academy of Arts and Sciences ×12, Royal Society ×6 |
+| none | 92% | 43% | 8 | 12.8 s / 136 s | Cambridge (20.7k) ×10, Edinburgh, Los Angeles |
+
+- **The sweep exposed a classification bug.** Kinds were assigned by precedence (organization > work > position > place), so a city with a single employer, school or team link became an `organization` and fell under the 5,000 cap instead of the place cap. 3,129 "organizations" were mostly birthplaces, holding 1.46M of the 4.35M P19 edges; 225 of them (Washington D.C., Bucharest, Melbourne, Heidelberg, "England", …) had 1,000–5,000 links and could connect people. This also explains why the v4 place-cap sweep barely moved between 250 and 2,000.
+- **Fix (policy v5):** a node whose birthplace links are at least half of its links is a `place`, whatever else points at it. Requires a rebuild.
+- **Provisional choice: keep the global cap at 5,000.** 2,000 → 5,000 gains 6 points of connectivity and many more strongest ≠ shortest pairs; 10,000 adds nothing and admits mega-academies. To be confirmed by re-running this sweep on the v5 graph.
+- The work caps cut off ~11% of searches at every cap except 1,000; decide on them after the v5 re-run.
+
 ## Extraction speed (2026-11-13)
 
 The original extraction was one `gzip -dc | grep -F | awk` pipeline: 29 min for the v1 scope (1,760 s). Measured per GiB of compressed dump (about 13 GB of text): gzip 10.7 s, grep 21.8 s, awk 14.3 s. grep was the bottleneck (Git-for-Windows grep 3.0, ~0.5 GB/s whatever the pattern), and the pipeline used about 3 of 16 cores.

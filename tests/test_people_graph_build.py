@@ -200,6 +200,25 @@ def test_v3_work_and_founder_statements_point_at_people(root, tmp_path):
         g.close()
 
 
+def test_birthplace_majority_makes_a_place_even_with_institutional_links(root, tmp_path):
+    """A city that also employs or schools someone stays a place (so the place hub cap applies)
+    when births are at least half its links; an institution with a few births stays an organization."""
+    people = {f"Q90003{i}": f"Person {i}" for i in range(6)}
+    city, univ = "Q930001", "Q930002"
+    p = list(people)
+    triples = [
+        (p[0], "P19", city), (p[1], "P19", city), (p[2], "P19", city), (p[3], "P108", city),
+        (p[0], "P69", univ), (p[1], "P69", univ), (p[4], "P108", univ), (p[5], "P19", univ),
+    ]
+    g = SqliteGraph(build_people_db(root, tmp_path, people, {city: "A City", univ: "A University"}, triples))
+    try:
+        assert g.node(city).kind == "place"
+        assert g.node(univ).kind == "organization"
+        assert "kind_rule" in g.meta
+    finally:
+        g.close()
+
+
 def test_parallel_scan_ranges_give_the_same_result_as_one_range(root, tmp_path):
     """Workers scan newline-aligned byte ranges; merged in file order they must equal one scan."""
     import numpy as np
