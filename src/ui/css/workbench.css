@@ -62,7 +62,22 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; back
 /* ── Main layout ── */
 #main { display: flex; min-height: 0; }
 #epane { width: 30%; min-width: 220px; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--bg); }
-body.no-src #epane, body.no-src #drag { display: none; }
+/* Collapsed source pane: a thin strip with "+" and a vertical label. */
+body.src-min #epane { width: 34px !important; min-width: 34px; }
+body.src-min #epane > :not(.pane-bar), body.src-min #drag { display: none; }
+body.src-min #epane .pane-bar { height: 100%; flex-direction: column; padding: 8px 0; border-bottom: 0; cursor: pointer; }
+body.src-min #epane .pane-bar > :not(#src-min):not(.ptitle) { display: none; }
+body.src-min #epane #src-min { order: -1; }
+body.src-min #epane .ptitle { writing-mode: vertical-rl; transform: rotate(180deg); }
+/* Collapsed result + timeline sidebar: the same thin strip, on the right. */
+body.side-min #side { width: 34px !important; }
+body.side-min #side > :not(#paths-sec), body.side-min #paths-sec > :not(.pane-bar) { display: none; }
+body.side-min #paths-sec { flex: 1; max-height: none; }
+body.side-min #paths-sec .pane-bar { height: 100%; flex-direction: column; padding: 8px 0; border-bottom: 0; cursor: pointer; }
+body.side-min #paths-sec .pane-bar > :not(#side-min):not(.ptitle) { display: none; }
+body.side-min #side-min { order: -1; }
+body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180deg); }
+.mini.min { width: 24px; padding: 0; font-size: 14px; font-weight: 700; line-height: 1; flex-shrink: 0; }
 #drag { width: 5px; background: var(--border); cursor: col-resize; flex-shrink: 0; }
 #drag:hover, #drag.on { background: var(--accent); }
 #gpane { flex: 1; min-width: 300px; display: flex; flex-direction: column; }
@@ -109,8 +124,14 @@ body.no-src #epane, body.no-src #drag { display: none; }
 #legend .ln { width: 16px; height: 3px; vertical-align: 2px; }
 #legend .ln.dash { height: 0; border-top: 2px dashed; background: none; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.08); }
-#inspector { position: absolute; right: 12px; top: 12px; width: 330px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12.5px; }
-.insp-head { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+/* Floating cards over the graph: the step card at the top, the detail box in the bottom-right corner. */
+#overlays { position: absolute; left: 12px; right: 12px; top: 12px; z-index: 5; display: flex; flex-direction: column;
+            align-items: center; gap: 8px; pointer-events: none; }
+#overlays > * { pointer-events: auto; }
+#inspector { position: absolute; right: 12px; bottom: 12px; z-index: 6; width: 330px; max-width: calc(100% - 24px); max-height: 45%; overflow: auto; padding: 10px 12px; display: grid; gap: 4px; font-size: 12.5px; }
+#inspector.min > :not(.insp-head) { display: none; }
+.insp-head { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.insp-head .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .x { border: 0; background: none; font-size: 16px; line-height: 1; cursor: pointer; color: var(--muted); }
 .vis-tooltip { background: #fff !important; border: 1px solid #e5e0d8 !important; color: #1c1917 !important; border-radius: 6px !important;
   font: 11px/1.5 ui-monospace, Consolas, monospace !important; padding: 7px 9px !important; box-shadow: 0 4px 16px rgba(0,0,0,.1) !important; white-space: pre-wrap !important; }
@@ -173,8 +194,10 @@ body.no-src #epane, body.no-src #drag { display: none; }
 @media (max-width: 1200px) { #side { width: 330px; } .picker input { width: 160px; } }
 
 /* ---- step-through presentation (plan §2) ---- */
-#step-card { position: absolute; left: 12px; right: 12px; top: 12px; max-width: 760px; margin: 0 auto; padding: 10px 14px 12px;
-             display: grid; gap: 8px; font-size: 14px; z-index: 5; max-height: 45%; overflow: auto; }
+#step-card { width: 100%; max-width: 760px; padding: 10px 14px 12px; box-sizing: border-box;
+             display: grid; gap: 8px; font-size: 14px; max-height: 45vh; overflow: auto; }
+#step-card.min { padding-bottom: 10px; }
+#step-card.min #step-body { display: none; }
 #step-card .step-head { display: flex; align-items: center; gap: 8px; }
 #step-title { font-weight: 700; font-size: 15px; }
 #step-card .who { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -187,4 +210,3 @@ body.no-src #epane, body.no-src #drag { display: none; }
 #step-card .paths { font-weight: 600; color: var(--c-fresh); }
 #step-card .foot { font-size: 12px; color: var(--muted); }
 #timeline .row.current { box-shadow: inset 3px 0 0 var(--c-fresh); background: #f0fdf4; }
-#step-mode.on { background: var(--c-fresh); border-color: var(--c-fresh); color: #fff; }

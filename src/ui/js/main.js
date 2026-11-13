@@ -25,10 +25,9 @@ let pathMode = "both";
 let turtleTimer = null;
 let turtleStale = false;
 let shownEdgeIds = null;     // Wikidata edges in the Turtle the editor was given (null = all)
-// Step-through presentation (plan §2): events of a stepped run are buffered in `book` and revealed
-// one step at a time with Next / Back.
-let stepMode = false;        // toolbar toggle: applies to the next run started
-let stepRun = false;         // the current run is being stepped through
+// Step-through presentation (plan §2): every run is stepped. Its events are buffered in `book` and
+// revealed one step at a time with Next / Back; nothing plays itself out.
+let stepRun = false;         // a run is being stepped through
 let stepIndex = -1;          // last revealed step (-1 = none yet)
 const book = new StepBook();
 
@@ -119,7 +118,14 @@ setInterval(refreshHealth, 15000);
 $("#go").addEventListener("click", () => start());
 $("#replay").addEventListener("change", () => { if ($("#replay").value) start($("#replay").value); });
 $("#cancel").addEventListener("click", async () => { if (model.id) try { await api.cancel(model.id); } catch {} });
-$("#reset").addEventListener("click", () => { resetAll(); pickSource.clear(); pickTarget.clear(); setStatus("idle", "Pick two people and press Explore, or choose a replay."); });
+$("#reset").addEventListener("click", () => {
+  // A stepped run stays "running" until its last step is shown: stop it on the server too, then
+  // re-enable Explore and the replay picker (they are disabled while a run is open).
+  if (model.id && model.status === "running") api.cancel(model.id).catch(() => {});
+  resetAll(); pickSource.clear(); pickTarget.clear();
+  setRunning(false);
+  setStatus("idle", "Pick two people and press Explore, or choose a replay.");
+});
 
 function resetAll() {
   es?.close(); es = null;
@@ -135,7 +141,7 @@ function resetAll() {
 
 async function start(replayCase) {
   let body;
-  if (replayCase) body = { mode: "replay", case_id: replayCase, replay_delay_seconds: stepMode ? 0 : 0.7 };
+  if (replayCase) body = { mode: "replay", case_id: replayCase, replay_delay_seconds: 0 };
   else {
     if (!pickSource.value || !pickTarget.value) { setStatus("error", "Pick both people from the suggestions first."); return; }
     const groups = [...document.querySelectorAll("#groups .tog.on")].map((b) => b.dataset.group);
@@ -149,8 +155,8 @@ async function start(replayCase) {
     // agent unavailable, bad input) must leave the previous result visible for the presenter.
     resetAll();
     model.id = inv.investigation_id;
-    stepRun = stepMode;
-    if (stepRun) renderStepCard();
+    stepRun = true;
+    renderStepCard();
     setRunning(true);
     es = streamEvents(inv.investigation_id, onEvent, () => { if (model.status === "running") setStatus("error", "Event stream lost; the server may be offline."); });
   } catch (err) {
@@ -255,16 +261,6 @@ function backStep() {
   afterStep();
 }
 
-/** Step-through switched off mid-run: show everything buffered so far and keep streaming normally. */
-function flushSteps() {
-  for (let i = stepIndex + 1; i < book.count; i++) for (const ev of book.steps[i].events) applyEvent(ev);
-  stepIndex = book.count - 1;
-  stepRun = false;
-  graph.setFocus(null);
-  timeline.markCurrent([]);
-  $("#step-card").hidden = true;
-}
-
 function afterStep() {
   const step = book.steps[stepIndex];
   const d = describeStep(step);
@@ -345,13 +341,16 @@ function stepBody(step, d) {
 
 $("#step-next").addEventListener("click", nextStep);
 $("#step-hide").addEventListener("click", () => { $("#step-card").hidden = true; });
-$("#step-back").addEventListener("click", backStep);
-$("#step-mode").addEventListener("click", () => {
-  stepMode = !stepMode;
-  $("#step-mode").classList.toggle("on", stepMode);
-  if (!stepMode && stepRun) flushSteps();
-  else if (stepMode && model.status === "running") setStatus("busy", "Step-through applies to the next run you start.");
+// "−" / "+": minimize to the title row. It stays minimized across steps until reopened.
+function setMinimized(box, button, min, what) {
+  box.classList.toggle("min", min);
+  button.textContent = min ? "+" : "−";
+  button.title = `${min ? "Expand" : "Minimize"} ${what}`;
+}
+$("#step-min").addEventListener("click", () => {
+  setMinimized($("#step-card"), $("#step-min"), !$("#step-card").classList.contains("min"), "this card (Back / Next stay available)");
 });
+$("#step-back").addEventListener("click", backStep);
 document.addEventListener("keydown", (e) => {
   if (!stepRun || e.altKey || e.ctrlKey || e.metaKey) return;
   if (e.target.closest?.("input, textarea, select, .CodeMirror")) return;  // typing in a picker or the editor
@@ -430,6 +429,15 @@ function showPaths(mode) {
   if (ids.length) graph.fitTo(new Set(ids.flatMap((id) => { const e = graph.edges.get(id); return e ? [e.subject, e.object] : []; })));
 }
 
+function inspectorHead(text) {
+  const box = $("#inspector");
+  const min = el("button", { class: "mini min", type: "button" }, "−");
+  setMinimized(box, min, box.classList.contains("min"), "the details");
+  min.addEventListener("click", () => setMinimized(box, min, !box.classList.contains("min"), "the details"));
+  return el("div", { class: "insp-head" }, el("span", { class: "grow" }, text), min,
+    el("button", { class: "x", title: "Close", on: { click: () => { box.hidden = true; } } }, "×"));
+}
+
 function showInspector({ nodes, edges }) {
   const box = $("#inspector");
   box.hidden = false;
@@ -438,8 +446,7 @@ function showInspector({ nodes, edges }) {
     if (!e) return;
     const s = model.nodes.get(e.subject), o = model.nodes.get(e.object);
     box.replaceChildren(
-      el("div", { class: "insp-head" }, e.origin === "sandbox" ? "Sandbox edge (not Wikidata)" : "Wikidata statement",
-        el("button", { class: "x", on: { click: () => { box.hidden = true; } } }, "×")),
+      inspectorHead(`${e.origin === "sandbox" ? "Sandbox edge (not Wikidata)" : "Wikidata statement"} · ${e.label}`),
       el("div", {}, wikidataLink(e.subject, label(s) || e.subject), " ",
         el("b", {}, "—", e.origin === "sandbox" ? e.label : wikidataLink(e.property_url, e.label), "→"), " ",
         wikidataLink(e.object, label(o) || e.object)),
@@ -449,12 +456,12 @@ function showInspector({ nodes, edges }) {
     const n = model.nodes.get(nodes[0]);
     if (!n) return;
     const known = [...model.edges.values()].filter((e) => e.subject === n.id || e.object === n.id).length;
-    box.replaceChildren(
-      el("div", { class: "insp-head" }, n.kind, el("button", { class: "x", on: { click: () => { box.hidden = true; } } }, "×")),
+    box.replaceChildren(...[  // replaceChildren(null) would insert the text "null"
+      inspectorHead(`${n.kind} · ${label(n) || n.id}`),
       el("div", {}, el("b", {}, label(n)), " ", wikidataLink(n.id, n.id)),
       n.label_es && n.label_es !== n.label_en ? el("div", { class: "small muted" }, `es: ${n.label_es}`) : null,
       el("div", { class: "small muted" }, `${n.degree} links in the snapshot · ${known} in the explored graph`
-        + `${model.expanded.has(n.id) ? " · expanded" : ""}`));
+        + `${model.expanded.has(n.id) ? " · expanded" : ""}`)].filter(Boolean));
   }
 }
 
@@ -532,12 +539,27 @@ $("#fit").addEventListener("click", () => graph.fitTo());
 
 function fmtTime(iso) { return iso ? String(iso).slice(0, 16).replace("T", " ") : "?"; }
 
-// ---- source pane toggle & drag -------------------------------------------------------------------
-$("#toggle-src").addEventListener("click", () => {
-  document.body.classList.toggle("no-src");
-  $("#toggle-src").classList.toggle("on", !document.body.classList.contains("no-src"));
+// ---- collapsible panes & drag --------------------------------------------------------------------
+// Source (left) and Result + timeline (right) collapse to a thin strip: the "−" in the pane bar, the
+// strip itself and (for the source) the graph bar's "Source" button all toggle it.
+function togglePane(cls, button, what) {
+  const min = document.body.classList.toggle(cls);
+  button.textContent = min ? "+" : "−";
+  button.title = `${min ? "Expand" : "Collapse"} ${what}`;
   setTimeout(() => { editor.refresh(); graph.network.redraw(); }, 50);
-});
+  return min;
+}
+function toggleSource(e) {
+  e?.stopPropagation();
+  const min = togglePane("src-min", $("#src-min"), "the source pane");
+  $("#toggle-src").classList.toggle("on", !min);
+}
+function toggleSide(e) { e?.stopPropagation(); togglePane("side-min", $("#side-min"), "the result and timeline"); }
+$("#toggle-src").addEventListener("click", toggleSource);
+$("#src-min").addEventListener("click", toggleSource);
+$("#epane .pane-bar").addEventListener("click", () => { if (document.body.classList.contains("src-min")) toggleSource(); });
+$("#side-min").addEventListener("click", toggleSide);
+$("#paths-sec .pane-bar").addEventListener("click", () => { if (document.body.classList.contains("side-min")) toggleSide(); });
 (() => {
   const drag = $("#drag"), pane = $("#epane");
   let x0 = 0, w0 = 0, on = false;
