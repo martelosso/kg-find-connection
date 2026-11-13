@@ -50,6 +50,20 @@ def backend_summary(cmp: PathComparison | None) -> str:
     return text + " (Among explored relationships only.)"
 
 
+def clip_summary(text: str, max_chars: int) -> str:
+    """Shorten to ``max_chars`` at the last full sentence; else at a word boundary with an ellipsis."""
+    if len(text) <= max_chars:
+        return text
+    head = text[:max_chars]
+    end = max(head.rfind(". "), head.rfind("! "), head.rfind("? "))
+    if head.endswith((".", "!", "?")):
+        end = len(head) - 1
+    if end >= max_chars // 3:
+        return head[:end + 1]
+    cut = head[:max_chars - 1].rsplit(" ", 1)[0]
+    return cut.rstrip(" ,;:—-") + "…"
+
+
 def verify_summary(summary: str | None, cmp: PathComparison | None, max_chars: int) -> dict[str, Any]:
     allowed: set[str] = set()
     path_ids = []
@@ -58,7 +72,7 @@ def verify_summary(summary: str | None, cmp: PathComparison | None, max_chars: i
             if r is not None:
                 allowed |= {n.qid for n in r.nodes}
                 path_ids.append(r.path_id)
-    text = " ".join((summary or "").split())[:max_chars]
+    text = clip_summary(" ".join((summary or "").split()), max_chars)
     unverified = sorted(set(QID_RE.findall(text)) - allowed)
     # With no path, ``allowed`` is empty, so any QID the model names is unverified.
     if text and not unverified:

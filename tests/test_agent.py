@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.agent.client import AssistantTurn, OpenRouterChatClient, ToolCall
-from src.agent.investigator import backend_summary, run_agent, verify_summary
+from src.agent.investigator import backend_summary, clip_summary, run_agent, verify_summary
 from src.agent.prompts import build_system_prompt
 from src.agent.tools import TOOL_SPECS, tool_definitions
 from src.config import load_search_config
@@ -274,7 +274,7 @@ def test_llm_provider_resolution():
 
     assert resolve_llm_settings({}) is None
     ds = resolve_llm_settings({"DEEPSEEK_API_KEY": "sk-abc"})
-    assert (ds.provider, ds.base_url, ds.model) == ("deepseek", "https://api.deepseek.com", "deepseek-chat")
+    assert (ds.provider, ds.base_url, ds.model) == ("deepseek", "https://api.deepseek.com", "deepseek-flash")
     assert "sk-abc" not in repr(ds)
     both = {"OPENROUTER_API_KEY": "sk-or-x", "DEEPSEEK_API_KEY": "sk-y", "DEEPSEEK_MODEL": "deepseek-reasoner"}
     assert resolve_llm_settings(both).provider == "openrouter"
@@ -318,3 +318,14 @@ def test_budget_stop_gets_a_verified_wrap_up_summary(provider):
     answer = state.events.events[-1].payload["answer"]
     assert answer["summary_source"] == "agent" and "cut short" in answer["summary"]
     assert any(e.type == "agent.decision" and e.payload["turn"] == "wrap-up" for e in state.events.events)
+
+
+def test_clip_summary_ends_at_a_sentence_or_word_never_mid_word():
+    text = "First sentence is here. Second one is a bit longer. Third mentions Ticiane Pinheiro and more."
+    assert clip_summary(text, 200) == text
+    assert clip_summary(text, 60) == "First sentence is here. Second one is a bit longer."
+    assert clip_summary(text, len("First sentence is here.")) == "First sentence is here."
+    one = "A single long sentence without any full stop that keeps on going and going"
+    out = clip_summary(one, 30)
+    assert out.endswith("…") and len(out) <= 30 and one.startswith(out[:-1]) and not out[:-1].endswith(" ")
+    assert out[:-1] in ("A single long sentence", "A single long sentence without")

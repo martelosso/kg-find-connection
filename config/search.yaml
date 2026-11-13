@@ -5,14 +5,21 @@
 # (pathfinding.max_hops) because the path engine enforces it.
 # An investigation request may LOWER these values, never raise them.
 
-version: 1
+version: 2
+# v2 (2026-11-13): agent budgets raised above the plan's §12 table for testing on the full graph:
+#   tool calls 18 -> 30, provider requests 25 -> 30, explored nodes 400 -> 600, edges 1500 -> 2000.
+#   With 18 calls every agent run on the demo pairs stopped while the backend still flagged a
+#   stronger path; with 30 alone, a third of runs hit the 400-node cap (royals and physicists have
+#   50-120 links each). At these values Diana-Churchill and Coelho-Senna showed a stronger path
+#   than the shortest in 2/2 runs each, no run hit the node cap, and runs took 18-33 s (< 90 s).
+#   Provisional until step 4 (benchmark_investigations.py).
 
 budgets:
-  max_explored_nodes: 400
-  max_explored_edges: 1500
+  max_explored_nodes: 600
+  max_explored_edges: 2000
   max_edges_per_expansion: 100
-  max_provider_requests: 25
-  max_agent_tool_calls: 18
+  max_provider_requests: 30
+  max_agent_tool_calls: 30
   wall_time_seconds: 90
 
 frontier:

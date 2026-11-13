@@ -72,7 +72,7 @@ class LLMSettings:
 PROVIDERS: dict[str, tuple[str, str, str, str]] = {
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", "OPENROUTER_MODEL",
                    "anthropic/claude-5.5-sonnet"),
-    "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "deepseek-chat"),
+    "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "deepseek-flash"),
 }
 
 

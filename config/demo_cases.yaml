@@ -2,8 +2,58 @@
 #
 # Every case must be a REAL pair of Wikidata humans, validated against the people-graph snapshot
 # named in `verified_on`, with its case fixture and event trace recorded by
-# scripts/record_demo_case.py. Never add a pair by hand without running that script.
+# scripts/investigate.py --record. Never add a pair by hand without running that script.
 # Cases are added once the full 2026-11-04 people graph is built (Milestone 1 full build).
 
 version: 1
-cases: []
+cases:
+  - id: diana-churchill
+    title: "Diana, Princess of Wales and Winston Churchill"
+    source_qid: Q9685
+    source_label: "Diana, Princess of Wales"
+    target_qid: Q8016
+    target_label: "Winston Churchill"
+    fixture: data/fixtures/cases/diana-churchill.json
+    trace: data/fixtures/event_traces/diana-churchill.json
+    notes: "Recorded deterministic exploration run."
+    verified_on: "20261104"
+  - id: coelho-senna
+    title: "Paulo Coelho and Ayrton Senna"
+    source_qid: Q12881
+    source_label: "Paulo Coelho"
+    target_qid: Q10490
+    target_label: "Ayrton Senna"
+    fixture: data/fixtures/cases/coelho-senna.json
+    trace: data/fixtures/event_traces/coelho-senna.json
+    notes: "Recorded deterministic exploration run."
+    verified_on: "20261104"
+  - id: charles-bohr
+    title: "Charles III and Niels Bohr"
+    source_qid: Q43274
+    source_label: "Charles III"
+    target_qid: Q7085
+    target_label: "Niels Bohr"
+    fixture: data/fixtures/cases/charles-bohr.json
+    trace: data/fixtures/event_traces/charles-bohr.json
+    notes: "Recorded deterministic exploration run."
+    verified_on: "20261104"
+  - id: coelho-senna-agent
+    title: "Paulo Coelho and Ayrton Senna (AI agent)"
+    source_qid: Q12881
+    source_label: "Paulo Coelho"
+    target_qid: Q10490
+    target_label: "Ayrton Senna"
+    fixture: data/fixtures/cases/coelho-senna-agent.json
+    trace: data/fixtures/event_traces/coelho-senna-agent.json
+    notes: "Recorded AI agent run."
+    verified_on: "20261104"
+  - id: diana-churchill-agent
+    title: "Diana, Princess of Wales and Winston Churchill (AI agent)"
+    source_qid: Q9685
+    source_label: "Diana, Princess of Wales"
+    target_qid: Q8016
+    target_label: "Winston Churchill"
+    fixture: data/fixtures/cases/diana-churchill-agent.json
+    trace: data/fixtures/event_traces/diana-churchill-agent.json
+    notes: "Recorded AI agent run."
+    verified_on: "20261104"
