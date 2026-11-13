@@ -23,7 +23,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 
 **Milestone 2 core is done:** policy, graph model, both stores, both path searches, and the Turtle projection. Still open: tuning the hub threshold and strengths against the full graph (speed: see `IndexedPeopleGraph`); and `ontology/people_connections.ttl`.
 
-**Milestone 6 is in progress** (694 tests passing): preflight, recording and runbook are done; the real demo cases wait for the full graph. **Milestone 5 workbench is done**. **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
+**Milestone 6 is in progress** (697 tests passing): preflight, recording and runbook are done; the real demo cases wait for the full graph. **Milestone 5 workbench is done**. **Milestone 4 agent is done**. It has been tested with scripted fake models and with real DeepSeek runs on the 3% sample (see "Agent evaluation" below). **Milestone 3 machinery is done**: offline providers, `rank_frontier`, the deterministic investigator, the event log, replay, and the §7 routes. **Still open:** recording ≥3 real demo cases (`config/demo_cases.yaml` is deliberately empty) and tuning `config/search.yaml` once the full people graph exists. Do not add cases by hand; use `scripts/investigate.py --record`.
 
 ### Milestone 2 engine (where things live)
 - `config/relationships.yaml` + `src/config.py` hold the versioned, Pydantic-validated policy: groups (`family`, `mentorship` and `institutional` on by default; `position` off), per-PID strengths and labels (en/es, plus inverse labels for reverse hops), ranking terms, the hub cap and work caps. **The strengths and the hub cap (5000) are provisional** until the full graph is measured.
@@ -161,6 +161,7 @@ Core principle: **the LLM decides what to explore next. Deterministic code does 
 - Labels are in **English and Spanish**.
 - The graph keeps only statements whose subject is a human (P31 Q5). Edges keep their original Wikidata direction.
 - **P39 "position held"** is extracted, but sits in a weak "position" group that is **off by default**.
+- **Policy v2 (2026-11-13)** added P40 child, P451 unmarried partner, P1038 relative (family; relative is weaker, 0.6) and P54 member of sports team (institutional, 0.35). They connect today's celebrities (footballers, musicians, influencers). The property list lives in three places that must agree: `config/relationships.yaml`, `PROPS` in `scripts/extract_people_slice.sh` and `RELATION_PIDS` in `scripts/build_people_graph.py` (a test enforces it). Changing it means re-extracting the dump (~30 min) and rebuilding.
 - The source has no statement IDs or qualifiers. Edge IDs hash `(subject, pid, object, dump_date)`.
 - Hubs (e.g. Harvard) dominate unrestricted shortest paths. A hub threshold or penalty, set from the measured degree distribution, is mandatory.
 

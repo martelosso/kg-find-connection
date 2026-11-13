@@ -18,9 +18,21 @@ def test_all_costs_nonnegative_and_ordered():
     costs = {pid: p.strength_cost(pid) for pid in p.properties}
     assert all(c >= 0 for c in costs.values())
     # Interpersonal relationships must be cheaper than shared affiliations.
-    for strong in ("P26", "P22", "P25", "P3373", "P1066"):
-        for weak in ("P108", "P69", "P463", "P39"):
+    for strong in ("P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066"):
+        for weak in ("P108", "P69", "P463", "P54", "P39"):
             assert costs[strong] < costs[weak], (strong, weak)
+    # A generic "relative" (kinship type lost with its qualifier) is weaker than explicit family.
+    for explicit in ("P26", "P22", "P25", "P40", "P3373", "P451"):
+        assert costs[explicit] < costs["P1038"]
+
+
+def test_v2_properties_are_in_the_right_groups():
+    p = load_policy()
+    assert p.version >= 2
+    groups = {pid: prop.group for pid, prop in p.properties.items()}
+    assert {groups[x] for x in ("P40", "P451", "P1038")} == {"family"}
+    assert groups["P54"] == "institutional"
+    assert {"P40", "P451", "P1038", "P54"} <= p.active_pids()
     assert p.hub_penalty(0) == 0 and p.hub_penalty(1000) > p.hub_penalty(10) > 0
 
 

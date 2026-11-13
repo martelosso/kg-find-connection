@@ -16,7 +16,7 @@ set -euo pipefail
 IN="$1"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="${2:-${ROOT}/data/wikidata/slice}"
-PROPS=(P31 P26 P22 P25 P3373 P1066 P108 P69 P463 P39)
+PROPS=(P31 P26 P22 P25 P3373 P40 P451 P1038 P1066 P108 P69 P463 P54 P39)
 
 mkdir -p "$OUT_DIR"
 PATTERNS="$(mktemp)"

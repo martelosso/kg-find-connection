@@ -10,7 +10,7 @@ from src.graph.paths import compare_paths
 
 from .graph_helpers import SRC, graph, org, person, policy
 
-PIDS = ["P26", "P22", "P25", "P3373", "P1066", "P108", "P69", "P463", "P39"]
+PIDS = ["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066", "P108", "P69", "P463", "P54", "P39"]
 
 
 def brute_force(g, p, source, target, pids):
@@ -77,9 +77,9 @@ def dense_case(rng: random.Random):
     for _ in range(rng.randint(10, 26)):
         s = rng.choice(people)
         if rng.random() < 0.35:
-            pid, o = rng.choice(["P108", "P69", "P463"]), rng.choice(orgs)
+            pid, o = rng.choice(["P108", "P69", "P463", "P54"]), rng.choice(orgs)
         else:
-            pid, o = rng.choice(["P26", "P22", "P25", "P3373", "P1066"]), rng.choice(people)
+            pid, o = rng.choice(["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066"]), rng.choice(people)
         if s != o:
             triples.add((s, pid, o))
     g = graph([person(q) for q in people] + [org(q) for q in orgs], sorted(triples), complete=True)

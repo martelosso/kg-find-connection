@@ -15,7 +15,7 @@ from src.wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider, bui
 
 from .graph_helpers import build_people_db, policy
 
-ALL = ["P26", "P22", "P25", "P3373", "P1066", "P108", "P69", "P463", "P39"]
+ALL = list(policy().properties)  # what scripts/investigate.py records: every policy property
 # A=spouse=C, C sibling D, D spouse B; A and B also studied at U. F/G form a separate component.
 PEOPLE = {"Q900001": "Ada", "Q900002": "Bea", "Q900003": "Cy", "Q900004": "Dee", "Q900006": "Fay",
           "Q900007": "Gus", "Q900008": "Hal"}

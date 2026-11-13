@@ -68,7 +68,7 @@ def test_paths_over_sqlite_are_complete_scope(people_db):
     assert [n.qid for n in only_institutional.nodes] == [A, UNIV, B]
 
 
-ALL_PIDS = frozenset({"P26", "P22", "P25", "P3373", "P1066", "P108", "P69", "P463", "P39"})
+ALL_PIDS = frozenset(policy().properties)
 
 
 def test_indexed_graph_answers_exactly_like_sqlite(people_db):
@@ -139,6 +139,33 @@ def test_indexed_graph_paths_match_sqlite_on_random_graphs(root, tmp_path, seed)
     finally:
         plain.close()
         indexed.close()
+
+
+def test_v2_properties_are_extracted_and_classified(root, tmp_path):
+    """P40/P451/P1038 between people; P54 makes its object an organisation (so the hub cap applies)."""
+    people = {"Q900011": "Star", "Q900012": "Partner", "Q900013": "Kid", "Q900014": "Cousin", "Q900015": "Teammate"}
+    others = {"Q910011": "Some FC"}
+    triples = [("Q900011", "P451", "Q900012"), ("Q900011", "P40", "Q900013"), ("Q900011", "P1038", "Q900014"),
+               ("Q900011", "P54", "Q910011"), ("Q900015", "P54", "Q910011")]
+    g = SqliteGraph(build_people_db(root, tmp_path, people, others, triples))
+    try:
+        assert g.meta["counts"]["edges_by_pid"] == {"P1038": 1, "P40": 1, "P451": 1, "P54": 2}
+        assert g.node("Q910011").kind == "organization"
+        cmp = compare_paths(g, "Q900012", "Q900015", policy())
+        assert [h.pid for h in cmp.strongest.result.hops] == ["P451", "P54", "P54"]
+        assert cmp.strongest.result.hops[0].relation_group == "family"
+        assert cmp.strongest.result.hops[2].label == "had player"
+    finally:
+        g.close()
+
+
+def test_extraction_script_and_builder_cover_every_policy_property(root):
+    """Adding a PID to the policy without re-extracting would silently find nothing."""
+    pids = set(policy().properties)
+    script = (root / "scripts" / "extract_people_slice.sh").read_text(encoding="utf-8")
+    props_line = next(line for line in script.splitlines() if line.startswith("PROPS=("))
+    assert pids | {"P31"} == set(props_line[len("PROPS=("):-1].split())
+    assert pids == set(_load_build_module(root).RELATION_PIDS)
 
 
 def test_position_group_only_when_enabled(people_db):

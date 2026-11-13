@@ -125,7 +125,7 @@ def well_connected(db: Path, limit: int, min_family: int) -> list[str]:
         """SELECT e.qid FROM entity e
            WHERE e.is_human AND e.label_en IS NOT NULL AND e.label_es IS NOT NULL
              AND (SELECT COUNT(*) FROM edge x WHERE (x.subject = e.qid OR x.object = e.qid)
-                  AND x.pid IN ('P26','P22','P25','P3373','P1066')) >= ?
+                  AND x.pid IN ('P26','P22','P25','P3373','P40','P451','P1038','P1066')) >= ?
            ORDER BY e.out_degree + e.in_degree DESC LIMIT ?""", (min_family, limit)).fetchall()
     return [f"Q{q}" for (q,) in rows]
 

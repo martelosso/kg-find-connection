@@ -70,7 +70,7 @@ export class PathComparison {
       same,
       el("div", { class: "note" },
         `Scope: ${c.scope === "explored_graph" ? "shortest/strongest among the explored relationships only, not all of Wikidata" : "complete within the configured snapshot"}. `,
-        "A shared employer, school or organization is an association, not proof that people met. ",
+        "A shared employer, school, sports team or organization is an association, not proof that people met. ",
         "Statements are what Wikidata records, not verified facts."),
       this._warnings());
   }

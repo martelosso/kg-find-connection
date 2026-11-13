@@ -84,9 +84,9 @@ def random_people_graph(seed: int, n_people: int = 40, n_orgs: int = 6, n_edges:
     while len(triples) < n_edges:
         s = rng.choice(pq)
         if rng.random() < 0.5:
-            p, o = rng.choice(["P108", "P69", "P463", "P39"]), rng.choice(oq)
+            p, o = rng.choice(["P108", "P69", "P463", "P54", "P39"]), rng.choice(oq)
         else:
-            p, o = rng.choice(["P26", "P22", "P25", "P3373", "P1066"]), rng.choice(pq)
+            p, o = rng.choice(["P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066"]), rng.choice(pq)
         if s != o:
             triples.add((s, p, o))
     return people, orgs, sorted(triples)

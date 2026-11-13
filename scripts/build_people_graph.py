@@ -32,8 +32,8 @@ WD = "http://www.wikidata.org/entity/Q"
 WDT = "http://www.wikidata.org/prop/direct/"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 
-RELATION_PIDS = ("P26", "P22", "P25", "P3373", "P1066", "P108", "P69", "P463", "P39")
-INSTITUTION_PIDS = ("P108", "P69", "P463")
+RELATION_PIDS = ("P26", "P22", "P25", "P3373", "P40", "P451", "P1038", "P1066", "P108", "P69", "P463", "P54", "P39")
+INSTITUTION_PIDS = ("P108", "P69", "P463", "P54")
 HUMAN = 5
 
 TRIPLE = re.compile(r'^<([^>]+)> <([^>]+)> (.+) \.\s*$')

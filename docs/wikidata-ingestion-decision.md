@@ -37,7 +37,9 @@ uv run python scripts/build_people_graph.py data/wikidata/slice/slice.nt \
 
 Everything under `data/wikidata/` is gitignored. Commit curated fixtures in `data/fixtures/`.
 
-**Extraction scope:** `P31` plus `P26 P22 P25 P3373 P1066` (interpersonal) plus `P108 P69 P463` (institutional) plus `P39` (position held), with `rdfs:label` in `en` and `es`. Only statements whose **subject is a human** (P31 = Q5) are kept. Adding a property means re-running extraction. Eligibility and ranking policy stay in `config/relationships.yaml` (Milestone 2), not in the extraction scripts.
+**Extraction scope:** `P31` plus `P26 P22 P25 P3373 P40 P451 P1038 P1066` (interpersonal) plus `P108 P69 P463 P54` (institutional) plus `P39` (position held), with `rdfs:label` in `en` and `es`.
+
+*Scope v2 (2026-11-13, policy version 2):* added **P40 child**, **P451 unmarried partner**, **P1038 relative** (family group; relative is weaker because its kinship type is a qualifier the truthy dump omits) and **P54 member of sports team** (institutional, so its teams are organisations under the hub cap). Reason: the demo seeds now include people everyone knows today (footballers, musicians, influencers), who connect mostly through teams, partners and children; without these they have almost no edges. P40 also catches children recorded only on the parent's page. The first full extraction (v1 scope: 248,380,336 lines, 33.8 GB, 29 min, reproduced byte-for-byte by a second run) was therefore redone with the v2 scope. A test keeps `extract_people_slice.sh`, `build_people_graph.py` and the policy on the same property list. Only statements whose **subject is a human** (P31 = Q5) are kept. Adding a property means re-running extraction. Eligibility and ranking policy stay in `config/relationships.yaml` (Milestone 2), not in the extraction scripts.
 
 **P39 "position held"** is extracted but **off by default**. It belongs to a "weak association" group the presenter can enable, because it links people through role nodes (e.g. "member of the House of Commons of Canada") rather than organizations. It is about 25% of all edges.
 

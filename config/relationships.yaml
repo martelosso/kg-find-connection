@@ -10,13 +10,13 @@
 # Every allowlisted property is traversable in both directions for connectivity; the original
 # Wikidata direction is preserved and shown (reverse hops use `inverse_label`).
 
-version: 1
+version: 2  # v2 (2026-11-13): + P40 child, P451 unmarried partner, P1038 relative, P54 sports team
 
 groups:
   family:
     label: Family
     label_es: Familia
-    description: Direct family relationships recorded on a person.
+    description: Family, partners and relatives recorded on a person.
     enabled_by_default: true
   mentorship:
     label: Teacher / student
@@ -27,8 +27,9 @@ groups:
     label: Shared institution
     label_es: Institución compartida
     description: >-
-      Person -> organization links. Two people linked through an organization share an
-      affiliation; this is an association, NOT evidence that they met.
+      Person -> organization links (employer, school, membership, sports team). Two people
+      linked through an organization share an affiliation; this is an association, NOT
+      evidence that they met.
     enabled_by_default: true
   position:
     label: Position held (weak)
@@ -69,6 +70,31 @@ properties:
     group: family
     strength: 0.85
     symmetric: true
+  P40:
+    label: child
+    label_es: hijo/a
+    inverse_label: parent (child of)
+    inverse_label_es: padre/madre (hijo/a de)
+    group: family
+    strength: 0.95
+  P451:
+    label: unmarried partner
+    label_es: pareja
+    inverse_label: unmarried partner
+    inverse_label_es: pareja
+    group: family
+    strength: 0.85
+    symmetric: true
+  P1038:
+    # Cousins, in-laws, uncles... The kinship type is a qualifier, which the truthy dump omits,
+    # so this is weaker than the explicit family properties.
+    label: relative
+    label_es: pariente
+    inverse_label: relative
+    inverse_label_es: pariente
+    group: family
+    strength: 0.60
+    symmetric: true
   P1066:
     label: student of
     label_es: alumno/a de
@@ -97,6 +123,14 @@ properties:
     inverse_label_es: tiene como miembro a
     group: institutional
     strength: 0.25
+  P54:
+    # Teammates may have played decades apart: an association, not evidence that they met.
+    label: member of sports team
+    label_es: miembro del equipo deportivo
+    inverse_label: had player
+    inverse_label_es: tuvo como jugador/a a
+    group: institutional
+    strength: 0.35
   P39:
     label: position held
     label_es: cargo ocupado
