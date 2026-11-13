@@ -5,7 +5,12 @@
 # (pathfinding.max_hops) because the path engine enforces it.
 # An investigation request may LOWER these values, never raise them.
 
-version: 2
+version: 3
+# v3 (2026-11-13, step 4): frontier rewards well-connected nodes (degree_weight 0.15 -> -0.5) and the
+#   exploration budgets grow (nodes 600 -> 2000, edges 2000 -> 7000, provider requests 30 -> 40).
+#   Measured with the deterministic search on 355 famous pairs connected within 2-4 hops: found live
+#   33 -> 202 (9% -> 57%); on 60 random connected pairs 6 -> 19. Run time p90 6 s, max 12 s.
+#   docs/search-tuning.md has the full sweep. The UI still draws at most ui.max_visible_nodes.
 # v2 (2026-11-13): agent budgets raised above the plan's §12 table for testing on the full graph:
 #   tool calls 18 -> 30, provider requests 25 -> 30, explored nodes 400 -> 600, edges 1500 -> 2000.
 #   With 18 calls every agent run on the demo pairs stopped while the backend still flagged a
@@ -15,17 +20,19 @@ version: 2
 #   Provisional until step 4 (benchmark_investigations.py).
 
 budgets:
-  max_explored_nodes: 600
-  max_explored_edges: 2000
+  max_explored_nodes: 2000
+  max_explored_edges: 7000
   max_edges_per_expansion: 100
-  max_provider_requests: 30
+  max_provider_requests: 40
   max_agent_tool_calls: 30
   wall_time_seconds: 90
 
 frontier:
   # rank_frontier score = weighted path cost from the node's side endpoint
-  #                       + degree_weight * ln(1 + degree)   (prefers cheap, specific expansions)
-  degree_weight: 0.15
+  #                       + degree_weight * ln(1 + degree)
+  # Negative rewards well-connected nodes. Positive values (0.15 until v2) preferred leaf relatives,
+  # which are dead ends: 9% of famous pairs found live, against 57% at -0.5 (v3 budgets).
+  degree_weight: -0.5
   # After the first path appears, keep expanding this many more nodes to look for better paths.
   expansions_after_first_path: 4
 

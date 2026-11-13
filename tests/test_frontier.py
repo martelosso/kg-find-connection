@@ -47,3 +47,23 @@ def test_respects_hop_limit():
     cands = rank_frontier(g, A, B, {A, C}, policy(max_hops=2), FRONTIER)
     assert D not in {c.qid for c in cands}  # D is 2 hops out: expanding it cannot stay within 2 hops
     assert D in {c.qid for c in rank_frontier(g, A, B, {A, C}, policy(max_hops=3), FRONTIER)}
+
+
+def test_negative_degree_weight_prefers_well_connected_candidates():
+    # Two equally cheap spouses: a leaf (degree 2) and a well-connected one (degree 200).
+    g = graph([person(A), person(B), deg(person(C), 2), deg(person(D), 200)], [(A, "P26", C), (A, "P26", D)])
+    pick = lambda dw: [c.qid for c in rank_frontier(g, A, B, {A}, policy(), FRONTIER.model_copy(
+        update={"degree_weight": dw})) if c.qid in (C, D)]
+    assert pick(0.15) == [C, D]
+    assert pick(-0.5) == [D, C]
+
+
+def test_degree_weight_is_bounded():
+    import pytest
+    from pydantic import ValidationError
+
+    from src.config import FrontierPolicy
+
+    assert FrontierPolicy(degree_weight=-0.5, expansions_after_first_path=4).degree_weight == -0.5
+    with pytest.raises(ValidationError):
+        FrontierPolicy(degree_weight=-5, expansions_after_first_path=4)

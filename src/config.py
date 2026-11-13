@@ -141,7 +141,8 @@ class SearchBudgets(_Frozen):
 
 
 class FrontierPolicy(_Frozen):
-    degree_weight: float = Field(ge=0)
+    # Negative = reward well-connected nodes (search v3: -0.5). Bounded so a typo cannot flip the search.
+    degree_weight: float = Field(ge=-2, le=2)
     expansions_after_first_path: int = Field(ge=0)
 
 

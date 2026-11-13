@@ -4,7 +4,13 @@ Pure function over the explored graph. Each candidate belongs to the side (sourc
 from which it is cheapest to reach. Score (lower is better):
 
     weighted path cost from that side's endpoint (same edge costs as the strongest path)
-    + frontier.degree_weight * ln(1 + degree)        # prefer cheap, specific expansions
+    + frontier.degree_weight * ln(1 + degree)
+
+degree_weight < 0 rewards well-connected nodes (config/search.yaml v3: -0.5). A positive weight
+prefers cheap, specific expansions, but on real pairs those are mostly leaf relatives (a star's
+children): dead ends that used the whole request budget. Rewarding degree reaches films, songs
+and well-connected people sooner; on 355 famous pairs live recall rose from 9% to 57% (with the
+v3 budgets). See docs/search-tuning.md.
 
 Excluded: already-expanded nodes, hubs that may not be intermediate nodes (they can never extend
 a path), nodes already at the hop limit, and nodes whose edges are all already explored (the
