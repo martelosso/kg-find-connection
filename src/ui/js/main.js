@@ -5,10 +5,10 @@
 import { api, streamEvents } from "./api.js";
 import { $, el, wikidataLink } from "./dom.js";
 import { GraphView } from "./graph-view.js";
-import { InvestigationModel, label } from "./investigation.js";
+import { InvestigationModel, label, pathsText } from "./investigation.js";
 import { PathComparison } from "./path-comparison.js";
 import { PeoplePicker } from "./people-picker.js";
-import { StepBook, describeStep, toolTarget } from "./steps.js";
+import { StepBook, describeStep, orderBadge, toolPurpose, toolTarget } from "./steps.js";
 import { Timeline } from "./timeline.js";
 import { TurtleEditor } from "./turtle-editor.js";
 
@@ -203,13 +203,14 @@ function applyEvent(ev) {
       break;
     case "graph.expanded":
       graph.markExpanded(p.expanded_qid);
-      graph.addNodes(change.addedNodes.map((id) => model.nodes.get(id)));
+      graph.addNodes(change.addedNodes.map((id) => model.nodes.get(id)), { origin: p.expanded_qid });
       graph.addEdges(change.addedEdges.map((id) => model.edges.get(id)), { fresh: true });
       graph.applyCap();
       scheduleTurtle();
       break;
     case "paths.updated":
-      graph.setPaths(model.comparison);
+      if (stepRun) graph.revealPaths(model.comparison);  // drawn hop by hop: the methodical style
+      else graph.setPaths(model.comparison);
       paths.update({ comparison: model.comparison });
       break;
     default:
@@ -232,7 +233,7 @@ function finish() {
       `${model.status === "completed" ? "Completed" : "Partial result"}: ${found ? "connection found" : "no connection found"} `
       + `(${String(f.stop_reason).replaceAll("_", " ")}) · among explored relationships only`);
   }
-  graph.fitWhenSettled(model.comparison?.shortest?.result ? model.pathNodeIds() : null);
+  if (!stepRun) graph.fitWhenSettled(model.comparison?.shortest?.result ? model.pathNodeIds() : null);  // stepping frames itself
   loadTurtle();
 }
 
@@ -264,14 +265,33 @@ function backStep() {
 function afterStep() {
   const step = book.steps[stepIndex];
   const d = describeStep(step);
-  // The step's new edges stand out (path edges stay lit); the result step shows the paths alone.
-  graph.setFocus(step.kind !== "result" && d.edgeIds.length ? { edges: d.edgeIds } : null);
+  // Story view: the trail (people, expanded nodes in order, paths) stays in colour, this step's new
+  // nodes and edges are green, everything fetched earlier that led nowhere is greyed out.
+  graph.focus = null;
+  const now = step.kind !== "result";
+  // The turn's planned calls: their target nodes and the branches to them show from the decision on.
+  const turn = step.kind === "decision" ? stepIndex : step.kind === "call" ? step.parent ?? null : null;
+  const planned = turn === null ? [] : book.plan(turn).map((t) => t.qid).filter(Boolean);
+  graph.setStory({ order: [...model.expanded], current: now ? d.nodeIds : [], currentEdges: now ? d.edgeIds : [],
+                   active: now ? d.expandedQids : [], planned });
   timeline.markCurrent(step.events.map((e) => e.event_id));
+  renderStepCard();
+  // Camera: frame the trail plus what this step added, below the step card.
+  const card = $("#step-card");
+  const inset = card.hidden ? 0 : card.getBoundingClientRect().bottom - $("#network").getBoundingClientRect().top + 8;
+  const focus = cameraFocus(step, d, planned);
+  if (focus.center.size || focus.around.size) graph.frameStory(focus, inset);
+  // Tools that do not touch the graph get an effect that depicts what they do.
+  graph.stopFx();
+  const tool = step.kind === "call" ? d.tools[0]?.tool : null;
+  // Both follow the backend's own rules (hub cap, hop limit) so only what is really computed moves.
+  const rules = { isHub: isHubNode, maxHops: model.meta?.max_hops ?? 6 };
+  if (tool === "compute_paths" || tool === "inspect_path") graph.fxPathSearch(rules);
+  else if (tool === "get_search_status") graph.fxFrontierScan(rules);
   if (step.kind !== "result") {
     setStatus("busy", `Step-through: ${stepIndex <= 0 ? "start" : `step ${stepIndex} of ${book.count - 1}${book.done ? "" : "+"}`}`
       + " · Next ▶ (→, Space, Page Down) · ◀ Back (←, Page Up)");
   }
-  renderStepCard();
 }
 
 function renderStepCard() {
@@ -282,6 +302,8 @@ function renderStepCard() {
   $("#step-back").disabled = stepIndex <= 0;
   $("#step-next").disabled = stepIndex >= book.lastComplete;
   $("#step-next").textContent = waiting && stepIndex >= 0 ? "Waiting…" : "Next ▶";
+  const total = Math.max(1, book.count - 1);
+  $("#step-progress i").style.width = `${Math.max(0, Math.min(100, (100 * stepIndex) / total))}%`;
   if (stepIndex < 0) {
     $("#step-title").textContent = "Step-through";
     $("#step-sub").textContent = "waiting for the run to start…";
@@ -292,7 +314,100 @@ function renderStepCard() {
   $("#step-title").textContent = stepIndex === 0 ? "Start" : `Step ${stepIndex} / ${book.count - 1}${book.done ? "" : "+"}`;
   $("#step-sub").textContent = waiting ? (model.isAgent ? "the agent is still working…" : "the search is still running…")
     : book.done || stepIndex >= book.lastComplete ? "" : `${book.lastComplete - stepIndex} more ready`;
-  $("#step-body").replaceChildren(...stepBody(step, describeStep(step)).filter(Boolean));
+  const body = $("#step-body");
+  body.replaceChildren(...stepBody(step, describeStep(step)).flat().filter(Boolean));
+  // A new step's lines ease in one after another; re-renders of the same step (live runs) do not replay it.
+  if (body.dataset.step !== String(stepIndex)) {
+    body.dataset.step = String(stepIndex);
+    body.classList.remove("enter"); void body.offsetWidth; body.classList.add("enter");
+  }
+}
+
+/**
+ * What the camera frames for a step: it centres on the PARENT and zooms out just enough to watch its
+ * tree grow. expansion: centre = the expanded node, around = its new branches (where they will end) ·
+ * decision: centre = the trail node(s) the planned branches hang from, around = the planned nodes ·
+ * a new/better path, the result: the path nodes · setup: the two people. Steps that change nothing in
+ * the graph (compute_paths, get_search_status…) keep the camera still.
+ */
+function cameraFocus(step, d, planned) {
+  const center = new Set(), around = new Set();
+  const add = (set, ...xs) => xs.forEach((x) => x && set.add(x));
+  if (step.kind === "setup") add(around, model.source?.id, model.target?.id);
+  else if (step.kind === "decision" && !planned.some((q) => !model.expanded.has(q))) {
+    add(around, ...graph.allVisibleIds());  // about the whole search (paths, status): show all of it
+  } else if (step.kind === "decision") {
+    for (const q of planned) {
+      if (model.expanded.has(q)) continue;  // already on the trail: nothing new to show there
+      add(around, q);
+      for (const e of model.edges.values()) {
+        if (e.subject === q && model.expanded.has(e.object)) add(center, e.object);
+        if (e.object === q && model.expanded.has(e.subject)) add(center, e.subject);
+      }
+    }
+  } else if (step.kind === "result") add(around, ...model.pathNodeIds());
+  else if (d.pathEvent) add(around, ...model.pathNodeIds(), ...d.expandedQids);
+  else if (d.nodeIds.length || d.edgeIds.length) { add(center, ...d.expandedQids); add(around, ...d.nodeIds); }
+  return { center, around };
+}
+
+/** The hub rule as the backend applies it (cap per node kind, from investigation.started). */
+function isHubNode(n) {
+  const m = model.meta || {};
+  const cap = (m.max_intermediate_degree_by_kind || {})[n?.kind] ?? m.max_intermediate_degree;
+  return !!n && n.kind !== "person" && cap != null && (n.degree || 0) > cap;
+}
+
+/** ① Beyoncé → ② Alice Braga → … (the last few expansions, in the order they happened). */
+function trailLine() {
+  const order = [...model.expanded];
+  if (!order.length) return null;
+  const first = Math.max(0, order.length - 7);
+  const shown = order.slice(first).map((q, i) => `${orderBadge(first + i + 1)} ${label(model.nodes.get(q)) || q}`);
+  return el("div", { class: "trail" }, el("span", { class: "muted" }, "Exploration order: "),
+    first ? "… → " : "", shown.join(" → "));
+}
+
+/** The result of one tool call: the call's own counts, or the backend state right after it. */
+function callResult(t, d) {
+  if (t.error) return [el("div", { class: "res err" }, `✗ ${t.error.code}: ${t.error.message}`)];
+  const lines = [];
+  if (t.returned !== null) {
+    if (!t.addedNodes && !t.addedEdges) {
+      lines.push(el("div", { class: "res" }, `${t.returned} relationships returned, all already in the graph: nothing new.`));
+    } else {
+      lines.push(el("div", { class: "res" }, `${t.returned} relationships returned → `,
+        el("b", { class: "fresh" }, `${t.addedNodes} new nodes, ${t.addedEdges} new edges`), " (green in the graph)"));
+    }
+    if (t.truncated) {
+      lines.push(el("div", { class: "res warn" },
+        `Cut at ${t.returned}${t.capHit ? ` (${t.capHit.replaceAll("_", " ")})` : ""}: Wikidata has more for this node.`));
+    }
+  } else if (t.tool === "compute_paths" || t.tool === "inspect_path") {
+    const c = model.comparison;
+    lines.push(el("div", { class: "res" }, c?.shortest?.result || c?.strongest?.result
+      ? `Connected: ${pathsText(c)}`
+      : `No connection yet among the ${model.nodes.size} explored nodes and ${model.edges.size} edges.`));
+  } else if (t.tool === "get_search_status") {
+    const b = model.meta?.budgets || {};
+    lines.push(el("div", { class: "res" }, `So far: ${model.nodes.size} nodes and ${model.edges.size} edges explored, `
+      + `${model.expanded.size} of ${b.max_provider_requests ?? "?"} expansions used.`));
+  }
+  if (d.pathEvent) {
+    lines.push(el("div", { class: "star" }, d.pathEvent === "first" ? "★ This connected the two sides! " : "★ A better path appeared: ",
+      d.paths || ""));
+  }
+  return lines;
+}
+
+function callBlock(t, d) {
+  const order = [...model.expanded];
+  const rank = t.qid ? order.indexOf(t.qid) + 1 : 0;
+  return el("div", { class: "call" },
+    el("div", { class: "call-head" }, rank ? el("span", { class: "badge-n" }, orderBadge(rank)) : null,
+      el("span", { class: "tool-name" }, t.tool), el("b", {}, toolTarget(t))),
+    el("div", { class: "purpose" }, toolPurpose(t)),
+    callResult(t, d));
 }
 
 function stepBody(step, d) {
@@ -303,15 +418,7 @@ function stepBody(step, d) {
     `nodes ${model.nodes.size}/${b.max_explored_nodes ?? "?"}`,
     model.isAgent ? `tool calls ${toolRows}/${b.max_agent_tool_calls ?? "?"}` : null,
   ].filter(Boolean).join(" · "));
-  const tools = d.tools.length ? el("ul", {}, ...d.tools.map((t) => {
-    const bits = [];
-    if (t.returned !== null) bits.push(`${t.returned} returned`, `+${t.addedNodes} nodes`, `+${t.addedEdges} edges`);
-    if (t.truncated) bits.push(t.capHit ? `cut at ${t.capHit.replaceAll("_", " ")}` : "truncated");
-    const res = t.error ? el("div", { class: "res err" }, `✗ ${t.error.code}: ${t.error.message}`)
-      : bits.length ? el("div", { class: `res${t.truncated ? " warn" : ""}` }, bits.join(" · ")) : null;
-    return el("li", {}, el("b", {}, t.tool), " ", toolTarget(t), res);
-  })) : null;
-  const paths = d.paths ? el("div", { class: "paths" }, d.paths) : null;
+  const turnNo = (i) => book.steps.slice(0, i + 1).filter((s) => s.kind === "decision").length;
   switch (step.kind) {
     case "setup": {
       const m = model.meta || {};
@@ -319,13 +426,33 @@ function stepBody(step, d) {
         el("div", { class: "decision" }, `Find a connection between ${label(model.source)} and ${label(model.target)}.`),
         el("div", { class: "small muted" }, `Relationship groups: ${(m.groups || []).join(", ")} · at most ${m.max_hops} hops`), foot];
     }
-    case "decision":
-      return [el("div", { class: "who" }, "The agent wrote"),
-        el("div", { class: "decision" }, d.decision ? `“${d.decision}”` : "(no text: the model called tools without writing a decision)"),
-        tools, paths, foot];
-    case "expansion":
+    case "decision": {
+      // The calls the model issued in this turn (all decided at once); each one is the next step.
+      const plan = book.plan(stepIndex);
+      const items = plan.length ? plan.map((t) => [el("span", { class: "tool-name" }, t.tool), " ", toolTarget(t)])
+        : (step.events[0].payload.tool_calls || []).map((name) => [el("span", { class: "tool-name" }, name)]);
+      return [el("div", { class: "who agent" }, `The agent decides · turn ${turnNo(stepIndex)}`),
+        el("div", { class: "decision agent" }, d.decision ? `“${d.decision}”` : "(no text: the model called tools without writing a decision)"),
+        items.length ? el("div", { class: "plan" },
+          el("div", { class: "muted small" }, items.length === 1 ? "Its next call:" : `Its next ${items.length} calls, one per step:`),
+          el("ol", {}, ...items.map((x) => el("li", {}, x)))) : null,
+        trailLine(), foot];
+    }
+    case "call": {
+      const t = d.tools[0];
+      const parent = step.parent ?? null;
+      const why = parent !== null ? describeStep(book.steps[parent]).decision : null;
+      return [el("div", { class: "who agent" }, parent !== null
+          ? `Turn ${turnNo(parent)} · call ${step.callNo} of ${book.callCount(stepIndex)}` : "Tool call"),
+        t ? callBlock(t, d) : null,
+        why ? el("div", { class: "why" }, el("span", { class: "muted" }, "The agent's reason for this turn: "), `“${why}”`) : null,
+        trailLine(), foot];
+    }
+    case "expansion": {
+      const t = d.tools[0];
       return [el("div", { class: "who" }, "Backend rule (no AI): expand the best-ranked frontier node"),
-        el("div", { class: "rule" }, d.rule || ""), tools, paths, foot];
+        el("div", { class: "rule" }, d.rule || ""), t ? callBlock(t, d) : null, trailLine(), foot];
+    }
     default: {
       const r = d.result || {};
       const found = r.outcome === "path_found";
@@ -334,7 +461,8 @@ function stepBody(step, d) {
         el("div", { class: "decision" }, r.error && !found ? `${r.error.code}: ${r.error.message}`
           : found ? r.paths : "No connection among the explored relationships."),
         r.answer ? el("div", { class: "small" }, r.answer) : null,
-        el("div", { class: "small muted" }, `stop: ${String(r.stop || "?").replaceAll("_", " ")} · among explored relationships only`), foot];
+        el("div", { class: "small muted" }, `stop: ${String(r.stop || "?").replaceAll("_", " ")} · among explored relationships only`),
+        trailLine(), foot];
     }
   }
 }
@@ -543,10 +671,11 @@ function fmtTime(iso) { return iso ? String(iso).slice(0, 16).replace("T", " ") 
 // Source (left) and Result + timeline (right) collapse to a thin strip: the "−" in the pane bar, the
 // strip itself and (for the source) the graph bar's "Source" button all toggle it.
 function togglePane(cls, button, what) {
+  document.body.classList.add("pane-anim");  // the pane slides (CSS --t-ui) instead of snapping
   const min = document.body.classList.toggle(cls);
   button.textContent = min ? "+" : "−";
   button.title = `${min ? "Expand" : "Collapse"} ${what}`;
-  setTimeout(() => { editor.refresh(); graph.network.redraw(); }, 50);
+  setTimeout(() => { document.body.classList.remove("pane-anim"); editor.refresh(); graph.network.redraw(); }, 480);
   return min;
 }
 function toggleSource(e) {

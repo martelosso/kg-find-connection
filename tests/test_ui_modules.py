@@ -130,12 +130,13 @@ def test_workbench_parser_module_equals_legacy_editor_parser(root, tmp_path):
 
 
 def test_step_book_groups_recorded_traces_into_presenter_steps(root, tmp_path):
-    """Step-through (plan §2): every event lands in exactly one step, in order; agent steps start at
-    decisions, deterministic steps at expansions, and the terminal event is its own last step."""
+    """Step-through (plan §2): every event lands in exactly one step, in order; agent turns become a
+    decision step plus one step per tool call, deterministic steps are expansions, and the terminal
+    event is its own last step."""
     traces = {name: json.loads((root / "data" / "fixtures" / "event_traces" / f"{name}.json").read_text(encoding="utf-8"))["events"]
               for name in ("lula-snoop-agent", "diana-churchill")}
     script = """
-const { StepBook, describeStep, toolTarget } = await mod('steps.js');
+const { StepBook, describeStep, toolTarget, toolPurpose, orderBadge } = await mod('steps.js');
 const { InvestigationModel } = await mod('investigation.js');
 const out = {};
 for (const [name, events] of Object.entries(data)) {
@@ -156,6 +157,12 @@ for (const [name, events] of Object.entries(data)) {
     edgeIds: desc.reduce((n, d) => n + d.edgeIds.length, 0),
     decisions: desc.filter((d) => d.decision).length,
     rules: desc.filter((d) => d.rule).length,
+    toolsPerCall: book.steps.filter((s) => s.kind === "call").map((s) => s.events.filter((e) => e.type === "tool.started").length),
+    callNos: book.steps.map((s, i) => s.kind === "call" ? [s.callNo, book.callCount(i), book.steps[s.parent].kind] : null).filter(Boolean),
+    plans: book.steps.map((s, i) => s.kind === "decision" ? book.plan(i).length : null).filter((n) => n !== null),
+    pathEvents: desc.map((d) => d.pathEvent).filter(Boolean),
+    purposes: desc.flatMap((d) => d.tools.map((t) => toolPurpose(t))).every((x) => x.length > 0),
+    badges: [orderBadge(1), orderBadge(20), orderBadge(21), orderBadge(50), orderBadge(51)],
     result: desc[desc.length - 1].result,
     sameFold: full.nodes.size === upTo.nodes.size && full.edges.size === upTo.edges.size,
     edgesTotal: full.edges.size,
@@ -175,9 +182,17 @@ console.log(JSON.stringify(out));
         # While streaming, a step only becomes showable once the next one has started.
         assert r["progress"] == sorted(r["progress"]) and r["progress"][0] == -1
         assert "side" in r["target"]
+        assert r["purposes"]                                         # every tool has a plain description
+        assert r["badges"] == ["①", "⑳", "㉑", "㊿", "(51)"]
+        assert r["pathEvents"][0] == "first" and "first" not in r["pathEvents"][1:]
     agent = out["lula-snoop-agent"]
-    n_decisions = sum(e["type"] == "agent.decision" for e in traces["lula-snoop-agent"])
-    assert set(agent["kinds"][1:-1]) == {"decision"} and agent["decisions"] == n_decisions
+    events = traces["lula-snoop-agent"]
+    n_decisions = sum(e["type"] == "agent.decision" for e in events)
+    n_calls = sum(e["type"] == "tool.started" for e in events)
+    assert set(agent["kinds"][1:-1]) == {"decision", "call"} and agent["decisions"] == n_decisions
+    assert agent["kinds"].count("call") == n_calls and set(agent["toolsPerCall"]) == {1}  # one call per step
+    assert all(kind == "decision" and 1 <= no <= count for no, count, kind in agent["callNos"])
+    assert sum(agent["plans"]) == n_calls
     det = out["diana-churchill"]
     n_expansions = sum(e["type"] == "tool.started" for e in traces["diana-churchill"])
     assert det["kinds"][1:-1] == ["expansion"] * n_expansions and det["rules"] == n_expansions

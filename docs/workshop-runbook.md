@@ -108,6 +108,9 @@ Tip: a deep link pre-fills a pair, for example `http://localhost:5000/?source=Q�
 - Live runs keep running in the background; the card says how many steps are ready ("3 more ready") or that the agent is still working.
 - The card quotes only what the agent actually wrote, plus backend facts (arguments, results, budgets). "(no text…)" means the model called tools without writing a decision.
 - Nothing plays itself out: to reach the result, keep pressing **Next**.
+- An agent turn takes several steps: first what the agent decided and the calls it planned, then one step per call ("Turn 3 · call 2 of 3"), each with what the tool does and what it returned. ★ marks the call that connected the two sides.
+- Tools that don't change the graph get an effect: `compute_paths` sends a pastel ping out from both people along every edge the path search can walk, hop by hop to the far end, colouring each edge as it crosses it; the colour then fades and, after a short pause, the next ping leaves (the search runs from both ends; hubs are skipped, as in the backend); `get_search_status` sweeps a radar beam around each person that lights exactly the candidates the backend ranks. Both loop until you press Next. They show what the tool does, not its answer.
+- The graph tells the story: expanded people carry their order (① ② ③…), the current step's additions are green, and earlier dead ends fade to grey. The camera frames the trail below the card on each step.
 - **−** (top right) minimizes the step card, the Source pane and the Result/timeline pane; **+** brings them back. The detail box for a clicked node or edge opens in the graph's bottom-right corner and has its own **−**.
 
 **Replay instead of live:** pick a case in **Replay a demo case…**. The badge reads **REPLAY · recorded <time>**. Say it is a recording.

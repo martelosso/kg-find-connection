@@ -4,11 +4,28 @@
 // Visible-node cap: beyond `maxVisible`, the least important nodes are hidden (endpoints, path
 // nodes, expanded nodes and nodes linking 2+ visible nodes are always kept). "Show all" lifts it.
 
+import { MOTION, easeInOut } from "./motion.js";
+import { orderBadge } from "./steps.js";
+
+/** compute_paths ping: each edge's ping leaves up to this fraction of a hop late, at random. */
+const PING_JITTER = 0.3;
+/** compute_paths ping: an edge's colour fades back to normal over this many ms after its ping arrives… */
+const PING_FADE = 600;
+/** …and the branch rests this long in its normal colours before its next ping leaves. */
+const PING_REST = 500;
+
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 export class GraphView {
   constructor(container, { maxVisible = 250, onSelect } = {}) {
     this.maxVisible = maxVisible;
+    this.container = container;
+    this.labelZoom = 1;       // story labels are scaled by 1/zoom so they stay readable on screen
+    this.fading = new Map();  // node id -> fade-in start time (new nodes and their edges fade in)
+    this.rising = new Map();  // node id -> start time: a greyed node lighting up as a planned branch
+    this.growing = [];        // branch tweens: [{id, origin, dx, dy, start}]
+    this.fadeMs = MOTION.fade;
+    this.growMs = MOTION.grow;
     this.labelThreshold = 60;  // above this many nodes, only important nodes keep a text label
     this.showAll = false;
     this.colors = {
@@ -16,7 +33,7 @@ export class GraphView {
       organization: css("--c-org"), position: css("--c-position"), other: css("--c-other"),
       work: css("--c-work"), place: css("--c-place"),
       edge: css("--c-edge"), dim: css("--c-dim"), shortest: css("--c-shortest"), strongest: css("--c-strongest"),
-      fresh: css("--c-fresh"), sandbox: css("--c-sandbox"), select: css("--c-select"),
+      fresh: css("--c-fresh"), freshSoft: css("--c-fresh-soft"), sandbox: css("--c-sandbox"), select: css("--c-select"),
     };
     this.nodesDS = new vis.DataSet();
     this.edgesDS = new vis.DataSet();
@@ -29,6 +46,9 @@ export class GraphView {
     this.expanded = new Set();
     this.mode = "both";       // which paths are emphasised: both | shortest | strongest | none
     this.focus = null;        // {nodes:Set, edges:Set} transient highlight (timeline step, editor selection)
+    // Step-through "story": the exploration trail (endpoints, expanded nodes in order, paths) stays in
+    // colour, the current step's new nodes/edges are green, and everything else is greyed out.
+    this.story = null;        // {current:Set, currentEdges:Set, order:Map qid->n, active:Set}
     this.network = new vis.Network(container, { nodes: this.nodesDS, edges: this.edgesDS }, {
       nodes: { shape: "dot", size: 10, borderWidth: 1.5,
                font: { size: 13, color: css("--text"), strokeWidth: 3, strokeColor: css("--bg") } },
@@ -36,19 +56,59 @@ export class GraphView {
                color: { color: this.colors.edge, highlight: this.colors.select, hover: this.colors.select },
                font: { size: 10, color: css("--muted"), strokeWidth: 3, strokeColor: css("--bg"), align: "middle" },
                smooth: { type: "continuous" }, selectionWidth: 2 },
-      physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -70, springLength: 120, avoidOverlap: 0.4 },
-                 stabilization: { enabled: false }, maxVelocity: 30, minVelocity: 0.75 },
+      physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -70, springLength: 120, avoidOverlap: 0.4, damping: 0.6 },
+                 // Calm physics: new nodes drift out from their parent instead of being flung ("popcorn").
+                 stabilization: { enabled: false }, maxVelocity: 5, minVelocity: 0.5 },
       interaction: { hover: true, tooltipDelay: 120, multiselect: true },
       layout: { randomSeed: 7 },
     });
     this.network.on("click", (params) => onSelect?.({ nodes: params.nodes, edges: params.nodes.length ? [] : params.edges }));
+    // The presenter's own mouse always wins over the step camera.
+    this.network.on("dragStart", () => this.stopCamera());
+    this.network.on("zoom", () => this.stopCamera());
+    this.network.on("afterDrawing", (ctx) => this._drawPing(ctx));  // compute_paths ping overlay
   }
 
   reset() {
+    this.stopCamera();
+    if (this._fxRaf) cancelAnimationFrame(this._fxRaf);
+    this._fxRaf = null; this._ping = null;
+    if (this._fadeRaf) cancelAnimationFrame(this._fadeRaf);
+    if (this._growRaf) cancelAnimationFrame(this._growRaf);
+    this._fadeRaf = null; this._growRaf = null; this.fading.clear(); this.rising.clear(); this.growing = [];
     this.nodesDS.clear(); this.edgesDS.clear();
     this.nodes.clear(); this.edges.clear(); this.hidden.clear(); this.expanded.clear();
     this.pathEdges = { shortest: new Set(), strongest: new Set(), sandbox: new Set() };
-    this.pathNodes = new Set(); this.focus = null; this.endpoints = { source: null, target: null };
+    this.pathNodes = new Set(); this.focus = null; this.story = null; this.labelZoom = 1; this.endpoints = { source: null, target: null };
+  }
+
+  /**
+   * Step-through view. `order` lists expanded QIDs in exploration order (they get ① ② ③ badges);
+   * `current`/`currentEdges` are what this step added; `active` is the node this step expanded.
+   */
+  setStory(story) {
+    const before = this.story;
+    this.story = story ? { current: new Set(story.current || []), currentEdges: new Set(story.currentEdges || []),
+                           active: new Set(story.active || []), order: new Map((story.order || []).map((q, i) => [q, i + 1])),
+                           planned: new Set(story.planned || []) } : null;
+    // Planned branches (the nodes the agent just decided to expand) light up gradually.
+    const now = performance.now();
+    for (const id of this.story?.planned || []) {
+      const wasLit = before && (this._onTrail(id) || before.current.has(id) || before.planned?.has(id));
+      if (!wasLit && !this._onTrail(id)) this.rising.set(id, now);
+    }
+    if (this.rising.size) this._runFade();
+    this.restyleAll();
+  }
+
+  /** Lit in the story: on the trail, added by this step, or a planned branch of this turn. */
+  _storyLit(id) {
+    const st = this.story;
+    return this._onTrail(id) || !!st?.current.has(id) || !!st?.planned.has(id);
+  }
+
+  _onTrail(id) {
+    return id === this.endpoints.source || id === this.endpoints.target || this.pathNodes.has(id) || this.expanded.has(id);
   }
 
   setEndpoints(source, target) {
@@ -69,17 +129,32 @@ export class GraphView {
   _nodeStyle(n) {
     const role = this._role(n), big = role === "source" || role === "target";
     const c = this.colors[role];
-    const lit = !this.focus || this.focus.nodes.has(n.id) || this.pathNodes.has(n.id) || big;
-    const important = big || this.pathNodes.has(n.id) || this.expanded.has(n.id) || this.focus?.nodes.has(n.id);
-    const showLabel = important || this.nodes.size <= this.labelThreshold;
+    const st = this.story;
+    const current = !!st?.current.has(n.id), active = !!st?.active.has(n.id);
+    const planned = !!st?.planned.has(n.id);
+    const lit = this.focus ? this.focus.nodes.has(n.id) || this.pathNodes.has(n.id) || big
+      : st ? this._storyLit(n.id) : true;
+    const important = big || this.pathNodes.has(n.id) || this.expanded.has(n.id) || this.focus?.nodes.has(n.id)
+      || planned || (current && st.current.size <= 30);
+    const showLabel = important || (this.nodes.size <= this.labelThreshold && lit);
+    const name = n.label_en || n.label_es || n.id;
+    const rank = st?.order.get(n.id);
+    const fill = lit ? c : this.colors.dim;
+    // A planned node (the agent's next call) pulses once as it lights up, then keeps a dashed ring.
+    const next = planned && !this.expanded.has(n.id);
+    const pulse = next && this.rising.has(n.id) ? 9 * Math.sin(Math.PI * this._rise(n.id)) : 0;
     return {
-      label: showLabel ? (n.label_en || n.label_es || n.id) : "",
-      color: { background: c, border: big ? css("--text") : "#ffffff", highlight: { background: c, border: this.colors.select },
-               hover: { background: c, border: this.colors.select } },
+      label: showLabel ? (rank ? `${orderBadge(rank)} ${name}` : name) : "",
+      color: { background: fill, border: active || next ? this.colors.fresh : big ? css("--text") : "#ffffff",
+               highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
+      borderWidth: active ? 5 : next ? 3 : 1.5,
+      shapeProperties: { borderDashes: next ? [4, 3] : false },
       shape: n.kind === "person" || big ? "dot" : "square",
-      size: big ? 24 : n.kind === "person" ? 10 : 8 + Math.min(9, Math.log1p(n.degree || 0)),
-      font: { size: big ? 17 : 13, bold: big ? { color: css("--text") } : undefined },
-      opacity: lit ? 1 : 0.25,
+      size: (big ? 24 : n.kind === "person" ? 10 : 8 + Math.min(9, Math.log1p(n.degree || 0))) + (active ? 6 : next ? 3 : 0) + pulse,
+      // While stepping the camera frames the whole trail, so trail labels are drawn larger to stay legible.
+      font: { size: st && lit ? (big ? 18 : active ? 17 : this._onTrail(n.id) || planned ? 15 : 12) * this.labelZoom : big ? 17 : active ? 16 : 13,
+              bold: big || active ? { color: css("--text") } : undefined },
+      opacity: (lit ? 0.18 + 0.82 * this._rise(n.id) : st ? 0.18 : 0.25) * this._fade(n.id),
     };
   }
 
@@ -93,28 +168,59 @@ export class GraphView {
     if (showS && shortest.has(e.id)) { color = this.colors.shortest; width = strongest.has(e.id) && showW ? 5 : 4; }
     // A sandbox edge never takes a path colour: it stays pink and dashed so it can't pass for Wikidata.
     if (e.origin === "sandbox") color = this.colors.sandbox;
+    const onPath = (showS && shortest.has(e.id)) || (showW && strongest.has(e.id));
+    const st = this.focus ? null : this.story;
+    const current = !!st?.currentEdges.has(e.id);
+    if (current && !onPath && e.origin !== "sandbox") { color = this.colors.fresh; width = 2.5; }
     if (this.focus?.edges.has(e.id)) { color = this.colors.select; width = Math.max(width, 3.5); }
-    const lit = (showS && shortest.has(e.id)) || (showW && strongest.has(e.id)) || this.focus?.edges.has(e.id) || e.origin === "sandbox";
-    const dimmed = (this.focus || (this.mode !== "none" && (shortest.size || strongest.size))) && !lit;
-    return { color: { color: dimmed ? this.colors.dim : color, highlight: this.colors.select, hover: this.colors.select },
+    // Story: an edge between two trail nodes (e.g. Beyoncé → her sister, both expanded) is part of the
+    // exploration's skeleton and stays; leaves fetched in earlier steps fade.
+    // A planned branch (trail node → node the agent will expand next) shows too, but nothing beyond it.
+    const branch = !!st && ((this._onTrail(e.subject) && st.planned.has(e.object)) || (st.planned.has(e.subject) && this._onTrail(e.object)));
+    const trail = !!st && ((this._onTrail(e.subject) && this._onTrail(e.object)) || branch);
+    if (branch && !onPath && !current) { color = this.colors.fresh; width = 2.5; }
+    const lit = onPath || this.focus?.edges.has(e.id) || e.origin === "sandbox" || current || trail;
+    const dimmed = (this.focus || st || (this.mode !== "none" && (shortest.size || strongest.size))) && !lit;
+    const fade = Math.min(this._fade(e.subject), this._fade(e.object)) * (branch ? 0.25 + 0.75 * Math.min(this._rise(e.subject), this._rise(e.object)) : 1);
+    return { color: { color: dimmed ? this.colors.dim : color, highlight: this.colors.select, hover: this.colors.select, opacity: fade },
              width, dashes, label: e.origin === "sandbox" ? `${e.label} (sandbox)` : e.label || e.predicate,
              font: { color: dimmed ? "rgba(0,0,0,0)" : css("--muted") } };
   }
 
-  addNodes(list) {
+  /**
+   * Add nodes. With `origin` (the node whose expansion produced them) they start packed in a small
+   * sunflower spiral on top of it and fade in, so the physics grows them outward from their parent
+   * instead of popping them up at random places.
+   */
+  addNodes(list, { origin = null } = {}) {
     const add = [];
+    const at = origin && this.nodesDS.get(origin) ? this.network.getPosition(origin) : null;
+    const fresh = list.filter((n) => !this.nodes.has(n.id));
+    const rays = at ? this._fan(origin, at, fresh.length) : [];
+    const now = performance.now(), gap = Math.min(70, 1000 / Math.max(1, fresh.length));
+    let i = 0;
     for (const n of list) {
       if (this.nodes.has(n.id)) continue;
       this.nodes.set(n.id, n);
+      const place = {};
+      if (at) {
+        // A branch: start on the parent, out of the physics, and grow along its ray (staggered).
+        const { dx, dy } = rays[i], start = now + i * gap;
+        Object.assign(place, { x: at.x + dx * 0.05, y: at.y + dy * 0.05, physics: false });
+        this.growing.push({ id: n.id, origin, dx, dy, start });
+        this.fading.set(n.id, start);
+        i += 1;
+      }
       add.push({ id: n.id,
                  title: `${n.label_en || n.label_es || n.id} (${n.id})\n${n.kind} · ${n.degree} links in the snapshot`,
-                 ...this._nodeStyle(n) });
+                 ...place, ...this._nodeStyle(n) });
     }
     if (add.length) {
       const crossed = this.nodes.size > this.labelThreshold && this.nodes.size - add.length <= this.labelThreshold;
       this.nodesDS.add(add);
       if (crossed) this.nodesDS.update([...this.nodes.values()].map((n) => ({ id: n.id, label: this._nodeStyle(n).label })));
     }
+    if (i) { this._runFade(); this._runGrow(); }
     return add.length;
   }
 
@@ -129,9 +235,89 @@ export class GraphView {
     }
     if (add.length) {
       this.edgesDS.add(add);
-      if (fresh) setTimeout(() => this.restyleEdges(add.map((a) => a.id)), 1500);
+      if (fresh) setTimeout(() => this.restyleEdges(add.map((a) => a.id)), MOTION.fresh);
     }
     return add.length;
+  }
+
+  /** 0..1 fade-in factor of a node (1 once it has fully appeared). */
+  _fade(id) {
+    const t0 = this.fading.get(id);
+    if (t0 === undefined) return 1;
+    const t = Math.min(1, Math.max(0, (performance.now() - t0) / this.fadeMs));
+    return Math.max(0.02, t * t * (3 - 2 * t));  // smoothstep
+  }
+
+  /** 0..1 light-up factor of a planned branch node (1 when not rising). */
+  _rise(id) {
+    const t0 = this.rising.get(id);
+    if (t0 === undefined) return 1;
+    const t = Math.min(1, Math.max(0, (performance.now() - t0) / this.fadeMs));
+    return t * t * (3 - 2 * t);
+  }
+
+  /**
+   * Ray offsets for `n` children of a node at `at`: fanned away from the parent's existing
+   * neighbours (so the tree keeps growing outward), a full circle when it has none yet.
+   */
+  _fan(origin, at, n) {
+    if (!n) return [];
+    let cx = 0, cy = 0, k = 0;
+    for (const e of this.edges.values()) {
+      const other = e.subject === origin ? e.object : e.object === origin ? e.subject : null;
+      if (!other || !this.nodesDS.get(other)) continue;
+      const p = this.network.getPosition(other);
+      cx += p.x; cy += p.y; k += 1;
+    }
+    const full = !k || n > 16;
+    const base = k ? Math.atan2(at.y - cy / k, at.x - cx / k) : 0;
+    const span = full ? 2 * Math.PI : n <= 2 ? 0.5 * Math.PI : n <= 6 ? 0.9 * Math.PI : 1.4 * Math.PI;
+    return Array.from({ length: n }, (_, i) => {
+      const a = full ? base + (2 * Math.PI * i) / n : base - span / 2 + (span * (i + 0.5)) / n;
+      const r = 130 + (n > 24 ? 45 * (i % 3) : 0);  // big bursts: three rings
+      return { dx: r * Math.cos(a), dy: r * Math.sin(a) };
+    });
+  }
+
+  /** Move growing branches out from their (possibly moving) parent; release them to the physics at the end. */
+  _runGrow() {
+    if (this._growRaf) return;
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const tick = () => {
+      const now = performance.now(), done = [];
+      this.growing = this.growing.filter((g) => {
+        if (!this.nodes.has(g.id)) return false;
+        if (!this.nodesDS.get(g.origin)) { done.push(g.id); return false; }
+        const t = Math.min(1, Math.max(0, (now - g.start) / this.growMs)), e = 0.05 + 0.95 * ease(t);
+        const p = this.network.getPosition(g.origin);
+        this.network.moveNode(g.id, p.x + g.dx * e, p.y + g.dy * e);
+        if (t >= 1) { done.push(g.id); return false; }
+        return true;
+      });
+      if (done.length) this.nodesDS.update(done.map((id) => ({ id, physics: true })));
+      this._growRaf = this.growing.length ? requestAnimationFrame(tick) : null;
+    };
+    this._growRaf = requestAnimationFrame(tick);
+  }
+
+  _runFade() {
+    if (this._fadeRaf) return;
+    const tick = () => {
+      const now = performance.now();
+      const moving = (id) => this.fading.has(id) || this.rising.has(id);
+      const ids = [...new Set([...this.fading.keys(), ...this.rising.keys()])].filter((id) => this.nodes.has(id));
+      this.nodesDS.update(ids.map((id) => {
+        const st = this._nodeStyle(this.nodes.get(id));
+        return this.rising.has(id) ? { id, opacity: st.opacity, size: st.size } : { id, opacity: st.opacity };
+      }));
+      const touching = [...this.edges.values()].filter((e) => moving(e.subject) || moving(e.object));
+      this.edgesDS.update(touching.map((e) => { const st = this._edgeStyle(e); return { id: e.id, color: st.color, width: st.width }; }));
+      for (const map of [this.fading, this.rising]) {
+        for (const [id, t0] of map) if (now - t0 >= this.fadeMs || !this.nodes.has(id)) map.delete(id);
+      }
+      this._fadeRaf = this.fading.size || this.rising.size ? requestAnimationFrame(tick) : null;
+    };
+    this._fadeRaf = requestAnimationFrame(tick);
   }
 
   removeEdges(ids) {
@@ -154,19 +340,56 @@ export class GraphView {
     this.restyleAll();
   }
 
+  /**
+   * An expanded node is a parent in the tree: it is pinned where it stands the moment it is expanded
+   * (and made heavy), so its branches grow from a fixed point and the trail holds still. Only leaves
+   * stay physics-driven, which also gives the step camera a stable target.
+   */
   markExpanded(qid) {
     this.expanded.add(qid);
     const n = this.nodes.get(qid);
-    if (n) this.nodesDS.update({ id: qid, label: this._nodeStyle(n).label });
+    if (n) this.nodesDS.update({ id: qid, label: this._nodeStyle(n).label, mass: 6, fixed: { x: true, y: true } });
+  }
+
+  /** Branch tweens still running: when the last one ends (ms from now), 0 if none. */
+  growthRemaining() {
+    if (!this.growing.length) return 0;
+    return Math.max(0, Math.max(...this.growing.map((g) => g.start)) + this.growMs - performance.now());
   }
 
   setPaths(comparison, sandboxComparison = null) {
+    clearTimeout(this._traceTimer);
     const ids = (o) => new Set(o?.result ? o.result.hops.map((h) => h.edge_id) : []);
     const cmp = sandboxComparison || comparison;
     this.pathEdges = { shortest: ids(cmp?.shortest), strongest: ids(cmp?.strongest), sandbox: new Set() };
     this.pathNodes = new Set();
     for (const r of [cmp?.shortest?.result, cmp?.strongest?.result]) if (r) r.nodes.forEach((n) => this.pathNodes.add(n.qid));
     this.restyleAll();
+  }
+
+  /**
+   * Like setPaths, but the new paths are DRAWN: one hop every MOTION.trace ms, from the people
+   * towards the middle (shortest and strongest together). Used when a path first appears or improves.
+   */
+  revealPaths(comparison) {
+    clearTimeout(this._traceTimer);
+    const hops = (o) => (o?.result ? o.result.hops.map((h) => h.edge_id) : []);
+    const nodes = (o) => (o?.result ? o.result.nodes.map((n) => n.qid) : []);
+    const sh = hops(comparison?.shortest), st = hops(comparison?.strongest);
+    const shN = nodes(comparison?.shortest), stN = nodes(comparison?.strongest);
+    const total = Math.max(sh.length, st.length);
+    if (!total) { this.setPaths(comparison); return; }
+    let k = 0;
+    const draw = () => {
+      k += 1;
+      this.pathEdges = { shortest: new Set(sh.slice(0, k)), strongest: new Set(st.slice(0, k)), sandbox: new Set() };
+      this.pathNodes = new Set([...shN.slice(0, k + 1), ...stN.slice(0, k + 1)]);
+      this.restyleAll();
+      if (k < total) this._traceTimer = setTimeout(draw, MOTION.trace);
+    };
+    this.pathEdges = { shortest: new Set(), strongest: new Set(), sandbox: new Set() };
+    this.pathNodes = new Set();
+    this._traceTimer = setTimeout(draw, MOTION.trace);
   }
 
   setMode(mode) { this.mode = mode; this.restyleAll(); }
@@ -240,10 +463,335 @@ export class GraphView {
     setTimeout(go, 4000);  // safety net
   }
 
+  /**
+   * Step-through camera: glide (ease-in-out) to frame `nodeIds` in the canvas area below `topInset`
+   * pixels (the step card). The target is computed ONCE, from where growing branches will END, so
+   * the camera follows one smooth curve instead of chasing moving nodes. If the nodes are already
+   * comfortably in view it does not move at all. Never calls network.stabilize() (calling it while
+   * the simulation runs unbalances vis-network's render counter and freezes later view animations,
+   * which then undo every mouse zoom/drag). A user drag or wheel zoom stops the glide at once.
+   */
+  frameStory(focus, topInset = 0, duration = MOTION.camera) {
+    this.stopCamera();
+    // focus: {center, around}. The view is centred on `center` (e.g. the parent whose branches grow)
+    // and zoomed out just enough to keep `around` (where those branches will end) in frame.
+    const center = [...(focus.center || [])], ids = [...new Set([...center, ...(focus.around || [])])];
+    const target = this._frameTarget(ids, topInset, center);
+    if (!target) return;
+    const from = { scale: this.network.getScale(), pos: this.network.getViewPosition() };
+    const settle = (scale) => {
+      this.labelZoom = Math.min(4, Math.max(1, 1 / scale));
+      this.nodesDS.update([...this.nodes.values()].map((n) => ({ id: n.id, font: this._nodeStyle(n).font })));
+    };
+    if (this._inView(ids, topInset, from.scale, target.scale, center)) { settle(from.scale); return; }
+    settle(target.scale);
+    duration = Math.max(duration, this.growthRemaining() + 350);
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - t0) / duration), e = easeInOut(t);
+      this.network.moveTo({
+        scale: from.scale * Math.pow(target.scale / from.scale, e),  // geometric: zoom feels uniform
+        position: { x: from.pos.x + (target.position.x - from.pos.x) * e, y: from.pos.y + (target.position.y - from.pos.y) * e },
+      });
+      this._camRaf = t < 1 ? requestAnimationFrame(tick) : null;
+    };
+    this._camRaf = requestAnimationFrame(tick);
+  }
+
+  /** Where a node will be once its branch has grown (its current position otherwise). */
+  _finalPosition(id) {
+    const g = this.growing.find((x) => x.id === id);
+    if (g && this.nodesDS.get(g.origin)) {
+      const p = this.network.getPosition(g.origin);
+      return { x: p.x + g.dx, y: p.y + g.dy };
+    }
+    return this.network.getPosition(id);
+  }
+
+  /** True when every node is inside the free area and the zoom is not far from the ideal one. */
+  _inView(ids, topInset, scale, idealScale, center = []) {
+    if (scale < idealScale * 0.6 || scale > idealScale * 1.8) return false;
+    const { width, height } = this.container.getBoundingClientRect();
+    const midY = (topInset + height - 40) / 2, freeH = height - 40 - topInset;
+    const offCentre = center.filter((id) => this.nodesDS.get(id)).some((id) => {
+      const p = this.network.canvasToDOM(this._finalPosition(id));
+      return Math.abs(p.x - width / 2) > width * 0.2 || Math.abs(p.y - midY) > freeH * 0.2;
+    });
+    if (offCentre) return false;
+    const margin = 110;  // room for the label beside a node
+    return ids.filter((id) => this.nodesDS.get(id) && !this.hidden.has(id)).every((id) => {
+      const p = this.network.canvasToDOM(this._finalPosition(id));
+      return p.x > margin && p.x < width - margin && p.y > topInset + 20 && p.y < height - 60;
+    });
+  }
+
+  // ---- step effects (presentation only: they depict what a tool does, never its result) ----------
+
+  stopFx() {
+    if (!this._fxRaf) return;
+    cancelAnimationFrame(this._fxRaf);
+    this._fxRaf = null;
+    this._ping = null;
+    this.restyleAll();
+    this.network.redraw();
+  }
+
+/**
+   * Run an effect until stopFx() (the next step) or for `duration` ms. Frames are throttled to
+   * ~25 fps: the effects restyle hundreds of edges per frame.
+   */
+  _runFx(duration, frame, minGap = 40) {
+    this.stopFx();
+    const t0 = performance.now();
+    let last = -Infinity;
+    const tick = (now) => {
+      const ms = now - t0, t = Number.isFinite(duration) ? Math.min(1, ms / duration) : 0;
+      if (now - last >= minGap) { last = now; frame(t, ms); }
+      if (t < 1) this._fxRaf = requestAnimationFrame(tick);
+      else { this._fxRaf = null; this.restyleAll(); }
+    };
+    this._fxRaf = requestAnimationFrame(tick);
+  }
+
+  /**
+   * Hops from `start` the way the backend searches the explored graph: hubs (non-person nodes over
+   * their kind's cap) are never entered, the other person ends a route, at most `maxHops` deep.
+   * With `through`, only those nodes are expanded (rank_frontier only knows expanded nodes' edges).
+   */
+  _searchHops(start, { isHub, maxHops }, through = null) {
+    const adj = new Map();
+    for (const e of this.edges.values()) {
+      if (e.origin === "sandbox") continue;
+      for (const [a, b] of [[e.subject, e.object], [e.object, e.subject]]) {
+        if (!adj.has(a)) adj.set(a, []);
+        adj.get(a).push(b);
+      }
+    }
+    const { source, target } = this.endpoints, other = start === source ? target : source;
+    const dist = new Map([[start, 0]]);
+    let frontier = [start];
+    while (frontier.length) {
+      const next = [];
+      for (const v of frontier) {
+        if (dist.get(v) >= maxHops || (v !== start && v === other) || (through && !through.has(v))) continue;
+        for (const w of adj.get(v) || []) {
+          if (dist.has(w)) continue;
+          if (w !== other && isHub(this.nodes.get(w))) continue;  // hubs are never on a route
+          dist.set(w, dist.get(v) + 1);
+          next.push(w);
+        }
+      }
+      frontier = next;
+    }
+    return dist;
+  }
+
+  /** Angle (0..2π) of point p around node `root`'s current position. */
+  _angle(pos, root, p) {
+    const c = pos[root];
+    return (Math.atan2(p.y - c.y, p.x - c.x) + 2 * Math.PI) % (2 * Math.PI);
+  }
+
+  /** Point at `frac` (0 = near end, 1 = far end) along an edge as vis draws it (curves included). */
+  _edgePoint(id, near, frac) {
+    const e = this.edges.get(id), body = this.network.body.edges[id];
+    const pos = near === e.subject ? frac : 1 - frac;  // vis measures from the edge's `from` (subject)
+    try {
+      const p = body?.edgeType?.getPoint(pos);
+      if (p && Number.isFinite(p.x)) return p;
+    } catch { /* fall back to a straight line */ }
+    const a = this.network.getPosition(e.subject), b = this.network.getPosition(e.object);
+    return { x: a.x + (b.x - a.x) * pos, y: a.y + (b.y - a.y) * pos };
+  }
+
+  /**
+   * compute_paths: a small "ping" leaves each person and runs out along every edge the path search can
+   * actually walk (`rules`: the hub cap and hop limit, as in the backend), hop by hop to the outermost
+   * node of its branch (forward only); each edge's colour fades back to normal once its ping arrives,
+   * and after a short rest in normal colours the branch's next ping leaves. Each branch loops on its
+   * own depth (node-local timer). Edges keep their usual style;
+   * the part of an edge the ping has already crossed is painted a pastel hue (by its direction around
+   * its person), so colour spreads outward with the pings. Each edge's
+   * ping sets off a little later than its neighbours (random `jit`), so they don't move in lockstep.
+   */
+  fxPathSearch(rules, hopMs = 800) {
+    const { source, target } = this.endpoints;
+    const ds = this._searchHops(source, rules), dt = this._searchHops(target, rules);
+    const ids = [...new Set([...ds.keys(), ...dt.keys()])];
+    const pos = this.network.getPositions(ids);
+    const onPath = (id) => this.pathEdges.shortest.has(id) || this.pathEdges.strongest.has(id);
+    const pings = [];
+    for (const e of this.edges.values()) {
+      if (e.origin === "sandbox") continue;
+      let best = null;
+      for (const [root, d] of [[source, ds], [target, dt]]) {
+        const a = d.get(e.subject), b = d.get(e.object);
+        if (a === undefined || b === undefined || Math.abs(a - b) !== 1) continue;  // outward edges only
+        const [near, far, h] = a < b ? [e.subject, e.object, a] : [e.object, e.subject, b];
+        if (!best || h < best.h) best = { id: e.id, root, near, far, h };
+      }
+      if (best && pos[best.far] && pos[best.root] && !this.hidden.has(best.far) && !this.hidden.has(best.near)) {
+        best.hue = Math.round((this._angle(pos, best.root, pos[best.far]) * 180) / Math.PI);
+        best.jit = Math.random() * PING_JITTER;  // this edge's ping leaves a little late
+        best.paint = !onPath(best.id);           // path edges keep their path colour
+        pings.push(best);
+      }
+    }
+    if (!pings.length) return;
+    // Node-local loops: each branch (a person's edge plus everything grown beyond it) loops on its
+    // own depth, so a one-hop fan restarts at once instead of waiting for a deeper sibling.
+    pings.sort((a, b) => a.h - b.h);
+    const branchOf = new Map(), depth = new Map();
+    for (const g of pings) {
+      g.branch = g.h === 0 ? g.id : branchOf.get(g.near) ?? g.id;
+      if (!branchOf.has(g.far)) branchOf.set(g.far, g.branch);
+      depth.set(g.branch, Math.max(depth.get(g.branch) || 0, g.h + 1));
+    }
+    for (const g of pings) g.cycle = depth.get(g.branch) * hopMs + PING_FADE + PING_REST;  // ms
+    this._runFx(Infinity, () => this.network.redraw(), 0);  // redraw every frame: the dots move smoothly
+    this._ping = { pings, t0: performance.now(), hopMs };
+  }
+
+  /**
+   * afterDrawing hook: the compute_paths pings. vis has no layer between edges and nodes, so the
+   * drawing is clipped to everything outside the visible nodes: trails and dots pass under them.
+   */
+  _drawPing(ctx) {
+    const p = this._ping;
+    if (!p) return;
+    const now = performance.now() - p.t0;
+    const scale = this.network.getScale(), r = 2.4 / scale;
+    ctx.save();
+    // clip: a huge rectangle minus every visible node's disc (even-odd rule)
+    ctx.beginPath();
+    ctx.rect(-1e7, -1e7, 2e7, 2e7);
+    for (const bn of Object.values(this.network.body.nodes)) {
+      if (bn.options.hidden || !this.nodes.has(bn.id)) continue;
+      const rad = Math.max(bn.shape?.width || 0, bn.shape?.height || 0) / 2 || bn.options.size || 10;
+      ctx.moveTo(bn.x + rad + 1.5, bn.y);
+      ctx.arc(bn.x, bn.y, rad + 1.5, 0, 2 * Math.PI);
+    }
+    ctx.clip("evenodd");
+    ctx.lineCap = "round";
+    const span = 1 - PING_JITTER;  // every ping takes the same time over its edge
+    const dots = [];
+    for (const g of p.pings) {
+      // this branch's own loop (forward only): travel, fade after arriving, rest, again
+      const ms = now % g.cycle, x = ms / p.hopMs;  // x: ping position in hops
+      const frac = Math.min(1, Math.max(0, (x - g.h - g.jit) / span));
+      if (frac <= 0) continue;
+      const arrived = (g.h + g.jit + span) * p.hopMs;
+      const alpha = ms < arrived ? 1 : 1 - (ms - arrived) / PING_FADE;
+      if (alpha <= 0) continue;
+      if (g.paint) {  // the crossed part of the edge, in this edge's hue
+        const bw = this.network.body.edges[g.id]?.options?.width || 1;
+        ctx.beginPath();
+        const n = Math.max(2, Math.ceil(frac * 14));
+        for (let i = 0; i <= n; i++) {
+          const pt = this._edgePoint(g.id, g.near, (frac * i) / n);
+          i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y);
+        }
+        ctx.strokeStyle = `hsla(${g.hue},65%,72%,${(0.95 * alpha).toFixed(3)})`;
+        ctx.lineWidth = Math.max(2, bw + 0.8);
+        ctx.stroke();
+      }
+      if (frac < 1) dots.push([g, frac]);
+    }
+    for (const [g, frac] of dots) {  // dots on top of all trails, with a short comet tail
+      for (let k = 2; k >= 0; k--) {
+        const f = Math.max(0, frac - k * 0.035);
+        const pt = this._edgePoint(g.id, g.near, f);
+        ctx.beginPath();
+        ctx.fillStyle = `hsla(${g.hue},70%,${k ? 78 : 62}%,${k ? 0.45 - k * 0.13 : 1})`;
+        if (!k) { ctx.shadowColor = `hsl(${g.hue},70%,70%)`; ctx.shadowBlur = 6; }
+        ctx.arc(pt.x, pt.y, r * (1 - k * 0.2), 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * get_search_status: a radar beam sweeps around each person and lights, in soft green, exactly the
+   * candidates the backend ranks (rank_frontier): reached through expanded nodes, not expanded
+   * themselves, not hubs, under the hop limit, and with links still unknown. Loops until the next step.
+   */
+  fxFrontierScan(rules, period = 4500) {
+    const { source, target } = this.endpoints;
+    const through = new Set([...this.expanded]);
+    const ds = this._searchHops(source, rules, through), dt = this._searchHops(target, rules, through);
+    const known = new Map();
+    for (const e of this.edges.values()) for (const q of [e.subject, e.object]) known.set(q, (known.get(q) || 0) + 1);
+    const root = new Map(), cands = [];
+    for (const id of new Set([...ds.keys(), ...dt.keys()])) {
+      const a = ds.get(id) ?? Infinity, b = dt.get(id) ?? Infinity, hops = Math.min(a, b);
+      const n = this.nodes.get(id);
+      if (!n || this.hidden.has(id) || this.expanded.has(id) || id === source || id === target) continue;
+      if (hops >= rules.maxHops || rules.isHub(n) || (known.get(id) || 0) >= (n.degree || 0)) continue;
+      root.set(id, a <= b ? source : target);
+      cands.push(id);
+    }
+    const ids = [...new Set([...cands, source, target])];
+    const ring = this.colors.fresh, fill = this.colors.freshSoft, tail = 1.1, lit = new Set();
+    this._runFx(Infinity, (_, ms) => {
+      const pos = this.network.getPositions(ids);
+      const beam = ((ms / period) * 2 * Math.PI) % (2 * Math.PI);
+      const updates = [];
+      for (const id of cands) {
+        const behind = (beam - this._angle(pos, root.get(id), pos[id]) + 2 * Math.PI) % (2 * Math.PI);
+        const st = this._nodeStyle(this.nodes.get(id));
+        if (behind < tail) {
+          const glow = 1 - behind / tail;  // brightest right under the beam, fading behind it (comet tail)
+          updates.push({ id, opacity: Math.max(st.opacity, 0.35 + 0.65 * glow), borderWidth: 1.5 + 3.5 * glow, size: st.size + 5 * glow,
+                         color: { ...st.color, border: ring, background: glow > 0.35 ? fill : st.color.background } });
+          lit.add(id);
+        } else if (lit.has(id)) {
+          lit.delete(id);
+          updates.push({ id, opacity: st.opacity, borderWidth: st.borderWidth, size: st.size, color: st.color });
+        }
+      }
+      if (updates.length) this.nodesDS.update(updates);
+    });
+  }
+
+  /** Fit every visible node in the area below the step card (a decision about the whole search). */
+  allVisibleIds() {
+    return [...this.nodes.keys()].filter((id) => !this.hidden.has(id));
+  }
+
+  stopCamera() {
+    if (this._camRaf) cancelAnimationFrame(this._camRaf);
+    this._camRaf = null;
+  }
+
+  /**
+   * {scale, position} that fits `ids` into the canvas area below `topInset` (legend kept clear).
+   * With `center`, the frame is centred on those nodes and made symmetric around them.
+   */
+  _frameTarget(ids, topInset, center = []) {
+    const shown = ids.filter((id) => this.nodesDS.get(id) && !this.hidden.has(id));
+    if (!shown.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const { x, y } of shown.map((id) => this._finalPosition(id))) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const mid = center.filter((id) => this.nodesDS.get(id)).map((id) => this._finalPosition(id));
+    if (mid.length) {
+      const cx = mid.reduce((s, p) => s + p.x, 0) / mid.length, cy = mid.reduce((s, p) => s + p.y, 0) / mid.length;
+      // 40% headroom: released leaves drift a little past the ring they grew to.
+      const hx = 1.4 * Math.max(cx - x0, x1 - cx, 60), hy = 1.4 * Math.max(cy - y0, y1 - cy, 60);
+      x0 = cx - hx; x1 = cx + hx; y0 = cy - hy; y1 = cy + hy;
+    }
+    const { width, height } = this.container.getBoundingClientRect();
+    const pad = 70, bottom = 40, freeH = Math.max(150, height - topInset - bottom);  // bottom: the legend
+    const scale = Math.max(0.15, Math.min(1.1, width / (x1 - x0 + 2 * pad), freeH / (y1 - y0 + 2 * pad)));
+    // moveTo centres `position` in the canvas; shift it so the frame sits in the free area.
+    return { scale, position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - (topInset - bottom) / 2 / scale } };
+  }
+
   fitTo(nodeIds) {
     const ids = (nodeIds ? [...nodeIds] : []).filter((id) => this.nodesDS.get(id) && !this.hidden.has(id));
     // vis-network throws "Nodes has to be an array of ids" for `nodes: undefined`: omit the key to fit all.
-    const options = { animation: { duration: 500, easingFunction: "easeInOutQuad" } };
+    const options = { animation: { duration: MOTION.camera, easingFunction: MOTION.easing } };  // same glide as the step camera
     if (ids.length) options.nodes = ids;
     this.network.fit(options);
   }

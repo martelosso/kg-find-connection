@@ -30,8 +30,10 @@ export class Timeline {
 
   /** Re-render from scratch (step-through: going back a step). */
   renderAll(rows) {
+    this.root.classList.add("instant");  // a rebuild (going back a step) should not replay every entrance
     this.clear();
     for (const r of rows) this.render(r);
+    requestAnimationFrame(() => requestAnimationFrame(() => this.root.classList.remove("instant")));
   }
 
   /** Mark the rows of the step being presented (no graph side effects, unlike select()). */
