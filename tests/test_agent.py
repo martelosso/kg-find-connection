@@ -125,6 +125,22 @@ def test_events_follow_contract_and_replay_reconstructs(provider):
     assert started == [e.payload["step"] for e in events if e.type == "tool.completed"]
 
 
+def test_status_event_records_exactly_the_suggestions_the_agent_saw(provider):
+    chat = FakeChat(adaptive)
+    state = run(provider, chat)
+    shown = [json.loads(m["content"]) for m in chat.seen[-1] if m["role"] == "tool"]
+    shown = [r["suggestions"] for r in shown if "suggestions" in r]
+    recorded = [e.payload for e in state.events.events
+                if e.type == "tool.completed" and e.payload["tool"] == "get_search_status"]
+    assert shown and len(shown) == len(recorded)
+    for seen, ev in zip(shown, recorded):
+        assert [{k: v for k, v in s.items() if k != "rank"} for s in ev["suggestions"]] == seen
+        assert [s["rank"] for s in ev["suggestions"]] == list(range(1, len(seen) + 1))
+        assert ev["frontier_size"] >= len(seen)
+    # Nothing else about the run changes: the suggestions are a record, not an input.
+    assert reconstruct(state.events.events)[1] == state.comparison
+
+
 def test_tool_calls_outside_allowlist_are_rejected_without_graph_changes(provider):
     script = iter([
         call("get_neighbors", qid=H, relation_groups=["family"]),            # not explored yet
@@ -190,7 +206,7 @@ def test_unverified_summary_is_replaced_by_backend_summary(provider):
     answer = state.events.events[-1].payload["answer"]
     assert answer["summary_source"] == "backend" and not answer["summary_verified"]
     assert answer["unverified_mentions"] == ["Q42"]
-    assert "Q42" not in answer["summary"] and "Shortest" in answer["summary"]
+    assert "Q42" not in answer["summary"] and "Strongest" in answer["summary"]
 
 
 def test_plain_text_reply_finishes_and_model_errors_are_honest(provider):
@@ -332,6 +348,15 @@ def test_improvement_leads_point_to_the_stronger_route(provider):
     final = tb.call("compute_paths", "{}", 3, "")
     assert final["strongest"]["qids"] == [A, C, D, B]
     assert final["stronger_path_possible"] is False and final["improvement_leads"] == []
+
+    # Every result that carried leads is recorded as a tool.leads event with exactly that list, so the
+    # UI can tell "lead #k from the tools" from "the agent's own pick" without recomputing anything.
+    recorded = [e.payload for e in state.events.events if e.type == "tool.leads"]
+    assert [r["tool"] for r in recorded] == ["get_neighbors", "get_neighbors", "compute_paths"]
+    assert [{k: v for k, v in x.items() if k != "rank"} for x in recorded[0]["improvement_leads"]] == res["improvement_leads"]
+    assert [x["rank"] for x in recorded[0]["improvement_leads"]] == list(range(1, len(res["improvement_leads"]) + 1))
+    assert recorded[-1]["stronger_path_possible"] is False and recorded[-1]["improvement_leads"] == []
+    assert reconstruct(state.events.events)[1] == state.comparison  # a record, not an input
 
 
 def test_budget_stop_gets_a_verified_wrap_up_summary(provider):

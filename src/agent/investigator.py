@@ -34,20 +34,14 @@ MAX_DECISION_CHARS = 300
 
 def backend_summary(cmp: PathComparison | None) -> str:
     """Plain summary generated from verified results only."""
-    if cmp is None or cmp.shortest.result is None:
+    # The demo shows the strongest path only, so the summary describes that one.
+    w = cmp.strongest.result if cmp is not None else None
+    if w is None:
         return "No connection was found among the explored relationships within the budget."
-
-    def route(r) -> str:
-        labels = {n.qid: n.label_en or n.label_es or n.qid for n in r.nodes}
-        return labels[r.source_qid] + "".join(f" —{h.label}→ {labels[h.to_qid]}" for h in r.hops)
-
-    s, w = cmp.shortest.result, cmp.strongest.result
-    text = f"Shortest ({s.hop_count} edge{'s' if s.hop_count != 1 else ''}): {route(s)}."
-    if w is not None and not cmp.same_path:
-        text += f" Strongest ({w.hop_count} edges, cost {w.total_cost:.2f}): {route(w)}."
-    elif cmp.same_path:
-        text += " It is also the strongest path."
-    return text + " (Among explored relationships only.)"
+    labels = {n.qid: n.label_en or n.label_es or n.qid for n in w.nodes}
+    route = labels[w.source_qid] + "".join(f" —{h.label}→ {labels[h.to_qid]}" for h in w.hops)
+    return (f"Strongest connection ({w.hop_count} edge{'s' if w.hop_count != 1 else ''}, cost {w.total_cost:.2f}): "
+            f"{route}. (Among explored relationships only.)")
 
 
 def clip_summary(text: str, max_chars: int) -> str:
@@ -90,7 +84,7 @@ def _wrap_up(chat: ChatClient, messages: list[dict[str, Any]], definitions: list
     if messages and messages[-1].get("role") == "assistant" and messages[-1].get("tool_calls"):
         return None  # unanswered tool calls would make the conversation invalid
     prompt = (f"The investigation stopped: {stop}. Do not call any tools. In 1-3 sentences, summarize "
-              f"the backend's current result for the audience, mentioning only people on these paths "
+              f"the verified result of compute_paths for the audience, mentioning only people on the strongest path "
               f"(say plainly if there is no path, and that the search was cut short): "
               f"{json.dumps(tools._paths(), ensure_ascii=False)}")
     try:
@@ -100,7 +94,7 @@ def _wrap_up(chat: ChatClient, messages: list[dict[str, Any]], definitions: list
         return None
     text = " ".join((reply.content or "").split())
     if text:
-        state.events.emit("agent.decision", {"turn": "wrap-up", "summary": text[:MAX_DECISION_CHARS], "tool_calls": []})
+        state.events.emit("agent.decision", {"turn": "wrap-up", "summary": clip_summary(text, MAX_DECISION_CHARS), "tool_calls": []})
     return text or None
 
 
@@ -151,7 +145,8 @@ def run_agent(
                 return finish(state, "agent_error", completed=False, extra={
                     "error": {"code": "agent_error", "message": message},
                     "answer": _model_unreachable_answer(state, search, message)})
-            decision = " ".join((reply.content or "").split())[:MAX_DECISION_CHARS]
+            # Shown to the audience: cut at a sentence or word boundary, never mid-word.
+            decision = clip_summary(" ".join((reply.content or "").split()), MAX_DECISION_CHARS)
             if decision:
                 state.events.emit("agent.decision", {"turn": turn, "summary": decision,
                                                      "tool_calls": [tc.name for tc in reply.tool_calls]})

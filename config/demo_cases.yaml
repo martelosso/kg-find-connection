@@ -45,7 +45,7 @@ cases:
     target_label: "Ayrton Senna"
     fixture: data/fixtures/cases/coelho-senna-agent.json
     trace: data/fixtures/event_traces/coelho-senna-agent.json
-    notes: "Recorded AI agent run."
+    notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent)."
     verified_on: "20261104"
   - id: diana-churchill-agent
     title: "Diana, Princess of Wales and Winston Churchill (AI agent)"
@@ -55,7 +55,7 @@ cases:
     target_label: "Winston Churchill"
     fixture: data/fixtures/cases/diana-churchill-agent.json
     trace: data/fixtures/event_traces/diana-churchill-agent.json
-    notes: "Recorded AI agent run."
+    notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent)."
     verified_on: "20261104"
   - id: beyonce-alice-braga-agent
     title: "Beyoncé and Alice Braga (AI agent)"
@@ -65,7 +65,7 @@ cases:
     target_label: "Alice Braga"
     fixture: data/fixtures/cases/beyonce-alice-braga-agent.json
     trace: data/fixtures/event_traces/beyonce-alice-braga-agent.json
-    notes: "Recorded AI agent run."
+    notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent)."
     verified_on: "20261104"
   - id: neymar-snoop-agent
     title: "Neymar and Snoop Dogg (AI agent)"
@@ -85,7 +85,7 @@ cases:
     target_label: "Ice Cube"
     fixture: data/fixtures/cases/neymar-icecube-agent.json
     trace: data/fixtures/event_traces/neymar-icecube-agent.json
-    notes: "Recorded AI agent run."
+    notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent)."
     verified_on: "20261104"
   - id: kanye-gisele-agent
     title: "Kanye West and Gisele Bündchen (AI agent)"
@@ -95,7 +95,7 @@ cases:
     target_label: "Gisele Bündchen"
     fixture: data/fixtures/cases/kanye-gisele-agent.json
     trace: data/fixtures/event_traces/kanye-gisele-agent.json
-    notes: "Recorded AI agent run."
+    notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent)."
     verified_on: "20261104"
   - id: lula-snoop-agent
     title: "Lula and Snoop Dogg (AI agent)"
@@ -105,5 +105,5 @@ cases:
     target_label: "Snoop Dogg"
     fixture: data/fixtures/cases/lula-snoop-agent.json
     trace: data/fixtures/event_traces/lula-snoop-agent.json
-    notes: "Recorded AI agent run with DeepSeek reasoning ON (DEEPSEEK_THINKING=enabled) and a 300 s wall-time budget for this recording; without reasoning the agent did not find this pair in 10 runs."
+    notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent) with DeepSeek reasoning ON (DEEPSEEK_THINKING=enabled) and a 300 s wall-time budget for this recording; without reasoning the agent did not find this pair in 10 runs."
     verified_on: "20261104"

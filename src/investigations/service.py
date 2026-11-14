@@ -9,7 +9,9 @@ Provider choice (``provider_from_env``):
 from __future__ import annotations
 
 import os
+import re
 import threading
+import unicodedata
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable
@@ -24,6 +26,7 @@ from ..graph.model import is_qid
 from ..wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider
 from ..wikidata.provider import KnowledgeProvider
 from .baseline import run_deterministic
+from .recording import RecordError, default_title, prepare_recording, save_demo_case
 from ..graph.turtle_projection import TurtleProjection, serialize_visible_turtle
 from .replay import load_trace, replay_into
 from .sandbox import OverlayError, parse_overlay, sandbox_comparison
@@ -108,6 +111,9 @@ class InvestigationService:
         self.search = search or load_search_config()
         self.demo_cases = demo_cases if demo_cases is not None else load_demo_cases()
         self.root = root
+        self.cases_path = DEMO_CASES_PATH  # where "Save as demo replay" appends (tests point it elsewhere)
+        self.cases_dir, self.traces_dir = CASES_DIR, TRACES_DIR
+        self._record_lock = threading.Lock()
         self._runs: OrderedDict[str, InvestigationState] = OrderedDict()
         self._lock = threading.Lock()
 
@@ -185,6 +191,47 @@ class InvestigationService:
         state = self.get(investigation_id)
         state.cancel()
         return state
+
+    # ---- save as demo replay -------------------------------------------------------------------
+
+    def record(self, investigation_id: str, case_id: str, title: str = "") -> dict[str, Any]:
+        """Save a finished live run as a demo case: same checks as scripts/investigate.py --record,
+        then fixture + trace are written and the entry is appended to demo_cases.yaml (all or nothing).
+        The new case is immediately available as a replay."""
+        state = self.get(investigation_id)
+        notes = None
+        if state.strategy == "agent":
+            started = state.events.events[0].payload if state.events.events else {}
+            settings = llm_settings()
+            thinking = (settings.extra_body.get("thinking") or {}).get("type") if settings else None
+            notes = (f"Recorded AI agent run (saved from the workbench; model {started.get('model') or 'unknown'}"
+                     + (f", reasoning {'on' if thinking == 'enabled' else 'off'}" if thinking else "") + ").")
+        elif state.strategy == "deterministic":
+            notes = "Recorded deterministic exploration run (saved from the workbench)."
+        try:
+            with self._record_lock:
+                rec = prepare_recording(state, self.provider, self.policy, self.search, case_id, title=title, notes=notes)
+                save_demo_case(rec, cases_dir=self.cases_dir, traces_dir=self.traces_dir, cases_path=self.cases_path,
+                               validate=load_demo_cases)
+                self.demo_cases = load_demo_cases(self.cases_path)
+        except RecordError as err:
+            raise ServiceError(err.status, err.code, err.message) from err
+        return {"case": rec.entry, "verification": rec.verification}
+
+    def suggested_case(self, investigation_id: str) -> dict[str, str]:
+        """A free case id and the conventional title for saving this run."""
+        state = self.get(investigation_id)
+        def slug(qid: str) -> str:
+            n = state.graph.node(qid)
+            words = re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", n.label() if n else qid)
+                               .encode("ascii", "ignore").decode().lower())
+            return words[-1] if len(words) > 1 and words[0] in ("sir", "lord", "lady", "saint") else (words[0] if words else qid.lower())
+        base = f"{slug(state.source_qid)}-{slug(state.target_qid)}" + ("-agent" if state.strategy == "agent" else "")
+        taken = {c.id for c in self.demo_cases.cases}
+        case_id, k = base, 2
+        while case_id in taken or (self.cases_dir / f"{case_id}.json").exists():
+            case_id, k = f"{base}-{k}", k + 1
+        return {"case_id": case_id, "title": default_title(state)}
 
     def _agent_status(self) -> dict[str, Any]:
         if self._agent_available():

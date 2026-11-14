@@ -45,7 +45,7 @@ a:hover { color: var(--c-shortest); }
 .sep { width: 1px; height: 22px; background: var(--border); }
 .arrow { color: var(--muted2); }
 .picker { position: relative; }
-.picker input { width: 190px; height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 6px;
+.picker input { width: 175px; height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 6px;
   font: inherit; background: var(--surface); }
 .picker input:focus { outline: 2px solid var(--c-select-bg); border-color: var(--accent); }
 .pick-hint { position: absolute; top: 33px; left: 2px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
@@ -54,19 +54,32 @@ a:hover { color: var(--c-shortest); }
 .pick-list li { padding: 6px 10px; cursor: pointer; }
 .pick-list li small { color: var(--muted); }
 .pick-list li.active, .pick-list li:hover { background: var(--surface2); }
-select { height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font: inherit; padding: 0 6px; max-width: 230px; }
+select { height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font: inherit; padding: 0 6px; max-width: 210px; }
 .btn { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface);
   font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; }
 .btn:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-dim); }
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
 .btn.primary:hover:not(:disabled) { background: #292524; }
 .btn:disabled, .mini:disabled, select:disabled { opacity: .45; cursor: default; }
-.groups { display: flex; gap: 4px; }
-.tog { height: 28px; padding: 0 9px; border-radius: 5px; border: 1px solid var(--border); background: transparent;
-  color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer; }
-.tog.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-.tog[hidden] { display: none; }
-.tog.more { border-style: dashed; color: var(--muted); }
+/* Mode switch (AI agent | No AI) and the Relations dropdown: one toolbar row. */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 32px; }
+.seg button { border: 0; background: var(--surface); padding: 0 11px; font: inherit; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+.seg button[data-mode="agent"].on { background: var(--c-agent); }
+.seg button:disabled { opacity: .45; cursor: default; }
+.seg.locked { pointer-events: none; }
+.seg.locked button:not(.on) { opacity: .45; }
+.menu { position: relative; }
+.btn.on { border-color: var(--accent); background: var(--accent-dim); }
+.btn .count { color: var(--muted); font-weight: 400; font-size: 12px; }
+.menu-panel { position: absolute; z-index: 40; top: 38px; left: 0; min-width: 230px; padding: 6px; display: grid; gap: 1px; }
+.menu-panel[hidden] { display: none; }
+.menu-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+.menu-item:hover { background: var(--surface2); }
+.menu-item input { accent-color: var(--accent); margin: 0; }
+.menu-sep { margin: 6px 8px 2px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 10.5px; font-weight: 700;
+            letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .badge { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
 .badge.idle { background: var(--surface2); color: var(--muted); }
 .badge.live { background: var(--c-fresh-bg); color: var(--c-fresh-ink); }
@@ -139,9 +152,10 @@ body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180de
 #legend .ln { width: 16px; height: 3px; vertical-align: 2px; }
 #legend .ln.dash { height: 0; border-top: 2px dashed; background: none; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.08); }
-/* Floating cards over the graph: the step card at the top, the detail box in the bottom-right corner. */
-#overlays { position: absolute; left: 12px; right: 12px; top: 12px; z-index: 5; display: flex; flex-direction: column;
-            align-items: center; gap: 8px; pointer-events: none; }
+/* Floating cards over the graph: the step card as a column at the top left (the camera frames the graph
+   to its right; the legend stays visible below it), the detail box in the bottom-right corner. */
+#overlays { position: absolute; left: 12px; top: 12px; bottom: 52px; z-index: 5; display: flex; flex-direction: column;
+            align-items: flex-start; gap: 8px; pointer-events: none; }
 #overlays > * { pointer-events: auto; }
 #inspector { position: absolute; right: 12px; bottom: 12px; z-index: 6; width: 330px; max-width: calc(100% - 24px); max-height: 45%; overflow: auto; padding: 10px 12px; display: grid; gap: 4px; font-size: 12.5px; }
 #inspector.min > :not(.insp-head) { display: none; }
@@ -206,11 +220,13 @@ body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180de
 .sd.busy { background: var(--amber); animation: blink .9s ease-in-out infinite; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
 
+/* The toolbar stays on one row on a 1366px projector: the wordmark (also the tab title) goes first. */
+@media (max-width: 1480px) { .wordmark, .wordmark + .sep { display: none; } }
 @media (max-width: 1200px) { #side { width: 330px; } .picker input { width: 160px; } }
 
 /* ---- step-through presentation (plan §2) ---- */
-#step-card { width: 100%; max-width: 760px; padding: 10px 14px 12px; box-sizing: border-box;
-             display: grid; gap: 8px; font-size: 14px; max-height: 45vh; overflow: auto; }
+#step-card { width: 430px; max-width: calc(100vw - 120px); padding: 10px 14px 12px; box-sizing: border-box;
+             display: grid; align-content: start; gap: 8px; font-size: 14px; max-height: 100%; overflow: auto; }
 #step-card.min { padding-bottom: 10px; }
 #step-card.min #step-body { display: none; }
 #step-card .step-head { display: flex; align-items: center; gap: 8px; }
@@ -224,12 +240,22 @@ body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180de
 #step-card li .res.err { color: var(--red); }
 #step-card .paths { font-weight: 600; color: var(--c-fresh); }
 #step-card .foot { font-size: 12px; color: var(--muted); }
+/* Budget meters at the bottom of the step card: grey with room left, amber from 80%, red when used up. */
+#step-card .budget { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted2); }
+#step-card .meter { display: inline-flex; align-items: center; gap: 5px; }
+#step-card .m-bar { width: 42px; height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+#step-card .m-bar i { display: block; height: 100%; background: var(--muted2); transition: width var(--t-slow) var(--ease); }
+#step-card .m-num { font-variant-numeric: tabular-nums; }
+#step-card .meter.near { color: var(--amber-ink); } #step-card .meter.near .m-bar i { background: var(--amber); }
+#step-card .meter.full { color: var(--red); font-weight: 600; } #step-card .meter.full .m-bar i { background: var(--red); }
 #step-card.min #step-progress { display: none; }
 #step-progress { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
 #step-progress i { display: block; height: 100%; width: 0; background: var(--c-fresh); transition: width var(--t-slow) var(--ease); }
 #step-body { display: grid; gap: 8px; }
 #step-card .call { display: grid; gap: 3px; padding: 8px 10px; border-radius: 8px; background: var(--surface2); }
 #step-card .call-head { font-size: 15px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+#step-card .call-label { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+#step-card .call .tool-name { font-size: 11px; color: var(--muted); }
 #step-card .tool-name { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; color: var(--accent); }
 #step-card .badge-n { font-size: 18px; color: var(--c-fresh); font-weight: 700; }
 #step-card .purpose { font-size: 13px; color: var(--muted); }
@@ -238,12 +264,62 @@ body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180de
 #step-card .res.err { color: var(--red); }
 #step-card .who.agent { color: var(--c-agent-ink); }
 #step-card .fresh { color: var(--c-fresh); }
+#step-card ol.ranks { margin: 4px 0 2px; padding: 0; list-style: none; columns: 2; column-gap: 18px; font-size: 13px; }
+#step-card ol.ranks li { break-inside: avoid; padding: 1px 0; }
+#step-card .rank-pill { display: inline-block; min-width: 26px; text-align: center; border-radius: 9px; padding: 0 5px;
+                        background: var(--c-fresh); color: #fff; font-size: 11px; font-weight: 600; }
+#step-card .rank-note { font-size: 12px; border-radius: 9px; padding: 0 6px; }
+#step-card .rank-note.hit { color: var(--c-fresh-ink); background: var(--c-fresh-bg); }
+#step-card .rank-note.miss { color: var(--c-agent-ink, var(--text)); background: var(--c-agent-bg, transparent); }
 #step-card .star { font-weight: 700; color: var(--c-fresh-ink); font-size: 14.5px; }
 @keyframes star-in { from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
 #step-card .why { font-size: 12.5px; font-style: italic; border-left: 3px solid var(--c-agent-line); padding-left: 8px; }
+#step-card .unfold { justify-self: start; margin-top: 2px; height: 26px; color: var(--accent); }
 #step-card .decision.agent { border-left: 3px solid var(--c-agent); padding-left: 10px; }
 #step-card .plan ol { margin: 2px 0 0; padding-left: 22px; display: grid; gap: 2px; }
 #step-card .trail { font-size: 12.5px; line-height: 1.5; }
+/* The result step: the connection as a chain, coloured like its path in the graph. */
+#step-card .who.result.ok { color: var(--c-fresh-ink); font-size: 12px; }
+#step-card .who.result.warn { color: var(--amber-ink); }
+#step-card .who.result.err { color: var(--red); }
+#step-card .chain { --path: var(--c-shortest); display: grid; gap: 6px; padding: 8px 10px; border-radius: 8px;
+                    background: var(--surface2); border-left: 4px solid var(--path); }
+#step-card .chain.strongest { --path: var(--c-strongest); }
+#step-card .chain.both { border-image: linear-gradient(var(--c-shortest), var(--c-strongest)) 1; border-radius: 0 8px 8px 0; }
+#step-card .chain-head { font-size: 12px; }
+#step-card .chain-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; line-height: 1.3; }
+#step-card .chain .node { --k: var(--c-person); padding: 2px 9px; border-radius: 12px; font-size: 14.5px; font-weight: 600;
+                          color: var(--text); background: var(--surface); border: 2px solid var(--k); text-decoration: none; }
+#step-card .chain .node:hover { background: var(--c-select-bg); }
+#step-card .chain .node.k-source { --k: var(--c-source); background: var(--c-source); color: #fff; }
+#step-card .chain .node.k-target { --k: var(--c-target); background: var(--c-target); color: #fff; }
+#step-card .chain .node.k-organization { --k: var(--c-org); border-radius: 4px; }
+#step-card .chain .node.k-work { --k: var(--c-work); border-radius: 4px; }
+#step-card .chain .node.k-place { --k: var(--c-place); border-radius: 4px; }
+#step-card .chain .node.k-position, #step-card .chain .node.k-other { --k: var(--c-other); border-radius: 4px; }
+#step-card .chain .rel { font-size: 12.5px; color: var(--path); font-weight: 600; white-space: nowrap; }
+#step-card .chain .rel.sandbox { color: var(--c-sandbox-ink); font-style: italic; }
+/* Link strength in words (policy strengths): strong links read solid, weak ones lighter. */
+#step-card .chain .rel.strong { font-weight: 700; }
+#step-card .chain .rel.medium { font-weight: 600; }
+#step-card .chain .rel.weak { font-weight: 500; opacity: .78; }
+#step-card .chain-strength { font-size: 12px; color: var(--muted); }
+/* The path a stronger one replaced: faded, dashed like in the graph. */
+#step-card .chain.faded { opacity: .6; border-left-style: dashed; }
+/* Honesty notes: what the tools gave the agent that this recording did not store. */
+#step-card .guidance { font-size: 12px; color: var(--muted); border-left: 3px solid var(--border); padding-left: 8px; }
+#step-card .summary { font-size: 13px; line-height: 1.45; }
+#step-card .summary > summary { cursor: pointer; color: var(--c-agent-ink); font-size: 12.5px; }
+#step-card .summary > div { margin-top: 4px; padding-left: 10px; border-left: 3px solid var(--c-agent-line); }
+#step-card .scope { font-size: 12px; color: var(--muted); }
+/* "Save as demo replay" on the result card of a live run. */
+#step-card .save-replay.open { display: grid; gap: 6px; padding: 8px 10px; border-radius: 8px; background: var(--surface2); }
+#step-card .save-title { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+#step-card .save-field { display: grid; gap: 2px; }
+#step-card .save-field input { height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: var(--surface); }
+#step-card .save-field input:focus { outline: 2px solid var(--c-select-bg); border-color: var(--accent); }
+#step-card .save-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#step-card .save-replay.saved { font-size: 13px; color: var(--c-fresh-ink); }
 #timeline .row.current { box-shadow: inset 3px 0 0 var(--c-fresh); background: var(--c-fresh-bg); }
 
 /* ---- one tempo: things ease in, one after another, never snap (see src/ui/js/motion.js) ---- */

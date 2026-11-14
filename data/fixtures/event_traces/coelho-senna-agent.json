@@ -2,21 +2,21 @@
  "format": "six-degrees-event-trace",
  "version": 1,
  "case_id": "coelho-senna-agent",
- "recorded_at": "2026-11-13T18:32:04.831+00:00",
+ "recorded_at": "2026-11-14T22:24:51.085+00:00",
  "recorded_with": {
   "provider": "people-graph-sqlite",
   "snapshot": "20261104",
   "strategy": "agent",
   "model": "deepseek-flash",
   "policy_version": 5,
-  "search_version": 2
+  "search_version": 3
  },
  "events": [
   {
    "event_id": 1,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "investigation.started",
-   "timestamp": "2026-11-13T18:32:04.831+00:00",
+   "timestamp": "2026-11-14T22:24:51.085+00:00",
    "payload": {
     "source_qid": "Q12881",
     "target_qid": "Q10490",
@@ -56,12 +56,12 @@
      "P3373"
     ],
     "policy_version": 5,
-    "search_config_version": 2,
+    "search_config_version": 3,
     "budgets": {
-     "max_explored_nodes": 600,
-     "max_explored_edges": 2000,
+     "max_explored_nodes": 2000,
+     "max_explored_edges": 7000,
      "max_edges_per_expansion": 100,
-     "max_provider_requests": 30,
+     "max_provider_requests": 40,
      "max_agent_tool_calls": 30,
      "wall_time_seconds": 90.0
     },
@@ -75,9 +75,9 @@
   },
   {
    "event_id": 2,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "identity.resolved",
-   "timestamp": "2026-11-13T18:32:04.831+00:00",
+   "timestamp": "2026-11-14T22:24:51.086+00:00",
    "payload": {
     "source": {
      "id": "Q12881",
@@ -122,12 +122,12 @@
   },
   {
    "event_id": 3,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:06.667+00:00",
+   "timestamp": "2026-11-14T22:24:52.586+00:00",
    "payload": {
     "turn": 1,
-    "summary": "I'll start by expanding both people from the two ends, requesting all enabled relation groups.",
+    "summary": "I'll start by expanding both people to see what relations connect them.",
     "tool_calls": [
      "get_neighbors",
      "get_neighbors"
@@ -136,16 +136,16 @@
   },
   {
    "event_id": 4,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:06.667+00:00",
+   "timestamp": "2026-11-14T22:24:52.586+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 1,
     "qid": "Q12881",
     "label": "Paulo Coelho",
     "side": "source",
-    "reason": "I'll start by expanding both people from the two ends, requesting all enabled relation groups.",
+    "reason": "I'll start by expanding both people to see what relations connect them.",
     "relation_groups": [
      "birthplace",
      "family",
@@ -188,9 +188,9 @@
   },
   {
    "event_id": 5,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:06.672+00:00",
+   "timestamp": "2026-11-14T22:24:52.590+00:00",
    "payload": {
     "step": 1,
     "expanded_qid": "Q12881",
@@ -460,9 +460,9 @@
   },
   {
    "event_id": 6,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:06.672+00:00",
+   "timestamp": "2026-11-14T22:24:52.590+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 1,
@@ -476,16 +476,16 @@
   },
   {
    "event_id": 7,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:06.672+00:00",
+   "timestamp": "2026-11-14T22:24:52.590+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 2,
     "qid": "Q10490",
     "label": "Ayrton Senna",
     "side": "target",
-    "reason": "I'll start by expanding both people from the two ends, requesting all enabled relation groups.",
+    "reason": "I'll start by expanding both people to see what relations connect them.",
     "relation_groups": [
      "birthplace",
      "family",
@@ -528,9 +528,9 @@
   },
   {
    "event_id": 8,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:06.676+00:00",
+   "timestamp": "2026-11-14T22:24:52.594+00:00",
    "payload": {
     "step": 2,
     "expanded_qid": "Q10490",
@@ -918,9 +918,9 @@
   },
   {
    "event_id": 9,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:06.676+00:00",
+   "timestamp": "2026-11-14T22:24:52.594+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 2,
@@ -934,22 +934,23 @@
   },
   {
    "event_id": 10,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:07.685+00:00",
+   "timestamp": "2026-11-14T22:24:53.886+00:00",
    "payload": {
     "turn": 2,
-    "summary": "No path yet. Let me check the ranked expansion suggestions from the backend.",
+    "summary": "No direct link yet. Let me check the search status for ranked suggestions and compute current paths.",
     "tool_calls": [
-     "get_search_status"
+     "get_search_status",
+     "compute_paths"
     ]
    }
   },
   {
    "event_id": 11,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:07.685+00:00",
+   "timestamp": "2026-11-14T22:24:53.886+00:00",
    "payload": {
     "tool": "get_search_status",
     "step": 3,
@@ -958,503 +959,138 @@
   },
   {
    "event_id": 12,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:07.685+00:00",
+   "timestamp": "2026-11-14T22:24:53.886+00:00",
    "payload": {
     "tool": "get_search_status",
     "step": 3,
-    "ok": true
+    "ok": true,
+    "suggestions": [
+     {
+      "rank": 1,
+      "qid": "Q275939",
+      "label": "Xuxa",
+      "side": "target",
+      "hops": 1,
+      "degree": 121,
+      "score": -2.039
+     },
+     {
+      "rank": 2,
+      "qid": "Q1065",
+      "label": "United Nations",
+      "side": "source",
+      "hops": 1,
+      "degree": 1372,
+      "score": -1.64
+     },
+     {
+      "rank": 3,
+      "qid": "Q3051286",
+      "label": "Renata Sorrah",
+      "side": "source",
+      "hops": 1,
+      "degree": 25,
+      "score": -1.267
+     },
+     {
+      "rank": 4,
+      "qid": "Q337224",
+      "label": "Brazilian Academy of Letters",
+      "side": "source",
+      "hops": 1,
+      "degree": 344,
+      "score": -0.751
+     },
+     {
+      "rank": 5,
+      "qid": "Q274064",
+      "label": "Viviane Senna",
+      "side": "target",
+      "hops": 1,
+      "degree": 8,
+      "score": -0.736
+     },
+     {
+      "rank": 6,
+      "qid": "Q2080462",
+      "label": "Adriane Galisteu",
+      "side": "target",
+      "hops": 1,
+      "degree": 6,
+      "score": -0.61
+     },
+     {
+      "rank": 7,
+      "qid": "Q10317363",
+      "label": "Leonardo Senna",
+      "side": "target",
+      "hops": 1,
+      "degree": 6,
+      "score": -0.61
+     },
+     {
+      "rank": 8,
+      "qid": "Q5110851",
+      "label": "Christina Oiticica",
+      "side": "source",
+      "hops": 1,
+      "degree": 4,
+      "score": -0.553
+     }
+    ],
+    "frontier_size": 20
    }
   },
   {
    "event_id": 13,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:24:53.886+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 4,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 14,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:24:53.886+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 4,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 15,
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:12.300+00:00",
+   "timestamp": "2026-11-14T22:24:55.599+00:00",
    "payload": {
     "turn": 3,
-    "summary": "I'll expand several close people from both sides in parallel: Paulo's wife Christina Oiticica, and Senna's partner Adriane Galisteu, sister Viviane, and Xuxa (a well-connected Brazilian figure).",
+    "summary": "No path yet. I'll expand the top-ranked people from both sides: Xuxa (target side) and Renata Sorrah (source side), both small-degree people.",
     "tool_calls": [
-     "get_neighbors",
-     "get_neighbors",
      "get_neighbors",
      "get_neighbors"
     ]
    }
   },
   {
-   "event_id": 14,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:12.301+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 4,
-    "qid": "Q5110851",
-    "label": "Christina Oiticica",
-    "side": "source",
-    "reason": "I'll expand several close people from both sides in parallel: Paulo's wife Christina Oiticica, and Senna's partner Adriane Galisteu, sister Viviane, and Xuxa (a well-connected Brazilian figure).",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q5110851"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 15,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:12.304+00:00",
-   "payload": {
-    "step": 4,
-    "expanded_qid": "Q5110851",
-    "side": "source",
-    "added_nodes": [],
-    "added_edges": [
-     {
-      "id": "e-0fb01d158d4e72ef",
-      "subject": "Q5110851",
-      "predicate": "P19",
-      "object": "Q8678",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-0fb01d158d4e72ef"
-    ],
-    "returned": 4,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q5110851"
-    ]
-   }
-  },
-  {
    "event_id": 16,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:12.304+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 4,
-    "qid": "Q5110851",
-    "ok": true,
-    "returned": 4,
-    "added_node_count": 0,
-    "added_edge_count": 1,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 17,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:12.304+00:00",
+   "timestamp": "2026-11-14T22:24:55.599+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 5,
-    "qid": "Q2080462",
-    "label": "Adriane Galisteu",
-    "side": "target",
-    "reason": "I'll expand several close people from both sides in parallel: Paulo's wife Christina Oiticica, and Senna's partner Adriane Galisteu, sister Viviane, and Xuxa (a well-connected Brazilian figure).",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q2080462"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 18,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:12.307+00:00",
-   "payload": {
-    "step": 5,
-    "expanded_qid": "Q2080462",
-    "side": "target",
-    "added_nodes": [
-     {
-      "id": "Q1797444",
-      "label": "Roberto Justus",
-      "label_en": "Roberto Justus",
-      "label_es": "Roberto Justus",
-      "kind": "person",
-      "degree": 7,
-      "url": "https://www.wikidata.org/wiki/Q1797444"
-     },
-     {
-      "id": "Q10369009",
-      "label": "If I Were You 2",
-      "label_en": "If I Were You 2",
-      "label_es": "If I Were You 2",
-      "kind": "work",
-      "degree": 22,
-      "url": "https://www.wikidata.org/wiki/Q10369009"
-     },
-     {
-      "id": "Q174",
-      "label": "São Paulo",
-      "label_en": "São Paulo",
-      "label_es": "São Paulo",
-      "kind": "place",
-      "degree": 9220,
-      "url": "https://www.wikidata.org/wiki/Q174"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-d5d150a90936f351",
-      "subject": "Q2080462",
-      "predicate": "P26",
-      "object": "Q1797444",
-      "label": "spouse",
-      "label_es": "cónyuge",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P26"
-     },
-     {
-      "id": "e-e156f4549ca33a98",
-      "subject": "Q1797444",
-      "predicate": "P26",
-      "object": "Q2080462",
-      "label": "spouse",
-      "label_es": "cónyuge",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P26"
-     },
-     {
-      "id": "e-0372b7aa6dcca27f",
-      "subject": "Q10369009",
-      "predicate": "P161",
-      "object": "Q2080462",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-86406c4225afa887",
-      "subject": "Q2080462",
-      "predicate": "P19",
-      "object": "Q174",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-d5d150a90936f351",
-     "e-e156f4549ca33a98",
-     "e-0372b7aa6dcca27f",
-     "e-86406c4225afa887"
-    ],
-    "returned": 6,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q2080462"
-    ]
-   }
-  },
-  {
-   "event_id": 19,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:12.307+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 5,
-    "qid": "Q2080462",
-    "ok": true,
-    "returned": 6,
-    "added_node_count": 3,
-    "added_edge_count": 4,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 20,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:12.307+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 6,
-    "qid": "Q274064",
-    "label": "Viviane Senna",
-    "side": "target",
-    "reason": "I'll expand several close people from both sides in parallel: Paulo's wife Christina Oiticica, and Senna's partner Adriane Galisteu, sister Viviane, and Xuxa (a well-connected Brazilian figure).",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q274064"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 21,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:12.310+00:00",
-   "payload": {
-    "step": 6,
-    "expanded_qid": "Q274064",
-    "side": "target",
-    "added_nodes": [
-     {
-      "id": "Q1815994",
-      "label": "Pontifícia Universidade Católica de São Paulo",
-      "label_en": "Pontifícia Universidade Católica de São Paulo",
-      "label_es": "Pontificia Universidad Católica de São Paulo",
-      "kind": "organization",
-      "degree": 491,
-      "url": "https://www.wikidata.org/wiki/Q1815994"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-8f30862be01f99fb",
-      "subject": "Q82864",
-      "predicate": "P25",
-      "object": "Q274064",
-      "label": "mother",
-      "label_es": "madre",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P25"
-     },
-     {
-      "id": "e-e66e4c44023242b3",
-      "subject": "Q274064",
-      "predicate": "P40",
-      "object": "Q82864",
-      "label": "child",
-      "label_es": "hijo/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P40"
-     },
-     {
-      "id": "e-52cd9dfe2c9387c9",
-      "subject": "Q274064",
-      "predicate": "P3373",
-      "object": "Q10317363",
-      "label": "sibling",
-      "label_es": "hermano/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P3373"
-     },
-     {
-      "id": "e-c33d536ecc2443e0",
-      "subject": "Q10317363",
-      "predicate": "P3373",
-      "object": "Q274064",
-      "label": "sibling",
-      "label_es": "hermano/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P3373"
-     },
-     {
-      "id": "e-0143b20a90147605",
-      "subject": "Q274064",
-      "predicate": "P69",
-      "object": "Q1815994",
-      "label": "educated at",
-      "label_es": "educado/a en",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P69"
-     },
-     {
-      "id": "e-27a883ba5ae7d911",
-      "subject": "Q274064",
-      "predicate": "P19",
-      "object": "Q174",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-8f30862be01f99fb",
-     "e-e66e4c44023242b3",
-     "e-52cd9dfe2c9387c9",
-     "e-c33d536ecc2443e0",
-     "e-0143b20a90147605",
-     "e-27a883ba5ae7d911"
-    ],
-    "returned": 8,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q274064"
-    ]
-   }
-  },
-  {
-   "event_id": 22,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:12.310+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 6,
-    "qid": "Q274064",
-    "ok": true,
-    "returned": 8,
-    "added_node_count": 1,
-    "added_edge_count": 6,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 23,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:12.311+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 7,
     "qid": "Q275939",
     "label": "Xuxa",
     "side": "target",
-    "reason": "I'll expand several close people from both sides in parallel: Paulo's wife Christina Oiticica, and Senna's partner Adriane Galisteu, sister Viviane, and Xuxa (a well-connected Brazilian figure).",
+    "reason": "No path yet. I'll expand the top-ranked people from both sides: Xuxa (target side) and Renata Sorrah (source side), both small-degree people.",
     "relation_groups": [
      "birthplace",
      "family",
@@ -1496,12 +1132,12 @@
    }
   },
   {
-   "event_id": 24,
-   "investigation_id": "621ca4c02388",
+   "event_id": 17,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:12.317+00:00",
+   "timestamp": "2026-11-14T22:24:55.605+00:00",
    "payload": {
-    "step": 7,
+    "step": 5,
     "expanded_qid": "Q275939",
     "side": "target",
     "added_nodes": [
@@ -3642,13 +3278,13 @@
    }
   },
   {
-   "event_id": 25,
-   "investigation_id": "621ca4c02388",
+   "event_id": 18,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:12.317+00:00",
+   "timestamp": "2026-11-14T22:24:55.605+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 7,
+    "step": 5,
     "qid": "Q275939",
     "ok": true,
     "returned": 100,
@@ -3658,316 +3294,17 @@
    }
   },
   {
-   "event_id": 26,
-   "investigation_id": "621ca4c02388",
-   "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:14.483+00:00",
-   "payload": {
-    "turn": 4,
-    "summary": "No path yet, but Xuxa opened up Pelé, a highly connected figure. Let me re-check the ranked suggestions.",
-    "tool_calls": [
-     "get_search_status"
-    ]
-   }
-  },
-  {
-   "event_id": 27,
-   "investigation_id": "621ca4c02388",
+   "event_id": 19,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:14.483+00:00",
-   "payload": {
-    "tool": "get_search_status",
-    "step": 8,
-    "arguments": {}
-   }
-  },
-  {
-   "event_id": 28,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:14.484+00:00",
-   "payload": {
-    "tool": "get_search_status",
-    "step": 8,
-    "ok": true
-   }
-  },
-  {
-   "event_id": 29,
-   "investigation_id": "621ca4c02388",
-   "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:18.285+00:00",
-   "payload": {
-    "turn": 5,
-    "summary": "Let me expand more leads from both sides: Leonardo Senna and Bruno Senna (target family), Renata Sorrah (source works), and Pelé (a major Brazilian connector).",
-    "tool_calls": [
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors"
-    ]
-   }
-  },
-  {
-   "event_id": 30,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:18.285+00:00",
+   "timestamp": "2026-11-14T22:24:55.605+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 9,
-    "qid": "Q10317363",
-    "label": "Leonardo Senna",
-    "side": "target",
-    "reason": "Let me expand more leads from both sides: Leonardo Senna and Bruno Senna (target family), Renata Sorrah (source works), and Pelé (a major Brazilian connector).",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q10317363"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 31,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:18.289+00:00",
-   "payload": {
-    "step": 9,
-    "expanded_qid": "Q10317363",
-    "side": "target",
-    "added_nodes": [],
-    "added_edges": [
-     {
-      "id": "e-4843b37375afcacd",
-      "subject": "Q10317363",
-      "predicate": "P1038",
-      "object": "Q82864",
-      "label": "relative",
-      "label_es": "pariente",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P1038"
-     },
-     {
-      "id": "e-ca0b7c8618f99e67",
-      "subject": "Q82864",
-      "predicate": "P1038",
-      "object": "Q10317363",
-      "label": "relative",
-      "label_es": "pariente",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P1038"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-4843b37375afcacd",
-     "e-ca0b7c8618f99e67"
-    ],
-    "returned": 6,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q10317363"
-    ]
-   }
-  },
-  {
-   "event_id": 32,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:18.289+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 9,
-    "qid": "Q10317363",
-    "ok": true,
-    "returned": 6,
-    "added_node_count": 0,
-    "added_edge_count": 2,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 33,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:18.289+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 10,
-    "qid": "Q82864",
-    "label": "Bruno Senna",
-    "side": "target",
-    "reason": "Let me expand more leads from both sides: Leonardo Senna and Bruno Senna (target family), Renata Sorrah (source works), and Pelé (a major Brazilian connector).",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q82864"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 34,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:18.292+00:00",
-   "payload": {
-    "step": 10,
-    "expanded_qid": "Q82864",
-    "side": "target",
-    "added_nodes": [
-     {
-      "id": "Q54917700",
-      "label": "Lotterer-Senna-Jani",
-      "label_en": "Lotterer-Senna-Jani",
-      "label_es": null,
-      "kind": "organization",
-      "degree": 3,
-      "url": "https://www.wikidata.org/wiki/Q54917700"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-11f880cee20f9928",
-      "subject": "Q82864",
-      "predicate": "P54",
-      "object": "Q54917700",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-70da2b491a15587d",
-      "subject": "Q82864",
-      "predicate": "P19",
-      "object": "Q174",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-11f880cee20f9928",
-     "e-70da2b491a15587d"
-    ],
-    "returned": 8,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q82864"
-    ]
-   }
-  },
-  {
-   "event_id": 35,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:18.292+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 10,
-    "qid": "Q82864",
-    "ok": true,
-    "returned": 8,
-    "added_node_count": 1,
-    "added_edge_count": 2,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 36,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:18.293+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 11,
+    "step": 6,
     "qid": "Q3051286",
     "label": "Renata Sorrah",
     "side": "source",
-    "reason": "Let me expand more leads from both sides: Leonardo Senna and Bruno Senna (target family), Renata Sorrah (source works), and Pelé (a major Brazilian connector).",
+    "reason": "No path yet. I'll expand the top-ranked people from both sides: Xuxa (target side) and Renata Sorrah (source side), both small-degree people.",
     "relation_groups": [
      "birthplace",
      "family",
@@ -4009,12 +3346,12 @@
    }
   },
   {
-   "event_id": 37,
-   "investigation_id": "621ca4c02388",
+   "event_id": 20,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:18.296+00:00",
+   "timestamp": "2026-11-14T22:24:55.609+00:00",
    "payload": {
-    "step": 11,
+    "step": 6,
     "expanded_qid": "Q3051286",
     "side": "source",
     "added_nodes": [
@@ -4509,13 +3846,13 @@
    }
   },
   {
-   "event_id": 38,
-   "investigation_id": "621ca4c02388",
+   "event_id": 21,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:18.296+00:00",
+   "timestamp": "2026-11-14T22:24:55.609+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 11,
+    "step": 6,
     "qid": "Q3051286",
     "ok": true,
     "returned": 25,
@@ -4525,17 +3862,164 @@
    }
   },
   {
-   "event_id": 39,
-   "investigation_id": "621ca4c02388",
+   "event_id": 22,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:24:56.933+00:00",
+   "payload": {
+    "turn": 4,
+    "summary": "Xuxa's expansion was large and incomplete. Let me recompute paths and check status to see if any connection emerged.",
+    "tool_calls": [
+     "compute_paths",
+     "get_search_status"
+    ]
+   }
+  },
+  {
+   "event_id": 23,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:18.297+00:00",
+   "timestamp": "2026-11-14T22:24:56.933+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 7,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 24,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:24:56.933+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 7,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 25,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:24:56.933+00:00",
+   "payload": {
+    "tool": "get_search_status",
+    "step": 8,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 26,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:24:56.934+00:00",
+   "payload": {
+    "tool": "get_search_status",
+    "step": 8,
+    "ok": true,
+    "suggestions": [
+     {
+      "rank": 1,
+      "qid": "Q1065",
+      "label": "United Nations",
+      "side": "source",
+      "hops": 1,
+      "degree": 1372,
+      "score": -1.64
+     },
+     {
+      "rank": 2,
+      "qid": "Q12897",
+      "label": "Pelé",
+      "side": "target",
+      "hops": 2,
+      "degree": 58,
+      "score": -1.314
+     },
+     {
+      "rank": 3,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "hops": 2,
+      "degree": 23,
+      "score": -0.975
+     },
+     {
+      "rank": 4,
+      "qid": "Q337224",
+      "label": "Brazilian Academy of Letters",
+      "side": "source",
+      "hops": 1,
+      "degree": 344,
+      "score": -0.751
+     },
+     {
+      "rank": 5,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "hops": 2,
+      "degree": 14,
+      "score": -0.74
+     },
+     {
+      "rank": 6,
+      "qid": "Q274064",
+      "label": "Viviane Senna",
+      "side": "target",
+      "hops": 1,
+      "degree": 8,
+      "score": -0.736
+     },
+     {
+      "rank": 7,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "hops": 2,
+      "degree": 11,
+      "score": -0.629
+     },
+     {
+      "rank": 8,
+      "qid": "Q2080462",
+      "label": "Adriane Galisteu",
+      "side": "target",
+      "hops": 1,
+      "degree": 6,
+      "score": -0.61
+     }
+    ],
+    "frontier_size": 57
+   }
+  },
+  {
+   "event_id": 27,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:24:58.445+00:00",
+   "payload": {
+    "turn": 5,
+    "summary": "Still no path. Pelé (degree 58) is a strong hub-like connector on the target side; let me expand him and also Viviane Senna (Ayrton's sister, small degree) to build the family side.",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 28,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:24:58.446+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 12,
+    "step": 9,
     "qid": "Q12897",
     "label": "Pelé",
     "side": "target",
-    "reason": "Let me expand more leads from both sides: Leonardo Senna and Bruno Senna (target family), Renata Sorrah (source works), and Pelé (a major Brazilian connector).",
+    "reason": "Still no path. Pelé (degree 58) is a strong hub-like connector on the target side; let me expand him and also Viviane Senna (Ayrton's sister, small degree) to build the family side.",
     "relation_groups": [
      "birthplace",
      "family",
@@ -4577,12 +4061,12 @@
    }
   },
   {
-   "event_id": 40,
-   "investigation_id": "621ca4c02388",
+   "event_id": 29,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:18.302+00:00",
+   "timestamp": "2026-11-14T22:24:58.450+00:00",
    "payload": {
-    "step": 12,
+    "step": 9,
     "expanded_qid": "Q12897",
     "side": "target",
     "added_nodes": [
@@ -5283,13 +4767,13 @@
    }
   },
   {
-   "event_id": 41,
-   "investigation_id": "621ca4c02388",
+   "event_id": 30,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:18.302+00:00",
+   "timestamp": "2026-11-14T22:24:58.450+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 12,
+    "step": 9,
     "qid": "Q12897",
     "ok": true,
     "returned": 37,
@@ -5299,12 +4783,12 @@
    }
   },
   {
-   "event_id": 42,
-   "investigation_id": "621ca4c02388",
+   "event_id": 31,
+   "investigation_id": "2a51962e1ba5",
    "type": "paths.updated",
-   "timestamp": "2026-11-13T18:32:18.303+00:00",
+   "timestamp": "2026-11-14T22:24:58.452+00:00",
    "payload": {
-    "step": 12,
+    "step": 9,
     "trigger_qid": "Q12897",
     "comparison": {
      "source_qid": "Q12881",
@@ -5459,7 +4943,7 @@
       },
       "scope": "explored_graph",
       "stats": {
-       "visited_nodes": 141,
+       "visited_nodes": 137,
        "expanded_states": 24,
        "truncated_reason": null
       }
@@ -5614,8 +5098,8 @@
       },
       "scope": "explored_graph",
       "stats": {
-       "visited_nodes": 158,
-       "expanded_states": 160,
+       "visited_nodes": 154,
+       "expanded_states": 154,
        "truncated_reason": null
       }
      },
@@ -5625,55 +5109,800 @@
    }
   },
   {
-   "event_id": 43,
-   "investigation_id": "621ca4c02388",
+   "event_id": 32,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:24:58.453+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 9,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q274064",
+      "label": "Viviane Senna",
+      "side": "target",
+      "best_possible_cost": 0.865,
+      "degree": 8
+     },
+     {
+      "rank": 2,
+      "qid": "Q2080462",
+      "label": "Adriane Galisteu",
+      "side": "target",
+      "best_possible_cost": 0.865,
+      "degree": 6
+     },
+     {
+      "rank": 3,
+      "qid": "Q5110851",
+      "label": "Christina Oiticica",
+      "side": "source",
+      "best_possible_cost": 0.865,
+      "degree": 4
+     },
+     {
+      "rank": 4,
+      "qid": "Q10317363",
+      "label": "Leonardo Senna",
+      "side": "target",
+      "best_possible_cost": 0.865,
+      "degree": 6
+     },
+     {
+      "rank": 5,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 9
+     },
+     {
+      "rank": 6,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 7
+     },
+     {
+      "rank": 7,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q82864",
+      "label": "Bruno Senna",
+      "side": "target",
+      "best_possible_cost": 1.213,
+      "degree": 8
+     }
+    ],
+    "more_leads": 69
+   }
+  },
+  {
+   "event_id": 33,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:24:58.453+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 10,
+    "qid": "Q274064",
+    "label": "Viviane Senna",
+    "side": "target",
+    "reason": "Still no path. Pelé (degree 58) is a strong hub-like connector on the target side; let me expand him and also Viviane Senna (Ayrton's sister, small degree) to build the family side.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q274064"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 34,
+   "investigation_id": "2a51962e1ba5",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-14T22:24:58.456+00:00",
+   "payload": {
+    "step": 10,
+    "expanded_qid": "Q274064",
+    "side": "target",
+    "added_nodes": [
+     {
+      "id": "Q1815994",
+      "label": "Pontifícia Universidade Católica de São Paulo",
+      "label_en": "Pontifícia Universidade Católica de São Paulo",
+      "label_es": "Pontificia Universidad Católica de São Paulo",
+      "kind": "organization",
+      "degree": 491,
+      "url": "https://www.wikidata.org/wiki/Q1815994"
+     },
+     {
+      "id": "Q174",
+      "label": "São Paulo",
+      "label_en": "São Paulo",
+      "label_es": "São Paulo",
+      "kind": "place",
+      "degree": 9220,
+      "url": "https://www.wikidata.org/wiki/Q174"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-8f30862be01f99fb",
+      "subject": "Q82864",
+      "predicate": "P25",
+      "object": "Q274064",
+      "label": "mother",
+      "label_es": "madre",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P25"
+     },
+     {
+      "id": "e-e66e4c44023242b3",
+      "subject": "Q274064",
+      "predicate": "P40",
+      "object": "Q82864",
+      "label": "child",
+      "label_es": "hijo/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P40"
+     },
+     {
+      "id": "e-52cd9dfe2c9387c9",
+      "subject": "Q274064",
+      "predicate": "P3373",
+      "object": "Q10317363",
+      "label": "sibling",
+      "label_es": "hermano/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P3373"
+     },
+     {
+      "id": "e-c33d536ecc2443e0",
+      "subject": "Q10317363",
+      "predicate": "P3373",
+      "object": "Q274064",
+      "label": "sibling",
+      "label_es": "hermano/a",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P3373"
+     },
+     {
+      "id": "e-0143b20a90147605",
+      "subject": "Q274064",
+      "predicate": "P69",
+      "object": "Q1815994",
+      "label": "educated at",
+      "label_es": "educado/a en",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P69"
+     },
+     {
+      "id": "e-27a883ba5ae7d911",
+      "subject": "Q274064",
+      "predicate": "P19",
+      "object": "Q174",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-8f30862be01f99fb",
+     "e-e66e4c44023242b3",
+     "e-52cd9dfe2c9387c9",
+     "e-c33d536ecc2443e0",
+     "e-0143b20a90147605",
+     "e-27a883ba5ae7d911"
+    ],
+    "returned": 8,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q274064"
+    ]
+   }
+  },
+  {
+   "event_id": 35,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:24:58.456+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 10,
+    "qid": "Q274064",
+    "ok": true,
+    "returned": 8,
+    "added_node_count": 2,
+    "added_edge_count": 6,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 36,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:24:58.459+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 10,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q2080462",
+      "label": "Adriane Galisteu",
+      "side": "target",
+      "best_possible_cost": 0.865,
+      "degree": 6
+     },
+     {
+      "rank": 2,
+      "qid": "Q5110851",
+      "label": "Christina Oiticica",
+      "side": "source",
+      "best_possible_cost": 0.865,
+      "degree": 4
+     },
+     {
+      "rank": 3,
+      "qid": "Q10317363",
+      "label": "Leonardo Senna",
+      "side": "target",
+      "best_possible_cost": 0.865,
+      "degree": 6
+     },
+     {
+      "rank": 4,
+      "qid": "Q82864",
+      "label": "Bruno Senna",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 8
+     },
+     {
+      "rank": 5,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 9
+     },
+     {
+      "rank": 6,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 7
+     },
+     {
+      "rank": 7,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.228,
+      "degree": 14
+     }
+    ],
+    "more_leads": 69
+   }
+  },
+  {
+   "event_id": 37,
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:20.428+00:00",
+   "timestamp": "2026-11-14T22:25:00.120+00:00",
    "payload": {
     "turn": 6,
-    "summary": "A path was found (strongest cost 3.947) but a stronger path is still possible. Let me view the current paths before expanding the improvement leads.",
+    "summary": "A path now exists (cost 3.947) but a stronger one is possible. The top leads are Adriane Galisteu and Christina Oiticica (best_possible_cost 0.865). Let me expand both.",
     "tool_calls": [
-     "compute_paths"
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 38,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:00.121+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 11,
+    "qid": "Q2080462",
+    "label": "Adriane Galisteu",
+    "side": "target",
+    "reason": "A path now exists (cost 3.947) but a stronger one is possible. The top leads are Adriane Galisteu and Christina Oiticica (best_possible_cost 0.865). Let me expand both.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q2080462"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 39,
+   "investigation_id": "2a51962e1ba5",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-14T22:25:00.124+00:00",
+   "payload": {
+    "step": 11,
+    "expanded_qid": "Q2080462",
+    "side": "target",
+    "added_nodes": [
+     {
+      "id": "Q1797444",
+      "label": "Roberto Justus",
+      "label_en": "Roberto Justus",
+      "label_es": "Roberto Justus",
+      "kind": "person",
+      "degree": 7,
+      "url": "https://www.wikidata.org/wiki/Q1797444"
+     },
+     {
+      "id": "Q10369009",
+      "label": "If I Were You 2",
+      "label_en": "If I Were You 2",
+      "label_es": "If I Were You 2",
+      "kind": "work",
+      "degree": 22,
+      "url": "https://www.wikidata.org/wiki/Q10369009"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-d5d150a90936f351",
+      "subject": "Q2080462",
+      "predicate": "P26",
+      "object": "Q1797444",
+      "label": "spouse",
+      "label_es": "cónyuge",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P26"
+     },
+     {
+      "id": "e-e156f4549ca33a98",
+      "subject": "Q1797444",
+      "predicate": "P26",
+      "object": "Q2080462",
+      "label": "spouse",
+      "label_es": "cónyuge",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P26"
+     },
+     {
+      "id": "e-0372b7aa6dcca27f",
+      "subject": "Q10369009",
+      "predicate": "P161",
+      "object": "Q2080462",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-86406c4225afa887",
+      "subject": "Q2080462",
+      "predicate": "P19",
+      "object": "Q174",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-d5d150a90936f351",
+     "e-e156f4549ca33a98",
+     "e-0372b7aa6dcca27f",
+     "e-86406c4225afa887"
+    ],
+    "returned": 6,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q2080462"
+    ]
+   }
+  },
+  {
+   "event_id": 40,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:00.124+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 11,
+    "qid": "Q2080462",
+    "ok": true,
+    "returned": 6,
+    "added_node_count": 2,
+    "added_edge_count": 4,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 41,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:00.127+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 11,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q5110851",
+      "label": "Christina Oiticica",
+      "side": "source",
+      "best_possible_cost": 0.865,
+      "degree": 4
+     },
+     {
+      "rank": 2,
+      "qid": "Q10317363",
+      "label": "Leonardo Senna",
+      "side": "target",
+      "best_possible_cost": 0.865,
+      "degree": 6
+     },
+     {
+      "rank": 3,
+      "qid": "Q82864",
+      "label": "Bruno Senna",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 8
+     },
+     {
+      "rank": 4,
+      "qid": "Q1797444",
+      "label": "Roberto Justus",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 7
+     },
+     {
+      "rank": 5,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 9
+     },
+     {
+      "rank": 6,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 7
+     },
+     {
+      "rank": 7,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.116,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.228,
+      "degree": 14
+     }
+    ],
+    "more_leads": 70
+   }
+  },
+  {
+   "event_id": 42,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:00.127+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 12,
+    "qid": "Q5110851",
+    "label": "Christina Oiticica",
+    "side": "source",
+    "reason": "A path now exists (cost 3.947) but a stronger one is possible. The top leads are Adriane Galisteu and Christina Oiticica (best_possible_cost 0.865). Let me expand both.",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q5110851"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 43,
+   "investigation_id": "2a51962e1ba5",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-14T22:25:00.131+00:00",
+   "payload": {
+    "step": 12,
+    "expanded_qid": "Q5110851",
+    "side": "source",
+    "added_nodes": [],
+    "added_edges": [
+     {
+      "id": "e-0fb01d158d4e72ef",
+      "subject": "Q5110851",
+      "predicate": "P19",
+      "object": "Q8678",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-0fb01d158d4e72ef"
+    ],
+    "returned": 4,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q5110851"
     ]
    }
   },
   {
    "event_id": 44,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:20.428+00:00",
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:00.131+00:00",
    "payload": {
-    "tool": "compute_paths",
-    "step": 13,
-    "arguments": {}
+    "tool": "get_neighbors",
+    "step": 12,
+    "qid": "Q5110851",
+    "ok": true,
+    "returned": 4,
+    "added_node_count": 0,
+    "added_edge_count": 1,
+    "complete": true
    }
   },
   {
    "event_id": 45,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:20.429+00:00",
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:00.133+00:00",
    "payload": {
-    "tool": "compute_paths",
-    "step": 13,
-    "ok": true
+    "tool": "get_neighbors",
+    "step": 12,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q10317363",
+      "label": "Leonardo Senna",
+      "side": "target",
+      "best_possible_cost": 1.228,
+      "degree": 6
+     },
+     {
+      "rank": 2,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.228,
+      "degree": 14
+     },
+     {
+      "rank": 3,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.228,
+      "degree": 11
+     },
+     {
+      "rank": 4,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.228,
+      "degree": 23
+     },
+     {
+      "rank": 5,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.339,
+      "degree": 6
+     },
+     {
+      "rank": 6,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.339,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q82864",
+      "label": "Bruno Senna",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 8
+     },
+     {
+      "rank": 8,
+      "qid": "Q1797444",
+      "label": "Roberto Justus",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     }
+    ],
+    "more_leads": 69
    }
   },
   {
    "event_id": 46,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:25.885+00:00",
+   "timestamp": "2026-11-14T22:25:01.504+00:00",
    "payload": {
     "turn": 7,
-    "summary": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "summary": "Christina Oiticica added nothing new. Leonardo Senna (Ayrton's brother) is now the top lead at 1.228. Let me expand him and Bruno Senna (Ayrton's nephew).",
     "tool_calls": [
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
      "get_neighbors",
      "get_neighbors"
     ]
@@ -5681,16 +5910,547 @@
   },
   {
    "event_id": 47,
-   "investigation_id": "621ca4c02388",
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.886+00:00",
+   "timestamp": "2026-11-14T22:25:01.504+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 13,
+    "qid": "Q10317363",
+    "label": "Leonardo Senna",
+    "side": "target",
+    "reason": "Christina Oiticica added nothing new. Leonardo Senna (Ayrton's brother) is now the top lead at 1.228. Let me expand him and Bruno Senna (Ayrton's nephew).",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q10317363"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 48,
+   "investigation_id": "2a51962e1ba5",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-14T22:25:01.508+00:00",
+   "payload": {
+    "step": 13,
+    "expanded_qid": "Q10317363",
+    "side": "target",
+    "added_nodes": [],
+    "added_edges": [
+     {
+      "id": "e-4843b37375afcacd",
+      "subject": "Q10317363",
+      "predicate": "P1038",
+      "object": "Q82864",
+      "label": "relative",
+      "label_es": "pariente",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P1038"
+     },
+     {
+      "id": "e-ca0b7c8618f99e67",
+      "subject": "Q82864",
+      "predicate": "P1038",
+      "object": "Q10317363",
+      "label": "relative",
+      "label_es": "pariente",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P1038"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-4843b37375afcacd",
+     "e-ca0b7c8618f99e67"
+    ],
+    "returned": 6,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q10317363"
+    ]
+   }
+  },
+  {
+   "event_id": 49,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:01.508+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 13,
+    "qid": "Q10317363",
+    "ok": true,
+    "returned": 6,
+    "added_node_count": 0,
+    "added_edge_count": 2,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 50,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:01.510+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 13,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q82864",
+      "label": "Bruno Senna",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 8
+     },
+     {
+      "rank": 2,
+      "qid": "Q1797444",
+      "label": "Roberto Justus",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 3,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 14
+     },
+     {
+      "rank": 4,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 9
+     },
+     {
+      "rank": 5,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 11
+     },
+     {
+      "rank": 6,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 7,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 8,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     }
+    ],
+    "more_leads": 68
+   }
+  },
+  {
+   "event_id": 51,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:01.510+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 14,
+    "qid": "Q82864",
+    "label": "Bruno Senna",
+    "side": "target",
+    "reason": "Christina Oiticica added nothing new. Leonardo Senna (Ayrton's brother) is now the top lead at 1.228. Let me expand him and Bruno Senna (Ayrton's nephew).",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q82864"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 52,
+   "investigation_id": "2a51962e1ba5",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-14T22:25:01.514+00:00",
+   "payload": {
+    "step": 14,
+    "expanded_qid": "Q82864",
+    "side": "target",
+    "added_nodes": [
+     {
+      "id": "Q54917700",
+      "label": "Lotterer-Senna-Jani",
+      "label_en": "Lotterer-Senna-Jani",
+      "label_es": null,
+      "kind": "organization",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q54917700"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-11f880cee20f9928",
+      "subject": "Q82864",
+      "predicate": "P54",
+      "object": "Q54917700",
+      "label": "member of sports team",
+      "label_es": "miembro del equipo deportivo",
+      "group": "institutional",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P54"
+     },
+     {
+      "id": "e-70da2b491a15587d",
+      "subject": "Q82864",
+      "predicate": "P19",
+      "object": "Q174",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-11f880cee20f9928",
+     "e-70da2b491a15587d"
+    ],
+    "returned": 8,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q82864"
+    ]
+   }
+  },
+  {
+   "event_id": 53,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:01.514+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 14,
+    "qid": "Q82864",
+    "ok": true,
+    "returned": 8,
+    "added_node_count": 1,
+    "added_edge_count": 2,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 54,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:01.516+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 14,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q1797444",
+      "label": "Roberto Justus",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 2,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 14
+     },
+     {
+      "rank": 3,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 9
+     },
+     {
+      "rank": 4,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 11
+     },
+     {
+      "rank": 5,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 6,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 7,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     }
+    ],
+    "more_leads": 68
+   }
+  },
+  {
+   "event_id": 55,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:25:02.974+00:00",
+   "payload": {
+    "turn": 8,
+    "summary": "The best_possible_cost keeps rising (now 1.479), meaning the strong family links are already exhausted. Let me inspect the current strongest path to understand what it looks like.",
+    "tool_calls": [
+     "compute_paths"
+    ]
+   }
+  },
+  {
+   "event_id": 56,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:02.974+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 15,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 57,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:02.975+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 15,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 58,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:02.975+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 15,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q1797444",
+      "label": "Roberto Justus",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 2,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 14
+     },
+     {
+      "rank": 3,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 9
+     },
+     {
+      "rank": 4,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 11
+     },
+     {
+      "rank": 5,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 6,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 7,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     }
+    ],
+    "more_leads": 68
+   }
+  },
+  {
+   "event_id": 59,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:25:04.565+00:00",
+   "payload": {
+    "turn": 9,
+    "summary": "The current path runs through the United Nations hub and unmarried-partner links. The leads suggest a stronger path is still possible. Let me expand the top leads: Roberto Justus (target) and Carlos Vereza (source).",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 60,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:04.565+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 16,
     "qid": "Q1797444",
     "label": "Roberto Justus",
     "side": "target",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The current path runs through the United Nations hub and unmarried-partner links. The leads suggest a stronger path is still possible. Let me expand the top leads: Roberto Justus (target) and Carlos Vereza (source).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -5732,12 +6492,12 @@
    }
   },
   {
-   "event_id": 48,
-   "investigation_id": "621ca4c02388",
+   "event_id": 61,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.889+00:00",
+   "timestamp": "2026-11-14T22:25:04.569+00:00",
    "payload": {
-    "step": 14,
+    "step": 16,
     "expanded_qid": "Q1797444",
     "side": "target",
     "added_nodes": [
@@ -5850,13 +6610,13 @@
    }
   },
   {
-   "event_id": 49,
-   "investigation_id": "621ca4c02388",
+   "event_id": 62,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.889+00:00",
+   "timestamp": "2026-11-14T22:25:04.569+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 14,
+    "step": 16,
     "qid": "Q1797444",
     "ok": true,
     "returned": 7,
@@ -5866,17 +6626,95 @@
    }
   },
   {
-   "event_id": 50,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.892+00:00",
+   "event_id": 63,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:04.572+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 15,
+    "step": 16,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q5042762",
+      "label": "Carlos Vereza",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 14
+     },
+     {
+      "rank": 2,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 9
+     },
+     {
+      "rank": 3,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 11
+     },
+     {
+      "rank": 4,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 5,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 6,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     }
+    ],
+    "more_leads": 69
+   }
+  },
+  {
+   "event_id": 64,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:04.572+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 17,
     "qid": "Q5042762",
     "label": "Carlos Vereza",
     "side": "source",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The current path runs through the United Nations hub and unmarried-partner links. The leads suggest a stronger path is still possible. Let me expand the top leads: Roberto Justus (target) and Carlos Vereza (source).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -5918,12 +6756,12 @@
    }
   },
   {
-   "event_id": 51,
-   "investigation_id": "621ca4c02388",
+   "event_id": 65,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.896+00:00",
+   "timestamp": "2026-11-14T22:25:04.576+00:00",
    "payload": {
-    "step": 15,
+    "step": 17,
     "expanded_qid": "Q5042762",
     "side": "source",
     "added_nodes": [
@@ -6168,13 +7006,13 @@
    }
   },
   {
-   "event_id": 52,
-   "investigation_id": "621ca4c02388",
+   "event_id": 66,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.896+00:00",
+   "timestamp": "2026-11-14T22:25:04.576+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 15,
+    "step": 17,
     "qid": "Q5042762",
     "ok": true,
     "returned": 13,
@@ -6184,17 +7022,109 @@
    }
   },
   {
-   "event_id": 53,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.899+00:00",
+   "event_id": 67,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:04.579+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 16,
+    "step": 17,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q6696881",
+      "label": "Luciano Szafir",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 9
+     },
+     {
+      "rank": 2,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 11
+     },
+     {
+      "rank": 3,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 4,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 5,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     },
+     {
+      "rank": 6,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 6
+     }
+    ],
+    "more_leads": 77
+   }
+  },
+  {
+   "event_id": 68,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:25:06.219+00:00",
+   "payload": {
+    "turn": 10,
+    "summary": "The best_possible_cost is stuck at 1.479 and rising — the strong family links are exhausted. Let me expand the remaining top leads: Luciano Szafir (target) and Euclydes Marinho (source).",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 69,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:06.219+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 18,
     "qid": "Q6696881",
     "label": "Luciano Szafir",
     "side": "target",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The best_possible_cost is stuck at 1.479 and rising — the strong family links are exhausted. Let me expand the remaining top leads: Luciano Szafir (target) and Euclydes Marinho (source).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -6236,12 +7166,12 @@
    }
   },
   {
-   "event_id": 54,
-   "investigation_id": "621ca4c02388",
+   "event_id": 70,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.902+00:00",
+   "timestamp": "2026-11-14T22:25:06.223+00:00",
    "payload": {
-    "step": 16,
+    "step": 18,
     "expanded_qid": "Q6696881",
     "side": "target",
     "added_nodes": [
@@ -6380,13 +7310,13 @@
    }
   },
   {
-   "event_id": 55,
-   "investigation_id": "621ca4c02388",
+   "event_id": 71,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.902+00:00",
+   "timestamp": "2026-11-14T22:25:06.223+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 16,
+    "step": 18,
     "qid": "Q6696881",
     "ok": true,
     "returned": 9,
@@ -6396,12 +7326,12 @@
    }
   },
   {
-   "event_id": 56,
-   "investigation_id": "621ca4c02388",
+   "event_id": 72,
+   "investigation_id": "2a51962e1ba5",
    "type": "paths.updated",
-   "timestamp": "2026-11-13T18:32:25.903+00:00",
+   "timestamp": "2026-11-14T22:25:06.224+00:00",
    "payload": {
-    "step": 16,
+    "step": 18,
     "trigger_qid": "Q6696881",
     "comparison": {
      "source_qid": "Q12881",
@@ -6751,17 +7681,95 @@
    }
   },
   {
-   "event_id": 57,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.905+00:00",
+   "event_id": 73,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:06.226+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 17,
+    "step": 18,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q10278106",
+      "label": "Euclydes Marinho",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 11
+     },
+     {
+      "rank": 2,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 3,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 4,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     },
+     {
+      "rank": 5,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 6,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q124500094",
+      "label": "Rafa Justus",
+      "side": "target",
+      "best_possible_cost": 1.73,
+      "degree": 4
+     }
+    ],
+    "more_leads": 73
+   }
+  },
+  {
+   "event_id": 74,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:06.226+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 19,
     "qid": "Q10278106",
     "label": "Euclydes Marinho",
     "side": "source",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The best_possible_cost is stuck at 1.479 and rising — the strong family links are exhausted. Let me expand the remaining top leads: Luciano Szafir (target) and Euclydes Marinho (source).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -6803,12 +7811,12 @@
    }
   },
   {
-   "event_id": 58,
-   "investigation_id": "621ca4c02388",
+   "event_id": 75,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.908+00:00",
+   "timestamp": "2026-11-14T22:25:06.229+00:00",
    "payload": {
-    "step": 17,
+    "step": 19,
     "expanded_qid": "Q10278106",
     "side": "source",
     "added_nodes": [
@@ -6991,13 +7999,13 @@
    }
   },
   {
-   "event_id": 59,
-   "investigation_id": "621ca4c02388",
+   "event_id": 76,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.908+00:00",
+   "timestamp": "2026-11-14T22:25:06.229+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 17,
+    "step": 19,
     "qid": "Q10278106",
     "ok": true,
     "returned": 11,
@@ -7007,17 +8015,109 @@
    }
   },
   {
-   "event_id": 60,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.911+00:00",
+   "event_id": 77,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:06.232+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 18,
+    "step": 19,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q10325473",
+      "label": "Marcos Paulo",
+      "side": "source",
+      "best_possible_cost": 1.479,
+      "degree": 23
+     },
+     {
+      "rank": 2,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 7
+     },
+     {
+      "rank": 3,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.479,
+      "degree": 6
+     },
+     {
+      "rank": 4,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 5,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 6,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 14
+     },
+     {
+      "rank": 7,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 10
+     }
+    ],
+    "more_leads": 76
+   }
+  },
+  {
+   "event_id": 78,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:25:07.691+00:00",
+   "payload": {
+    "turn": 11,
+    "summary": "The strongest cost improved to 3.019. Let me expand the top remaining leads: Marcos Paulo (source) and Sasha Meneghel (target).",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 79,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:07.691+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 20,
     "qid": "Q10325473",
     "label": "Marcos Paulo",
     "side": "source",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The strongest cost improved to 3.019. Let me expand the top remaining leads: Marcos Paulo (source) and Sasha Meneghel (target).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -7059,12 +8159,12 @@
    }
   },
   {
-   "event_id": 61,
-   "investigation_id": "621ca4c02388",
+   "event_id": 80,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.915+00:00",
+   "timestamp": "2026-11-14T22:25:07.695+00:00",
    "payload": {
-    "step": 18,
+    "step": 20,
     "expanded_qid": "Q10325473",
     "side": "source",
     "added_nodes": [
@@ -7511,13 +8611,13 @@
    }
   },
   {
-   "event_id": 62,
-   "investigation_id": "621ca4c02388",
+   "event_id": 81,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.915+00:00",
+   "timestamp": "2026-11-14T22:25:07.695+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 18,
+    "step": 20,
     "qid": "Q10325473",
     "ok": true,
     "returned": 23,
@@ -7527,17 +8627,95 @@
    }
   },
   {
-   "event_id": 63,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.918+00:00",
+   "event_id": 82,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:07.698+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 19,
+    "step": 20,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 2,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 3,
+      "qid": "Q16240175",
+      "label": "Sasha Meneghel",
+      "side": "target",
+      "best_possible_cost": 1.59,
+      "degree": 7
+     },
+     {
+      "rank": 4,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 5,
+      "qid": "Q3074666",
+      "label": "Flávia Alessandra",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 12
+     },
+     {
+      "rank": 6,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 14
+     },
+     {
+      "rank": 7,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 10
+     }
+    ],
+    "more_leads": 87
+   }
+  },
+  {
+   "event_id": 83,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:07.699+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 21,
     "qid": "Q16240175",
     "label": "Sasha Meneghel",
     "side": "target",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The strongest cost improved to 3.019. Let me expand the top remaining leads: Marcos Paulo (source) and Sasha Meneghel (target).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -7579,12 +8757,12 @@
    }
   },
   {
-   "event_id": 64,
-   "investigation_id": "621ca4c02388",
+   "event_id": 84,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.921+00:00",
+   "timestamp": "2026-11-14T22:25:07.702+00:00",
    "payload": {
-    "step": 19,
+    "step": 21,
     "expanded_qid": "Q16240175",
     "side": "target",
     "added_nodes": [
@@ -7662,13 +8840,13 @@
    }
   },
   {
-   "event_id": 65,
-   "investigation_id": "621ca4c02388",
+   "event_id": 85,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.921+00:00",
+   "timestamp": "2026-11-14T22:25:07.702+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 19,
+    "step": 21,
     "qid": "Q16240175",
     "ok": true,
     "returned": 7,
@@ -7678,17 +8856,351 @@
    }
   },
   {
-   "event_id": 66,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.924+00:00",
+   "event_id": 86,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:07.705+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 20,
+    "step": 21,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q9614318",
+      "label": "André Gonçalves",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 2,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 3,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 4,
+      "qid": "Q3074666",
+      "label": "Flávia Alessandra",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 12
+     },
+     {
+      "rank": 5,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 14
+     },
+     {
+      "rank": 6,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 10
+     },
+     {
+      "rank": 8,
+      "qid": "Q76390649",
+      "label": "Giulia Costa",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 5
+     }
+    ],
+    "more_leads": 86
+   }
+  },
+  {
+   "event_id": 87,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:25:09.683+00:00",
+   "payload": {
+    "turn": 12,
+    "summary": "The best_possible_cost is now 1.59 and rising — the strong family links are exhausted. Let me expand the two top leads: André Gonçalves (source) and Junno Andrade (target).",
+    "tool_calls": [
+     "get_neighbors",
+     "get_neighbors"
+    ]
+   }
+  },
+  {
+   "event_id": 88,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:09.683+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 22,
+    "qid": "Q9614318",
+    "label": "André Gonçalves",
+    "side": "source",
+    "reason": "The best_possible_cost is now 1.59 and rising — the strong family links are exhausted. Let me expand the two top leads: André Gonçalves (source) and Junno Andrade (target).",
+    "relation_groups": [
+     "birthplace",
+     "family",
+     "institutional",
+     "mentorship",
+     "works"
+    ],
+    "arguments": {
+     "qids": [
+      "Q9614318"
+     ],
+     "properties": [
+      "P22",
+      "P25",
+      "P26",
+      "P40",
+      "P184",
+      "P185",
+      "P451",
+      "P3373",
+      "P802",
+      "P1066",
+      "P1038",
+      "P57",
+      "P58",
+      "P86",
+      "P161",
+      "P175",
+      "P112",
+      "P54",
+      "P108",
+      "P69",
+      "P463",
+      "P19"
+     ],
+     "direction": "both",
+     "max_edges": 100
+    }
+   }
+  },
+  {
+   "event_id": 89,
+   "investigation_id": "2a51962e1ba5",
+   "type": "graph.expanded",
+   "timestamp": "2026-11-14T22:25:09.687+00:00",
+   "payload": {
+    "step": 22,
+    "expanded_qid": "Q9614318",
+    "side": "source",
+    "added_nodes": [
+     {
+      "id": "Q10262711",
+      "label": "Cynthia Benini",
+      "label_en": "Cynthia Benini",
+      "label_es": "Cynthia Benini",
+      "kind": "person",
+      "degree": 3,
+      "url": "https://www.wikidata.org/wiki/Q10262711"
+     },
+     {
+      "id": "Q10288404",
+      "label": "Garrincha: Lonely Star",
+      "label_en": "Garrincha: Lonely Star",
+      "label_es": "Garrincha: Lonely Star",
+      "kind": "work",
+      "degree": 14,
+      "url": "https://www.wikidata.org/wiki/Q10288404"
+     }
+    ],
+    "added_edges": [
+     {
+      "id": "e-5d5775e43ab45171",
+      "subject": "Q9614318",
+      "predicate": "P26",
+      "object": "Q10262711",
+      "label": "spouse",
+      "label_es": "cónyuge",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P26"
+     },
+     {
+      "id": "e-de5221d89084cdaf",
+      "subject": "Q10262711",
+      "predicate": "P26",
+      "object": "Q9614318",
+      "label": "spouse",
+      "label_es": "cónyuge",
+      "group": "family",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P26"
+     },
+     {
+      "id": "e-ebfb5cc4053d582f",
+      "subject": "Q10288404",
+      "predicate": "P161",
+      "object": "Q9614318",
+      "label": "cast member",
+      "label_es": "reparto",
+      "group": "works",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P161"
+     },
+     {
+      "id": "e-783ceddb18c060c8",
+      "subject": "Q9614318",
+      "predicate": "P19",
+      "object": "Q8678",
+      "label": "place of birth",
+      "label_es": "lugar de nacimiento",
+      "group": "birthplace",
+      "source": "wikidata-truthy:20261104",
+      "origin": "wikidata",
+      "property_url": "https://www.wikidata.org/wiki/Property:P19"
+     }
+    ],
+    "highlight_edge_ids": [
+     "e-5d5775e43ab45171",
+     "e-de5221d89084cdaf",
+     "e-ebfb5cc4053d582f",
+     "e-783ceddb18c060c8"
+    ],
+    "returned": 6,
+    "complete": true,
+    "truncated": false,
+    "cap_hit": null,
+    "provider": "people-graph-sqlite",
+    "snapshot": "20261104",
+    "source_urls": [
+     "https://www.wikidata.org/wiki/Q9614318"
+    ]
+   }
+  },
+  {
+   "event_id": 90,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:09.687+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 22,
+    "qid": "Q9614318",
+    "ok": true,
+    "returned": 6,
+    "added_node_count": 2,
+    "added_edge_count": 4,
+    "complete": true
+   }
+  },
+  {
+   "event_id": 91,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:09.690+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 22,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 2,
+      "qid": "Q56347018",
+      "label": "Junno Andrade",
+      "side": "target",
+      "best_possible_cost": 1.59,
+      "degree": 6
+     },
+     {
+      "rank": 3,
+      "qid": "Q3074666",
+      "label": "Flávia Alessandra",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 12
+     },
+     {
+      "rank": 4,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 14
+     },
+     {
+      "rank": 5,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 6
+     },
+     {
+      "rank": 6,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 10
+     },
+     {
+      "rank": 7,
+      "qid": "Q76390649",
+      "label": "Giulia Costa",
+      "side": "source",
+      "best_possible_cost": 1.73,
+      "degree": 5
+     },
+     {
+      "rank": 8,
+      "qid": "Q10262711",
+      "label": "Cynthia Benini",
+      "side": "source",
+      "best_possible_cost": 1.841,
+      "degree": 3
+     }
+    ],
+    "more_leads": 87
+   }
+  },
+  {
+   "event_id": 92,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:09.690+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 23,
     "qid": "Q56347018",
     "label": "Junno Andrade",
     "side": "target",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
+    "reason": "The best_possible_cost is now 1.59 and rising — the strong family links are exhausted. Let me expand the two top leads: André Gonçalves (source) and Junno Andrade (target).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -7730,12 +9242,12 @@
    }
   },
   {
-   "event_id": 67,
-   "investigation_id": "621ca4c02388",
+   "event_id": 93,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.928+00:00",
+   "timestamp": "2026-11-14T22:25:09.693+00:00",
    "payload": {
-    "step": 20,
+    "step": 23,
     "expanded_qid": "Q56347018",
     "side": "target",
     "added_nodes": [
@@ -7835,13 +9347,13 @@
    }
   },
   {
-   "event_id": 68,
-   "investigation_id": "621ca4c02388",
+   "event_id": 94,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.928+00:00",
+   "timestamp": "2026-11-14T22:25:09.693+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 20,
+    "step": 23,
     "qid": "Q56347018",
     "ok": true,
     "returned": 6,
@@ -7851,234 +9363,109 @@
    }
   },
   {
-   "event_id": 69,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:25.931+00:00",
+   "event_id": 95,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:09.696+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 21,
-    "qid": "Q9614318",
-    "label": "André Gonçalves",
-    "side": "source",
-    "reason": "Current path uses weak institutional links (Paulo → UN → Pelé → Xuxa → Senna). I'll expand the improvement leads (all cost 1.479) in parallel to find a stronger, more personal path.",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q9614318"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 70,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:25.934+00:00",
-   "payload": {
-    "step": 21,
-    "expanded_qid": "Q9614318",
-    "side": "source",
-    "added_nodes": [
+    "step": 23,
+    "stronger_path_possible": true,
+    "improvement_leads": [
      {
-      "id": "Q10262711",
-      "label": "Cynthia Benini",
-      "label_en": "Cynthia Benini",
-      "label_es": "Cynthia Benini",
-      "kind": "person",
-      "degree": 3,
-      "url": "https://www.wikidata.org/wiki/Q10262711"
+      "rank": 1,
+      "qid": "Q10363254",
+      "label": "Roberto Bonfim",
+      "side": "source",
+      "best_possible_cost": 1.841,
+      "degree": 6
      },
      {
-      "id": "Q10288404",
-      "label": "Garrincha: Lonely Star",
-      "label_en": "Garrincha: Lonely Star",
-      "label_es": "Garrincha: Lonely Star",
-      "kind": "work",
-      "degree": 14,
-      "url": "https://www.wikidata.org/wiki/Q10288404"
+      "rank": 2,
+      "qid": "Q124500094",
+      "label": "Rafa Justus",
+      "side": "target",
+      "best_possible_cost": 1.841,
+      "degree": 4
+     },
+     {
+      "rank": 3,
+      "qid": "Q612205",
+      "label": "Edson Cholbi Nascimento",
+      "side": "target",
+      "best_possible_cost": 1.953,
+      "degree": 9
+     },
+     {
+      "rank": 4,
+      "qid": "Q2502098",
+      "label": "Dondinho",
+      "side": "target",
+      "best_possible_cost": 1.953,
+      "degree": 11
+     },
+     {
+      "rank": 5,
+      "qid": "Q9635348",
+      "label": "Assíria Nascimento",
+      "side": "target",
+      "best_possible_cost": 1.953,
+      "degree": 3
+     },
+     {
+      "rank": 6,
+      "qid": "Q10367575",
+      "label": "Sandra Regina Machado",
+      "side": "target",
+      "best_possible_cost": 1.953,
+      "degree": 4
+     },
+     {
+      "rank": 7,
+      "qid": "Q126868954",
+      "label": "Celeste Arantes",
+      "side": "target",
+      "best_possible_cost": 1.953,
+      "degree": 6
+     },
+     {
+      "rank": 8,
+      "qid": "Q126869101",
+      "label": "Rosemeri dos Reis Cholbi",
+      "side": "target",
+      "best_possible_cost": 1.953,
+      "degree": 4
      }
     ],
-    "added_edges": [
-     {
-      "id": "e-5d5775e43ab45171",
-      "subject": "Q9614318",
-      "predicate": "P26",
-      "object": "Q10262711",
-      "label": "spouse",
-      "label_es": "cónyuge",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P26"
-     },
-     {
-      "id": "e-de5221d89084cdaf",
-      "subject": "Q10262711",
-      "predicate": "P26",
-      "object": "Q9614318",
-      "label": "spouse",
-      "label_es": "cónyuge",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P26"
-     },
-     {
-      "id": "e-ebfb5cc4053d582f",
-      "subject": "Q10288404",
-      "predicate": "P161",
-      "object": "Q9614318",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-783ceddb18c060c8",
-      "subject": "Q9614318",
-      "predicate": "P19",
-      "object": "Q8678",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-5d5775e43ab45171",
-     "e-de5221d89084cdaf",
-     "e-ebfb5cc4053d582f",
-     "e-783ceddb18c060c8"
-    ],
-    "returned": 6,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q9614318"
-    ]
+    "more_leads": 86
    }
   },
   {
-   "event_id": 71,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:25.934+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 21,
-    "qid": "Q9614318",
-    "ok": true,
-    "returned": 6,
-    "added_node_count": 2,
-    "added_edge_count": 4,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 72,
-   "investigation_id": "621ca4c02388",
+   "event_id": 96,
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:28.598+00:00",
+   "timestamp": "2026-11-14T22:25:11.165+00:00",
    "payload": {
-    "turn": 8,
-    "summary": "Strongest cost improved from 3.947 to 3.019. Let me check the new route.",
+    "turn": 13,
+    "summary": "The best_possible_cost has climbed to 1.841 and rising — the strong family links are exhausted. Let me expand the two remaining top leads: Roberto Bonfim (source) and Rafa Justus (target).",
     "tool_calls": [
-     "compute_paths"
-    ]
-   }
-  },
-  {
-   "event_id": 73,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:28.598+00:00",
-   "payload": {
-    "tool": "compute_paths",
-    "step": 22,
-    "arguments": {}
-   }
-  },
-  {
-   "event_id": 74,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:28.600+00:00",
-   "payload": {
-    "tool": "compute_paths",
-    "step": 22,
-    "ok": true
-   }
-  },
-  {
-   "event_id": 75,
-   "investigation_id": "621ca4c02388",
-   "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:33.468+00:00",
-   "payload": {
-    "turn": 9,
-    "summary": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
-    "tool_calls": [
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
-     "get_neighbors",
      "get_neighbors",
      "get_neighbors"
     ]
    }
   },
   {
-   "event_id": 76,
-   "investigation_id": "621ca4c02388",
+   "event_id": 97,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:33.469+00:00",
+   "timestamp": "2026-11-14T22:25:11.165+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 23,
+    "step": 24,
     "qid": "Q10363254",
     "label": "Roberto Bonfim",
     "side": "source",
-    "reason": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
+    "reason": "The best_possible_cost has climbed to 1.841 and rising — the strong family links are exhausted. Let me expand the two remaining top leads: Roberto Bonfim (source) and Rafa Justus (target).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -8120,12 +9507,12 @@
    }
   },
   {
-   "event_id": 77,
-   "investigation_id": "621ca4c02388",
+   "event_id": 98,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:33.472+00:00",
+   "timestamp": "2026-11-14T22:25:11.169+00:00",
    "payload": {
-    "step": 23,
+    "step": 24,
     "expanded_qid": "Q10363254",
     "side": "source",
     "added_nodes": [
@@ -8225,13 +9612,13 @@
    }
   },
   {
-   "event_id": 78,
-   "investigation_id": "621ca4c02388",
+   "event_id": 99,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:33.472+00:00",
+   "timestamp": "2026-11-14T22:25:11.169+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 23,
+    "step": 24,
     "qid": "Q10363254",
     "ok": true,
     "returned": 6,
@@ -8241,17 +9628,95 @@
    }
   },
   {
-   "event_id": 79,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:33.476+00:00",
+   "event_id": 100,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:11.172+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 24,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q3074666",
+      "label": "Flávia Alessandra",
+      "side": "source",
+      "best_possible_cost": 1.982,
+      "degree": 12
+     },
+     {
+      "rank": 2,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 1.982,
+      "degree": 14
+     },
+     {
+      "rank": 3,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 1.982,
+      "degree": 6
+     },
+     {
+      "rank": 4,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 1.982,
+      "degree": 10
+     },
+     {
+      "rank": 5,
+      "qid": "Q76390649",
+      "label": "Giulia Costa",
+      "side": "source",
+      "best_possible_cost": 1.982,
+      "degree": 5
+     },
+     {
+      "rank": 6,
+      "qid": "Q124500094",
+      "label": "Rafa Justus",
+      "side": "target",
+      "best_possible_cost": 1.982,
+      "degree": 4
+     },
+     {
+      "rank": 7,
+      "qid": "Q612205",
+      "label": "Edson Cholbi Nascimento",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 9
+     },
+     {
+      "rank": 8,
+      "qid": "Q2502098",
+      "label": "Dondinho",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 11
+     }
+    ],
+    "more_leads": 86
+   }
+  },
+  {
+   "event_id": 101,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:11.172+00:00",
+   "payload": {
+    "tool": "get_neighbors",
+    "step": 25,
     "qid": "Q124500094",
     "label": "Rafa Justus",
     "side": "target",
-    "reason": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
+    "reason": "The best_possible_cost has climbed to 1.841 and rising — the strong family links are exhausted. Let me expand the two remaining top leads: Roberto Bonfim (source) and Rafa Justus (target).",
     "relation_groups": [
      "birthplace",
      "family",
@@ -8293,12 +9758,12 @@
    }
   },
   {
-   "event_id": 80,
-   "investigation_id": "621ca4c02388",
+   "event_id": 102,
+   "investigation_id": "2a51962e1ba5",
    "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:33.479+00:00",
+   "timestamp": "2026-11-14T22:25:11.175+00:00",
    "payload": {
-    "step": 24,
+    "step": 25,
     "expanded_qid": "Q124500094",
     "side": "target",
     "added_nodes": [
@@ -8354,13 +9819,13 @@
    }
   },
   {
-   "event_id": 81,
-   "investigation_id": "621ca4c02388",
+   "event_id": 103,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:33.479+00:00",
+   "timestamp": "2026-11-14T22:25:11.175+00:00",
    "payload": {
     "tool": "get_neighbors",
-    "step": 24,
+    "step": 25,
     "qid": "Q124500094",
     "ok": true,
     "returned": 4,
@@ -8370,1051 +9835,275 @@
    }
   },
   {
-   "event_id": 82,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:33.482+00:00",
+   "event_id": 104,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:11.178+00:00",
    "payload": {
     "tool": "get_neighbors",
     "step": 25,
-    "qid": "Q612205",
-    "label": "Edson Cholbi Nascimento",
-    "side": "source",
-    "reason": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q612205"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 83,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:33.486+00:00",
-   "payload": {
-    "step": 25,
-    "expanded_qid": "Q612205",
-    "side": "source",
-    "added_nodes": [
+    "stronger_path_possible": true,
+    "improvement_leads": [
      {
-      "id": "Q2584065",
-      "label": "Associação Atlética Portuguesa",
-      "label_en": "Associação Atlética Portuguesa",
-      "label_es": "Portuguesa Santista",
-      "kind": "organization",
-      "degree": 110,
-      "url": "https://www.wikidata.org/wiki/Q2584065"
+      "rank": 1,
+      "qid": "Q612205",
+      "label": "Edson Cholbi Nascimento",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 9
      },
      {
-      "id": "Q290940",
-      "label": "Associação Desportiva São Caetano",
-      "label_en": "Associação Desportiva São Caetano",
-      "label_es": "Associação Desportiva São Caetano",
-      "kind": "organization",
-      "degree": 344,
-      "url": "https://www.wikidata.org/wiki/Q290940"
+      "rank": 2,
+      "qid": "Q2502098",
+      "label": "Dondinho",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 11
      },
      {
-      "id": "Q219120",
-      "label": "Associação Atlética Ponte Preta",
-      "label_en": "Associação Atlética Ponte Preta",
-      "label_es": "Associação Atlética Ponte Preta",
-      "kind": "organization",
-      "degree": 514,
-      "url": "https://www.wikidata.org/wiki/Q219120"
+      "rank": 3,
+      "qid": "Q3074666",
+      "label": "Flávia Alessandra",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 12
+     },
+     {
+      "rank": 4,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 14
+     },
+     {
+      "rank": 5,
+      "qid": "Q9635348",
+      "label": "Assíria Nascimento",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 3
+     },
+     {
+      "rank": 6,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 10
+     },
+     {
+      "rank": 8,
+      "qid": "Q10367575",
+      "label": "Sandra Regina Machado",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 4
      }
     ],
-    "added_edges": [
-     {
-      "id": "e-05fbf38346744abb",
-      "subject": "Q612205",
-      "predicate": "P25",
-      "object": "Q126869101",
-      "label": "mother",
-      "label_es": "madre",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P25"
-     },
-     {
-      "id": "e-4b2a78763aff3fc5",
-      "subject": "Q126869101",
-      "predicate": "P40",
-      "object": "Q612205",
-      "label": "child",
-      "label_es": "hijo/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P40"
-     },
-     {
-      "id": "e-5b1dc97ecbd13a4f",
-      "subject": "Q612205",
-      "predicate": "P54",
-      "object": "Q2584065",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-bc9986554dec1543",
-      "subject": "Q612205",
-      "predicate": "P54",
-      "object": "Q290940",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-01bf33d4ae89e9f5",
-      "subject": "Q612205",
-      "predicate": "P54",
-      "object": "Q219120",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-b57e01e5fa959513",
-      "subject": "Q612205",
-      "predicate": "P54",
-      "object": "Q80955",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-63ded9ba8b552591",
-      "subject": "Q612205",
-      "predicate": "P19",
-      "object": "Q174",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-05fbf38346744abb",
-     "e-4b2a78763aff3fc5",
-     "e-5b1dc97ecbd13a4f",
-     "e-bc9986554dec1543",
-     "e-01bf33d4ae89e9f5",
-     "e-b57e01e5fa959513",
-     "e-63ded9ba8b552591"
-    ],
-    "returned": 9,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q612205"
-    ]
+    "more_leads": 82
    }
   },
   {
-   "event_id": 84,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:33.486+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 25,
-    "qid": "Q612205",
-    "ok": true,
-    "returned": 9,
-    "added_node_count": 3,
-    "added_edge_count": 7,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 85,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:33.489+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 26,
-    "qid": "Q2502098",
-    "label": "Dondinho",
-    "side": "source",
-    "reason": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q2502098"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 86,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:33.492+00:00",
-   "payload": {
-    "step": 26,
-    "expanded_qid": "Q2502098",
-    "side": "source",
-    "added_nodes": [
-     {
-      "id": "Q270995",
-      "label": "Clube Atlético Mineiro",
-      "label_en": "Clube Atlético Mineiro",
-      "label_es": "Clube Atlético Mineiro",
-      "kind": "organization",
-      "degree": 570,
-      "url": "https://www.wikidata.org/wiki/Q270995"
-     },
-     {
-      "id": "Q80987",
-      "label": "Fluminense F.C.",
-      "label_en": "Fluminense F.C.",
-      "label_es": "Fluminense Football Club",
-      "kind": "organization",
-      "degree": 792,
-      "url": "https://www.wikidata.org/wiki/Q80987"
-     },
-     {
-      "id": "Q5014111",
-      "label": "CR Vasco da Gama",
-      "label_en": "CR Vasco da Gama",
-      "label_es": "Club de Regatas Vasco da Gama",
-      "kind": "organization",
-      "degree": 808,
-      "url": "https://www.wikidata.org/wiki/Q5014111"
-     },
-     {
-      "id": "Q1791960",
-      "label": "Campos Gerais",
-      "label_en": "Campos Gerais",
-      "label_es": "Campos Gerais",
-      "kind": "place",
-      "degree": 5,
-      "url": "https://www.wikidata.org/wiki/Q1791960"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-39f59e899772063d",
-      "subject": "Q116846389",
-      "predicate": "P22",
-      "object": "Q2502098",
-      "label": "father",
-      "label_es": "padre",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P22"
-     },
-     {
-      "id": "e-ef677dbbf37fedde",
-      "subject": "Q126869010",
-      "predicate": "P22",
-      "object": "Q2502098",
-      "label": "father",
-      "label_es": "padre",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P22"
-     },
-     {
-      "id": "e-697b9cb2b053ea49",
-      "subject": "Q2502098",
-      "predicate": "P40",
-      "object": "Q126869010",
-      "label": "child",
-      "label_es": "hijo/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P40"
-     },
-     {
-      "id": "e-9a87270449c3c904",
-      "subject": "Q2502098",
-      "predicate": "P40",
-      "object": "Q116846389",
-      "label": "child",
-      "label_es": "hijo/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P40"
-     },
-     {
-      "id": "e-9e2857380338cb55",
-      "subject": "Q2502098",
-      "predicate": "P54",
-      "object": "Q2340403",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-e69e0f594f334847",
-      "subject": "Q2502098",
-      "predicate": "P54",
-      "object": "Q270995",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-fc42aa84b9b58789",
-      "subject": "Q2502098",
-      "predicate": "P54",
-      "object": "Q80987",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-5290e734b8d19bd0",
-      "subject": "Q2502098",
-      "predicate": "P54",
-      "object": "Q5014111",
-      "label": "member of sports team",
-      "label_es": "miembro del equipo deportivo",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P54"
-     },
-     {
-      "id": "e-04815a146a4b651b",
-      "subject": "Q2502098",
-      "predicate": "P19",
-      "object": "Q1791960",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-39f59e899772063d",
-     "e-ef677dbbf37fedde",
-     "e-697b9cb2b053ea49",
-     "e-9a87270449c3c904",
-     "e-9e2857380338cb55",
-     "e-e69e0f594f334847",
-     "e-fc42aa84b9b58789",
-     "e-5290e734b8d19bd0",
-     "e-04815a146a4b651b"
-    ],
-    "returned": 11,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q2502098"
-    ]
-   }
-  },
-  {
-   "event_id": 87,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:33.492+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 26,
-    "qid": "Q2502098",
-    "ok": true,
-    "returned": 11,
-    "added_node_count": 4,
-    "added_edge_count": 9,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 88,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:33.496+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 27,
-    "qid": "Q9635348",
-    "label": "Assíria Nascimento",
-    "side": "source",
-    "reason": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q9635348"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 89,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:33.499+00:00",
-   "payload": {
-    "step": 27,
-    "expanded_qid": "Q9635348",
-    "side": "source",
-    "added_nodes": [
-     {
-      "id": "Q192387",
-      "label": "Londrina",
-      "label_en": "Londrina",
-      "label_es": "Londrina",
-      "kind": "place",
-      "degree": 223,
-      "url": "https://www.wikidata.org/wiki/Q192387"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-cd2ee430adf5edfa",
-      "subject": "Q9635348",
-      "predicate": "P19",
-      "object": "Q192387",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-cd2ee430adf5edfa"
-    ],
-    "returned": 3,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q9635348"
-    ]
-   }
-  },
-  {
-   "event_id": 90,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:33.499+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 27,
-    "qid": "Q9635348",
-    "ok": true,
-    "returned": 3,
-    "added_node_count": 1,
-    "added_edge_count": 1,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 91,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:33.502+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 28,
-    "qid": "Q10367575",
-    "label": "Sandra Regina Machado",
-    "side": "source",
-    "reason": "Strongest path now uses Renata Sorrah → a film → Luciano Szafir → Xuxa → Senna (cost 3.019), but a stronger path is still possible. I'll expand the next-ranked leads, prioritizing the lowest best_possible_cost.",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
-    ],
-    "arguments": {
-     "qids": [
-      "Q10367575"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
-    }
-   }
-  },
-  {
-   "event_id": 92,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:33.505+00:00",
-   "payload": {
-    "step": 28,
-    "expanded_qid": "Q10367575",
-    "side": "source",
-    "added_nodes": [
-     {
-      "id": "Q271374",
-      "label": "Guarujá",
-      "label_en": "Guarujá",
-      "label_es": "Guarujá",
-      "kind": "place",
-      "degree": 55,
-      "url": "https://www.wikidata.org/wiki/Q271374"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-c923e6a72b2b76b5",
-      "subject": "Q10367575",
-      "predicate": "P19",
-      "object": "Q271374",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-c923e6a72b2b76b5"
-    ],
-    "returned": 3,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q10367575"
-    ]
-   }
-  },
-  {
-   "event_id": 93,
-   "investigation_id": "621ca4c02388",
-   "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:33.505+00:00",
-   "payload": {
-    "tool": "get_neighbors",
-    "step": 28,
-    "qid": "Q10367575",
-    "ok": true,
-    "returned": 3,
-    "added_node_count": 1,
-    "added_edge_count": 1,
-    "complete": true
-   }
-  },
-  {
-   "event_id": 94,
-   "investigation_id": "621ca4c02388",
+   "event_id": 105,
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:40.276+00:00",
+   "timestamp": "2026-11-14T22:25:12.608+00:00",
    "payload": {
-    "turn": 10,
-    "summary": "Budget is nearly spent. I'll make one final expansion of the top remaining lead (Flávia Alessandra), which also reports the updated strongest cost, then finish.",
+    "turn": 14,
+    "summary": "The best_possible_cost keeps rising (now 2.093) — the strong family links are exhausted and the current path (cost 3.019) is likely near-optimal. Let me inspect the current strongest path to confirm its evidence before finishing.",
     "tool_calls": [
-     "get_neighbors"
+     "compute_paths"
     ]
    }
   },
   {
-   "event_id": 95,
-   "investigation_id": "621ca4c02388",
+   "event_id": 106,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:40.276+00:00",
+   "timestamp": "2026-11-14T22:25:12.608+00:00",
    "payload": {
-    "tool": "get_neighbors",
-    "step": 29,
-    "qid": "Q3074666",
-    "label": "Flávia Alessandra",
-    "side": "source",
-    "reason": "Budget is nearly spent. I'll make one final expansion of the top remaining lead (Flávia Alessandra), which also reports the updated strongest cost, then finish.",
-    "relation_groups": [
-     "birthplace",
-     "family",
-     "institutional",
-     "mentorship",
-     "works"
+    "tool": "compute_paths",
+    "step": 26,
+    "arguments": {}
+   }
+  },
+  {
+   "event_id": 107,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.completed",
+   "timestamp": "2026-11-14T22:25:12.609+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 26,
+    "ok": true
+   }
+  },
+  {
+   "event_id": 108,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.leads",
+   "timestamp": "2026-11-14T22:25:12.609+00:00",
+   "payload": {
+    "tool": "compute_paths",
+    "step": 26,
+    "stronger_path_possible": true,
+    "improvement_leads": [
+     {
+      "rank": 1,
+      "qid": "Q612205",
+      "label": "Edson Cholbi Nascimento",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 9
+     },
+     {
+      "rank": 2,
+      "qid": "Q2502098",
+      "label": "Dondinho",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 11
+     },
+     {
+      "rank": 3,
+      "qid": "Q3074666",
+      "label": "Flávia Alessandra",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 12
+     },
+     {
+      "rank": 4,
+      "qid": "Q3705464",
+      "label": "Denise Dumont",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 14
+     },
+     {
+      "rank": 5,
+      "qid": "Q9635348",
+      "label": "Assíria Nascimento",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 3
+     },
+     {
+      "rank": 6,
+      "qid": "Q10316403",
+      "label": "Larissa Vereza",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 6
+     },
+     {
+      "rank": 7,
+      "qid": "Q10346156",
+      "label": "Patrycia Travassos",
+      "side": "source",
+      "best_possible_cost": 2.093,
+      "degree": 10
+     },
+     {
+      "rank": 8,
+      "qid": "Q10367575",
+      "label": "Sandra Regina Machado",
+      "side": "target",
+      "best_possible_cost": 2.093,
+      "degree": 4
+     }
     ],
+    "more_leads": 82
+   }
+  },
+  {
+   "event_id": 109,
+   "investigation_id": "2a51962e1ba5",
+   "type": "agent.decision",
+   "timestamp": "2026-11-14T22:25:13.863+00:00",
+   "payload": {
+    "turn": 15,
+    "summary": "The strongest path is now a 5-hop route through Renata Sorrah and Luciano Szafir. Let me inspect its evidence edge-by-edge to confirm.",
+    "tool_calls": [
+     "inspect_path"
+    ]
+   }
+  },
+  {
+   "event_id": 110,
+   "investigation_id": "2a51962e1ba5",
+   "type": "tool.started",
+   "timestamp": "2026-11-14T22:25:13.863+00:00",
+   "payload": {
+    "tool": "inspect_path",
+    "step": 27,
     "arguments": {
-     "qids": [
-      "Q3074666"
-     ],
-     "properties": [
-      "P22",
-      "P25",
-      "P26",
-      "P40",
-      "P184",
-      "P185",
-      "P451",
-      "P3373",
-      "P802",
-      "P1066",
-      "P1038",
-      "P57",
-      "P58",
-      "P86",
-      "P161",
-      "P175",
-      "P112",
-      "P54",
-      "P108",
-      "P69",
-      "P463",
-      "P19"
-     ],
-     "direction": "both",
-     "max_edges": 100
+     "path_id": "p-2339c2ba9e43"
     }
    }
   },
   {
-   "event_id": 96,
-   "investigation_id": "621ca4c02388",
-   "type": "graph.expanded",
-   "timestamp": "2026-11-13T18:32:40.280+00:00",
-   "payload": {
-    "step": 29,
-    "expanded_qid": "Q3074666",
-    "side": "source",
-    "added_nodes": [
-     {
-      "id": "Q10342445",
-      "label": "Otaviano Costa",
-      "label_en": "Otaviano Costa",
-      "label_es": "Otaviano Costa",
-      "kind": "person",
-      "degree": 3,
-      "url": "https://www.wikidata.org/wiki/Q10342445"
-     },
-     {
-      "id": "Q2937894",
-      "label": "Caras & Bocas",
-      "label_en": "Caras & Bocas",
-      "label_es": "Caras & Bocas",
-      "kind": "work",
-      "degree": 1,
-      "url": "https://www.wikidata.org/wiki/Q2937894"
-     },
-     {
-      "id": "Q967301",
-      "label": "Alma Gêmea",
-      "label_en": "Alma Gêmea",
-      "label_es": "Alma gemela",
-      "kind": "work",
-      "degree": 3,
-      "url": "https://www.wikidata.org/wiki/Q967301"
-     },
-     {
-      "id": "Q85876105",
-      "label": "O Amor Dá Trabalho",
-      "label_en": "O Amor Dá Trabalho",
-      "label_es": "O Amor Dá Trabalho",
-      "kind": "work",
-      "degree": 6,
-      "url": "https://www.wikidata.org/wiki/Q85876105"
-     },
-     {
-      "id": "Q1026493",
-      "label": "Salve Jorge",
-      "label_en": "Salve Jorge",
-      "label_es": "La guerrera",
-      "kind": "work",
-      "degree": 19,
-      "url": "https://www.wikidata.org/wiki/Q1026493"
-     },
-     {
-      "id": "Q2840233",
-      "label": "Rio de Janeiro State University",
-      "label_en": "Rio de Janeiro State University",
-      "label_es": "Universidad del Estado del Río de Janeiro",
-      "kind": "organization",
-      "degree": 1193,
-      "url": "https://www.wikidata.org/wiki/Q2840233"
-     },
-     {
-      "id": "Q1787668",
-      "label": "Rio das Ostras",
-      "label_en": "Rio das Ostras",
-      "label_es": "Rio das Ostras",
-      "kind": "place",
-      "degree": 11,
-      "url": "https://www.wikidata.org/wiki/Q1787668"
-     }
-    ],
-    "added_edges": [
-     {
-      "id": "e-f7010db38cf7ed64",
-      "subject": "Q76390649",
-      "predicate": "P25",
-      "object": "Q3074666",
-      "label": "mother",
-      "label_es": "madre",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P25"
-     },
-     {
-      "id": "e-ca810fd837c7b4e2",
-      "subject": "Q10342445",
-      "predicate": "P26",
-      "object": "Q3074666",
-      "label": "spouse",
-      "label_es": "cónyuge",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P26"
-     },
-     {
-      "id": "e-f5df2baefe1e763f",
-      "subject": "Q3074666",
-      "predicate": "P26",
-      "object": "Q10342445",
-      "label": "spouse",
-      "label_es": "cónyuge",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P26"
-     },
-     {
-      "id": "e-40d6c634c3d46840",
-      "subject": "Q3074666",
-      "predicate": "P40",
-      "object": "Q76390649",
-      "label": "child",
-      "label_es": "hijo/a",
-      "group": "family",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P40"
-     },
-     {
-      "id": "e-968281b07795cdc2",
-      "subject": "Q2937894",
-      "predicate": "P161",
-      "object": "Q3074666",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-464177242df6db56",
-      "subject": "Q7073210",
-      "predicate": "P161",
-      "object": "Q3074666",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-b1e8340ffb38cfd8",
-      "subject": "Q967301",
-      "predicate": "P161",
-      "object": "Q3074666",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-d20d496932f34baf",
-      "subject": "Q85876105",
-      "predicate": "P161",
-      "object": "Q3074666",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-8adfc52a4acb9c1c",
-      "subject": "Q1026493",
-      "predicate": "P161",
-      "object": "Q3074666",
-      "label": "cast member",
-      "label_es": "reparto",
-      "group": "works",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P161"
-     },
-     {
-      "id": "e-cf5fa016e60ac073",
-      "subject": "Q3074666",
-      "predicate": "P69",
-      "object": "Q2840233",
-      "label": "educated at",
-      "label_es": "educado/a en",
-      "group": "institutional",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P69"
-     },
-     {
-      "id": "e-fdcd37a0c690ecfe",
-      "subject": "Q3074666",
-      "predicate": "P19",
-      "object": "Q1787668",
-      "label": "place of birth",
-      "label_es": "lugar de nacimiento",
-      "group": "birthplace",
-      "source": "wikidata-truthy:20261104",
-      "origin": "wikidata",
-      "property_url": "https://www.wikidata.org/wiki/Property:P19"
-     }
-    ],
-    "highlight_edge_ids": [
-     "e-f7010db38cf7ed64",
-     "e-ca810fd837c7b4e2",
-     "e-f5df2baefe1e763f",
-     "e-40d6c634c3d46840",
-     "e-968281b07795cdc2",
-     "e-464177242df6db56",
-     "e-b1e8340ffb38cfd8",
-     "e-d20d496932f34baf",
-     "e-8adfc52a4acb9c1c",
-     "e-cf5fa016e60ac073",
-     "e-fdcd37a0c690ecfe"
-    ],
-    "returned": 12,
-    "complete": true,
-    "truncated": false,
-    "cap_hit": null,
-    "provider": "people-graph-sqlite",
-    "snapshot": "20261104",
-    "source_urls": [
-     "https://www.wikidata.org/wiki/Q3074666"
-    ]
-   }
-  },
-  {
-   "event_id": 97,
-   "investigation_id": "621ca4c02388",
+   "event_id": 111,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:40.280+00:00",
+   "timestamp": "2026-11-14T22:25:13.863+00:00",
    "payload": {
-    "tool": "get_neighbors",
-    "step": 29,
-    "qid": "Q3074666",
-    "ok": true,
-    "returned": 12,
-    "added_node_count": 7,
-    "added_edge_count": 11,
-    "complete": true
+    "tool": "inspect_path",
+    "step": 27,
+    "ok": true
    }
   },
   {
-   "event_id": 98,
-   "investigation_id": "621ca4c02388",
+   "event_id": 112,
+   "investigation_id": "2a51962e1ba5",
    "type": "agent.decision",
-   "timestamp": "2026-11-13T18:32:44.867+00:00",
+   "timestamp": "2026-11-14T22:25:16.550+00:00",
    "payload": {
-    "turn": 11,
-    "summary": "The strongest cost held at 3.019, and budget is nearly spent. I'll finalize with the two backend paths.",
+    "turn": 16,
+    "summary": "The path is verified. The best_possible_cost has risen to 2.093 and keeps climbing, meaning the strong family links are exhausted and this 5-hop path (cost 3.019) is the strongest available. I'll finish.",
     "tool_calls": [
      "finish"
     ]
    }
   },
   {
-   "event_id": 99,
-   "investigation_id": "621ca4c02388",
+   "event_id": 113,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.started",
-   "timestamp": "2026-11-13T18:32:44.868+00:00",
+   "timestamp": "2026-11-14T22:25:16.550+00:00",
    "payload": {
     "tool": "finish",
-    "step": 30,
+    "step": 28,
     "arguments": {
-     "summary": "Paulo Coelho and Ayrton Senna are connected on the explored graph. The fewest-edge path runs Paulo Coelho → United Nations → Pelé → Xuxa → Ayrton Senna (4 hops), but it hinges on a weak shared-employer link. The stronger path runs Paulo Coelho → Renata Sorrah → the film \"Um Anjo Caiu do Céu\" → Luciano Szafir → Xuxa → Ayrton Senna (5 hops), which wins on cost because it uses meaningful personal ties — Luciano Szafir's spouse Xuxa, plus the unmarried-partner links to Xuxa and Renata Sorrah — instead of a shared institution. Note these are association links from Wikidata, not proof that the two people ever met."
+     "summary": "The strongest verified path links Paulo Coelho to Ayrton Senna through five hops: Paulo Coelho was the unmarried partner of actress Renata Sorrah, who appeared in the film \"Um Anjo Caiu do Céu\" alongside Luciano Szafir, who was married to Xuxa, who was Ayrton Senna's unmarried partner. Its strength comes from the two family-type links (unmarried partner and spouse) at each end, though the middle is only a shared film credit — an association, not proof the two men ever met."
     }
    }
   },
   {
-   "event_id": 100,
-   "investigation_id": "621ca4c02388",
+   "event_id": 114,
+   "investigation_id": "2a51962e1ba5",
    "type": "tool.completed",
-   "timestamp": "2026-11-13T18:32:44.868+00:00",
+   "timestamp": "2026-11-14T22:25:16.550+00:00",
    "payload": {
     "tool": "finish",
-    "step": 30,
+    "step": 28,
     "ok": true
    }
   },
   {
-   "event_id": 101,
-   "investigation_id": "621ca4c02388",
+   "event_id": 115,
+   "investigation_id": "2a51962e1ba5",
    "type": "investigation.completed",
-   "timestamp": "2026-11-13T18:32:44.868+00:00",
+   "timestamp": "2026-11-14T22:25:16.551+00:00",
    "payload": {
     "outcome": "path_found",
     "stop_reason": "agent_finished",
@@ -9756,8 +10445,8 @@
       },
       "scope": "explored_graph",
       "stats": {
-       "visited_nodes": 154,
-       "expanded_states": 155,
+       "visited_nodes": 153,
+       "expanded_states": 154,
        "truncated_reason": null
       }
      },
@@ -9765,16 +10454,16 @@
      "scope": "explored_graph"
     },
     "stats": {
-     "expanded_nodes": 25,
+     "expanded_nodes": 20,
      "truncated_expansions": 1,
      "failed_expansions": 0,
-     "explored_nodes": 231,
-     "explored_edges": 302,
-     "provider_requests": 25
+     "explored_nodes": 215,
+     "explored_edges": 273,
+     "provider_requests": 20
     },
     "note": "Paths are shortest/strongest among the explored relationships only; Wikidata statements are what Wikidata records, not verified facts.",
     "answer": {
-     "summary": "Paulo Coelho and Ayrton Senna are connected on the explored graph. The fewest-edge path runs Paulo Coelho → United Nations → Pelé → Xuxa → Ayrton Senna (4 hops), but it hinges on a weak shared-employer link. The stronger path runs Paulo Coelho → Renata Sorrah → the film \"Um Anjo Caiu do Céu\" → Luciano Szafir → Xuxa → Ayrton Senna (5 hops), which wins on cost because it uses meaningful personal ties — Luciano Szafir's spouse Xuxa, plus the unmarried-partner links to Xuxa and Renata Sorrah — instead of a shared institution. Note these are association links from Wikidata, not proof that the two people ever met.",
+     "summary": "The strongest verified path links Paulo Coelho to Ayrton Senna through five hops: Paulo Coelho was the unmarried partner of actress Renata Sorrah, who appeared in the film \"Um Anjo Caiu do Céu\" alongside Luciano Szafir, who was married to Xuxa, who was Ayrton Senna's unmarried partner. Its strength comes from the two family-type links (unmarried partner and spouse) at each end, though the middle is only a shared film credit — an association, not proof the two men ever met.",
      "summary_source": "agent",
      "summary_verified": true,
      "unverified_mentions": [],
@@ -9782,9 +10471,9 @@
       "p-21b016e9cad6",
       "p-2339c2ba9e43"
      ],
-     "backend_summary": "Shortest (4 edges): Paulo Coelho —employer→ United Nations —employed→ Pelé —unmarried partner→ Xuxa —unmarried partner→ Ayrton Senna. Strongest (5 edges, cost 3.02): Paulo Coelho —unmarried partner→ Renata Sorrah —acted in→ Um Anjo Caiu do Céu —cast member→ Luciano Szafir —spouse→ Xuxa —unmarried partner→ Ayrton Senna. (Among explored relationships only.)"
+     "backend_summary": "Strongest connection (5 edges, cost 3.02): Paulo Coelho —unmarried partner→ Renata Sorrah —acted in→ Um Anjo Caiu do Céu —cast member→ Luciano Szafir —spouse→ Xuxa —unmarried partner→ Ayrton Senna. (Among explored relationships only.)"
     },
-    "tool_calls": 30
+    "tool_calls": 28
    }
   }
  ]

@@ -196,3 +196,220 @@ console.log(JSON.stringify(out));
     det = out["diana-churchill"]
     n_expansions = sum(e["type"] == "tool.started" for e in traces["diana-churchill"])
     assert det["kinds"][1:-1] == ["expansion"] * n_expansions and det["rules"] == n_expansions
+
+
+def test_step_book_folds_the_fruitless_search_after_the_last_path_change(root, tmp_path):
+    """Once a run ends, the steps after the strongest path last changed become one "tail" step (Lula–Snoop:
+    after the path appears the agent follows a dozen more leads that change nothing). The fold loses no event,
+    keeps every plan intact, never touches a step already on screen, and unfolds back exactly."""
+    names = [p.stem for p in sorted((root / "data" / "fixtures" / "event_traces").glob("*.json"))]
+    traces = {n: json.loads((root / "data" / "fixtures" / "event_traces" / f"{n}.json").read_text(encoding="utf-8"))["events"]
+              for n in names}
+    script = """
+const { StepBook, describeTail, MIN_FOLD } = await mod('steps.js');
+const fill = (events) => { const b = new StepBook(); events.forEach((e) => b.push(e)); return b; };
+const sig = (b) => b.steps.map((s) => s.kind + ':' + s.events.map((e) => e.event_id).join(','));
+const out = {};
+for (const [name, events] of Object.entries(data)) {
+  const book = fill(events);
+  const before = sig(book), plansBefore = book.steps.map((s, i) => s.kind === 'decision' ? JSON.stringify(book.plan(i)) : null);
+  const pathSteps = book.steps.map((s, i) => s.pathEvent ? i : -1).filter((i) => i >= 0);
+  const folded = book.foldTail(0);
+  const tailAt = book.steps.findIndex((s) => s.kind === 'tail');
+  const tail = tailAt >= 0 ? book.steps[tailAt] : null;
+  const r = {
+    folded, before: before.length, after: book.count, tailAt, lastPath: pathSteps.at(-1) ?? null,
+    pathStep: tail?.pathStep ?? null, kindsAfterTail: tail ? book.steps.slice(tailAt + 1).map((s) => s.kind) : null,
+    ids: book.steps.flatMap((s) => s.events.map((e) => e.event_id)),
+    plansKept: book.steps.slice(0, tailAt < 0 ? undefined : tailAt).every((s, i) => s.kind !== 'decision' || JSON.stringify(book.plan(i)) === plansBefore[i]),
+    tail: tail ? describeTail(tail) : null,
+    again: book.foldTail(0),
+  };
+  const at = book.unfoldTail();
+  r.unfoldAt = at; r.restored = JSON.stringify(sig(book)) === JSON.stringify(before); r.refold = book.foldTail(0);
+  // A presenter already past the path (live run) keeps the steps they have seen.
+  const live = fill(events);
+  r.liveFold = live.foldTail(before.length - 2);
+  out[name] = r;
+}
+out.MIN_FOLD = MIN_FOLD;
+console.log(JSON.stringify(out));
+"""
+    out = run_node(root, tmp_path, script, traces)
+    for name, events in traces.items():
+        r = out[name]
+        assert r["ids"] == [e["event_id"] for e in events]  # nothing lost or reordered
+        assert r["again"] is False and r["refold"] is False and r["liveFold"] is False
+        if r["folded"]:
+            assert r["tailAt"] == r["lastPath"] + 1 == r["pathStep"] + 1 and r["kindsAfterTail"] == ["result"]
+            assert r["before"] - r["after"] == r["tail"]["steps"] - 1 and r["tail"]["steps"] >= out["MIN_FOLD"]
+            assert r["plansKept"] and r["unfoldAt"] == r["tailAt"] and r["restored"]
+        else:
+            assert r["lastPath"] is None or r["before"] - 2 - r["lastPath"] < out["MIN_FOLD"]
+    lula = out["lula-snoop-agent"]
+    assert lula["folded"] and lula["tail"]["steps"] >= 15 and len(lula["tail"]["expansions"]) >= 10
+    lula_decisions = [e["payload"].get("summary") for e in traces["lula-snoop-agent"] if e["type"] == "agent.decision"]
+    assert lula["tail"]["reason"] in lula_decisions                   # the agent's own words, quoted verbatim
+    assert lula["tail"]["addedNodes"] > 0 and lula["tail"]["otherCalls"].get("compute_paths", 0) >= 1
+    assert out["diana-churchill"]["folded"]                          # deterministic: expansions after the first path
+
+
+def test_path_moments_are_explained_from_recorded_facts(root, tmp_path):
+    """The path step card explains the moment in words, from the recording only: where the two sides
+    met (a hop whose ends were first reached from different sides, joined by this step's statement),
+    link strengths as words that follow the policy, and why a replacing path is stronger."""
+    names = [p.stem for p in sorted((root / "data" / "fixtures" / "event_traces").glob("*.json"))]
+    traces = {n: json.loads((root / "data" / "fixtures" / "event_traces" / f"{n}.json").read_text(encoding="utf-8"))["events"]
+              for n in names}
+    script = """
+const S = await mod('steps.js');
+const out = { words: [0.95, 0.85, 0.8, 0.6, 0.5, 0.35, 0.3, 0.1, null].map(S.strengthWord), cases: {} };
+for (const [name, events] of Object.entries(data)) {
+  const book = new S.StepBook(); events.forEach((e) => book.push(e));
+  const moments = [];
+  book.steps.forEach((s, i) => {
+    const d = S.describeStep(s);
+    if (!d.pathEvent) return;
+    const now = S.pathChain(d.pathResult);
+    const m = S.meetingPoint(now, d.sides, d.expandedQids[0], d.edgeIds);
+    moments.push({ kind: d.pathEvent, hops: now.hops, words: now.rels.map((r) => [r.strength, r.word]),
+      summary: S.strengthSummary(now), meet: m && { meet: m.meet.qid, already: m.already, via: m.viaThisStep,
+        sides: [d.sides.get(m.from.qid), d.sides.get(m.to.qid)], mine: d.sides.get(d.expandedQids[0]) },
+      why: d.prevPath ? S.whyStronger(S.pathChain(d.prevPath), now) : null,
+      prevCost: d.prevPath?.total_cost ?? null, cost: d.pathResult.total_cost });
+  });
+  const tailBook = new S.StepBook(); events.forEach((e) => tailBook.push(e)); tailBook.foldTail(0);
+  const tail = tailBook.steps.find((s) => s.kind === 'tail');
+  out.cases[name] = { moments,
+    tailLeads: tail ? S.describeTail(tail, tailBook.latestLeads(tailBook.steps.indexOf(tail) - 1)).fromLeads : 'none',
+    hasLeads: events.some((e) => e.type === 'tool.leads'), agent: events[0].payload.strategy === 'agent',
+    guidance: book.steps.map((s, i) => book.unrecordedGuidance(i)).filter(Boolean),
+    firstPathStep: book.steps.findIndex((s) => s.pathEvent),
+    guidanceSteps: book.steps.map((s, i) => book.unrecordedGuidance(i) === 'leads' ? i : -1).filter((i) => i >= 0) };
+}
+// A synthetic lead list: leadsFor returns it for the next decision, and the graph growing makes it stale.
+const ev = (id, type, payload) => ({ event_id: id, type, payload });
+const b = new S.StepBook();
+[ev(1, 'investigation.started', { strategy: 'agent' }), ev(2, 'agent.decision', { summary: 'go', tool_calls: ['get_neighbors'] }),
+ ev(3, 'tool.started', { tool: 'get_neighbors', step: 1, qid: 'Q1' }),
+ ev(4, 'tool.leads', { tool: 'get_neighbors', step: 1, stronger_path_possible: true, improvement_leads: [{ rank: 1, qid: 'Q7' }], more_leads: 0 }),
+ ev(5, 'agent.decision', { summary: 'lead', tool_calls: ['get_neighbors'] }),
+ ev(6, 'tool.started', { tool: 'get_neighbors', step: 2, qid: 'Q7' }),
+ ev(7, 'graph.expanded', { step: 2, expanded_qid: 'Q7', side: 'source', added_nodes: [{ id: 'Q8' }], added_edges: [{ id: 'e' }] }),
+ ev(8, 'agent.decision', { summary: 'again', tool_calls: [] })].forEach((e) => b.push(e));
+out.synthetic = { fresh: b.leadsFor(3), viaCall: b.leadsFor(4), stale: b.leadsFor(5), latest: b.latestLeads(5) };
+console.log(JSON.stringify(out));
+"""
+    out = run_node(root, tmp_path, script, traces)
+    assert out["words"] == ["strong", "strong", "strong", "medium", "medium", "weak", "weak", "weak", None]
+    for name, r in out["cases"].items():
+        assert r["moments"] and r["moments"][0]["kind"] == "first", name
+        for m in r["moments"]:
+            assert all(w in ("strong", "medium", "weak") for _, w in m["words"]) and m["summary"]
+            if m["kind"] == "first" and m["meet"]:
+                # the joining hop's ends really were first reached from different sides; the meeting
+                # node is the end the expanded node's side did NOT reach first
+                assert set(m["meet"]["sides"]) == {"source", "target"} and m["meet"]["already"] != m["meet"]["mine"]
+            if m["kind"] == "improved":
+                assert m["why"] and m["cost"] < m["prevCost"]
+        if r["agent"] and not r["hasLeads"]:
+            # every decision after the first path discloses the unrecorded lead list
+            assert r["guidanceSteps"] and min(r["guidanceSteps"]) > r["firstPathStep"]
+        if not r["agent"]:
+            assert r["guidance"] == []
+        assert r["tailLeads"] in (None, "none") or isinstance(r["tailLeads"], int)
+    assert any(m["meet"] and m["meet"]["via"] for r in out["cases"].values() for m in r["moments"])
+    syn = out["synthetic"]
+    assert syn["fresh"]["leads"][0]["qid"] == "Q7" and syn["viaCall"] == syn["fresh"] and syn["stale"] is None
+    assert syn["latest"][0]["qid"] == "Q7"
+
+
+def test_step_book_exposes_the_recorded_suggestions_the_agent_saw(root, tmp_path):
+    """get_search_status records its ranked suggestions; the step card and the ranking effect read them
+    from the event (never recomputed). Recordings made before that return no ranking."""
+    from .test_agent import FakeChat, adaptive, run
+
+    provider = SqlitePeopleGraphProvider(build_people_db(root, tmp_path, PEOPLE, ORGS, TRIPLES))
+    state = run(provider, FakeChat(adaptive))
+    provider.close()
+    events = [{"event_id": e.event_id, "investigation_id": "x", "type": e.type, "timestamp": e.timestamp,
+               "payload": e.payload} for e in state.events.events]
+    recorded = [e["payload"]["suggestions"] for e in events
+                if e["type"] == "tool.completed" and e["payload"]["tool"] == "get_search_status"]
+    # An older recording: the same trace without the ranking fields (recordings before 2026-11-14 had none).
+    old = json.loads((root / "data" / "fixtures" / "event_traces" / "lula-snoop-agent.json").read_text(encoding="utf-8"))["events"]
+    for e in old:
+        if e["type"] == "tool.completed":
+            e["payload"].pop("suggestions", None); e["payload"].pop("frontier_size", None)
+    script = """
+const { StepBook, describeStep } = await mod('steps.js');
+const book = (events) => { const b = new StepBook(); events.forEach((e) => b.push(e)); return b; };
+const b = book(data.events);
+const statusAt = b.steps.findIndex((s) => describeStep(s).tools.some((t) => t.tool === 'get_search_status'));
+const t = describeStep(b.steps[statusAt]).tools[0];
+const old = book(data.old);
+console.log(JSON.stringify({
+  cardList: t.suggestions, size: t.frontierSize,
+  before: b.lastSuggestions(statusAt - 1), at: b.lastSuggestions(statusAt), after: b.lastSuggestions(b.count - 1),
+  old: old.steps.map((_, i) => old.lastSuggestions(i) || old.rankingFor(i)).filter(Boolean).length,
+  // the agent's next decision after the status turn is judged against that list; its own turn is not
+  nextDecision: b.rankingFor(b.steps.findIndex((s, i) => i > statusAt && s.kind === 'decision')),
+  ownTurn: b.rankingFor(b.steps[statusAt].parent),
+}));
+"""
+    out = run_node(root, tmp_path, script, {"events": events, "old": old})
+    assert recorded and out["cardList"] == recorded[0] and out["size"] >= len(recorded[0])
+    assert out["before"] is None and out["at"]["suggestions"] == recorded[0]
+    assert out["after"]["suggestions"] == recorded[-1]
+    assert out["old"] == 0  # no ranking is ever invented for older recordings
+    assert out["nextDecision"]["suggestions"] == recorded[0] and out["ownTurn"] is None
+
+
+def test_result_step_shows_the_connection_as_chains(root, tmp_path):
+    """The final step card shows the strongest path (the only one the demo shows) as a chain, in
+    hop order from source to target, with direction-aware relation labels, and an honest headline."""
+    traces = {name: json.loads((root / "data" / "fixtures" / "event_traces" / f"{name}.json").read_text(encoding="utf-8"))["events"]
+              for name in ("lula-snoop-agent", "diana-churchill", "coelho-senna-agent")}
+    script = """
+const { pathChains, resultHeadline } = await mod('steps.js');
+const out = {};
+for (const [name, events] of Object.entries(data)) {
+  const last = events[events.length - 1];
+  const r = { type: last.type, outcome: last.payload.outcome, stop: last.payload.stop_reason };
+  out[name] = { chains: pathChains(last.payload.comparison), head: resultHeadline(r), comparison: last.payload.comparison };
+}
+out.none = { chains: pathChains(null), head: resultHeadline({ type: 'investigation.partial', outcome: 'budget_exhausted', stop: 'max_explored_nodes' }),
+             failed: resultHeadline({ type: 'investigation.failed', error: { code: 'agent_error', message: 'x' } }) };
+console.log(JSON.stringify(out));
+"""
+    out = run_node(root, tmp_path, script, traces)
+    for name, events in traces.items():
+        r, c = out[name], out[name]["comparison"]
+        assert r["head"]["head"] == "Connection found" and "explored subgraph only" in r["head"]["scope"]
+        if events[-1]["type"] == "investigation.partial":
+            assert "stopped early" in r["head"]["scope"]
+        expected = [("strongest", c["strongest"]["result"])]
+        assert [ch["mode"] for ch in r["chains"]] == [m for m, _ in expected]
+        for ch, (_, res) in zip(r["chains"], expected):
+            assert ch["hops"] == res["hop_count"] == len(ch["rels"]) == len(ch["nodes"]) - 1
+            assert [n["qid"] for n in ch["nodes"]] == [res["hops"][0]["from_qid"]] + [h["to_qid"] for h in res["hops"]]
+            assert ch["nodes"][0]["role"] == "source" and ch["nodes"][-1]["role"] == "target"
+            assert [x["label"] for x in ch["rels"]] == [h["label"] for h in res["hops"]]
+            assert all(n["label"] for n in ch["nodes"])
+    c = out["coelho-senna-agent"]["comparison"]  # recorded with strongest != shortest: only the strongest is shown
+    assert not c["same_path"] and len(out["coelho-senna-agent"]["chains"]) == 1
+    assert out["coelho-senna-agent"]["chains"][0]["hops"] == c["strongest"]["result"]["hop_count"]
+    assert out["none"]["chains"] == [] and out["none"]["head"]["head"] == "No connection found yet"
+    assert out["none"]["failed"]["tone"] == "err" and "agent_error" in out["none"]["failed"]["scope"]
+
+
+def test_browser_subscribes_to_every_server_event_type(root, tmp_path):
+    """SSE delivers named events only to listeners of that exact type: a type the server emits but
+    api.js does not subscribe to vanishes silently (tool.leads did, until this test)."""
+    from typing import get_args
+
+    from src.investigations.events import EventType
+
+    out = run_node(root, tmp_path, "const { EVENT_TYPES } = await mod('investigation.js');\n"
+                                   "console.log(JSON.stringify(EVENT_TYPES));\n", {})
+    assert sorted(out) == sorted(get_args(EventType))

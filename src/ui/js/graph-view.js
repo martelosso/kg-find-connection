@@ -13,10 +13,18 @@ const PING_JITTER = 0.3;
 const PING_FADE = 600;
 /** …and the branch rests this long in its normal colours before its next ping leaves. */
 const PING_REST = 500;
+/** get_search_status: the one radar sweep before the ranking shows (ms), then each "#k" pill pops in
+ *  RANK_STAGGER ms after the previous one, over RANK_POP ms. */
+const RANK_SWEEP = 1800, RANK_STAGGER = 140, RANK_POP = 380;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 export class GraphView {
+  /** A step's new nodes are all labelled up to STORY_LABELS_ALL; beyond that only the top STORY_LABELS. */
+  static STORY_LABELS_ALL = 30;
+  static STORY_LABELS = 14;
+  /** In a dense story, only the latest NAMED_RECENT expanded nodes keep their names (as in the card's trail line). */
+  static NAMED_RECENT = 7;
   constructor(container, { maxVisible = 250, onSelect } = {}) {
     this.maxVisible = maxVisible;
     this.container = container;
@@ -43,8 +51,10 @@ export class GraphView {
     this.endpoints = { source: null, target: null };
     this.pathEdges = { shortest: new Set(), strongest: new Set(), sandbox: new Set() };
     this.pathNodes = new Set();
+    this.prevPath = new Set();  // edges of the path a stronger one just replaced (that step only)
+    this.targets = new Map();   // node id -> where straightenPath is gliding it (the camera frames these)
     this.expanded = new Set();
-    this.mode = "both";       // which paths are emphasised: both | shortest | strongest | none
+    this.mode = "strongest";  // which paths are emphasised: strongest | none (the demo shows the strongest path only)
     this.focus = null;        // {nodes:Set, edges:Set} transient highlight (timeline step, editor selection)
     // Step-through "story": the exploration trail (endpoints, expanded nodes in order, paths) stays in
     // colour, the current step's new nodes/edges are green, and everything else is greyed out.
@@ -66,20 +76,23 @@ export class GraphView {
     // The presenter's own mouse always wins over the step camera.
     this.network.on("dragStart", () => this.stopCamera());
     this.network.on("zoom", () => this.stopCamera());
-    this.network.on("afterDrawing", (ctx) => this._drawPing(ctx));  // compute_paths ping overlay
+    this.network.on("afterDrawing", (ctx) => { this._drawPing(ctx); this._drawRanks(ctx); });  // effect overlays
   }
 
   reset() {
     this.stopCamera();
     if (this._fxRaf) cancelAnimationFrame(this._fxRaf);
-    this._fxRaf = null; this._ping = null;
+    if (this._rankRaf) cancelAnimationFrame(this._rankRaf);
+    this._fxRaf = null; this._ping = null; this._ranks = null; this._rankRaf = null;
     if (this._fadeRaf) cancelAnimationFrame(this._fadeRaf);
     if (this._growRaf) cancelAnimationFrame(this._growRaf);
     this._fadeRaf = null; this._growRaf = null; this.fading.clear(); this.rising.clear(); this.growing = [];
     this.nodesDS.clear(); this.edgesDS.clear();
     this.nodes.clear(); this.edges.clear(); this.hidden.clear(); this.expanded.clear();
     this.pathEdges = { shortest: new Set(), strongest: new Set(), sandbox: new Set() };
-    this.pathNodes = new Set(); this.focus = null; this.story = null; this.labelZoom = 1; this.endpoints = { source: null, target: null };
+    if (this._straightRaf) cancelAnimationFrame(this._straightRaf);
+    this._straightRaf = null; this.targets = new Map();
+    this.pathNodes = new Set(); this.prevPath = new Set(); this.focus = null; this.story = null; this.labelZoom = 1; this.endpoints = { source: null, target: null };
   }
 
   /**
@@ -91,6 +104,10 @@ export class GraphView {
     this.story = story ? { current: new Set(story.current || []), currentEdges: new Set(story.currentEdges || []),
                            active: new Set(story.active || []), order: new Map((story.order || []).map((q, i) => [q, i + 1])),
                            planned: new Set(story.planned || []) } : null;
+    // A big expansion (100 new nodes) cannot label everything legibly: label its best-connected new
+    // nodes, people first, so the audience can still read who arrived (the rest stay unlabelled dots).
+    // On a path moment (`calm`) only the path and the trail keep labels: the path is the story there.
+    if (this.story) this.story.named = story.calm ? new Set() : this._namedSubset(this.story.current, GraphView.STORY_LABELS);
     // Planned branches (the nodes the agent just decided to expand) light up gradually.
     const now = performance.now();
     for (const id of this.story?.planned || []) {
@@ -99,6 +116,15 @@ export class GraphView {
     }
     if (this.rising.size) this._runFade();
     this.restyleAll();
+  }
+
+  /** The nodes of `ids` worth a label: all of them when few, otherwise the top `k`, people first, by degree. */
+  _namedSubset(ids, k) {
+    const list = [...ids].map((id) => this.nodes.get(id)).filter(Boolean);
+    if (list.length <= GraphView.STORY_LABELS_ALL) return new Set(list.map((n) => n.id));
+    const person = (n) => (n.kind === "person" ? 0 : 1);
+    list.sort((a, b) => person(a) - person(b) || (b.degree || 0) - (a.degree || 0) || (a.id < b.id ? -1 : 1));
+    return new Set(list.slice(0, k).map((n) => n.id));
   }
 
   /** Lit in the story: on the trail, added by this step, or a planned branch of this turn. */
@@ -135,16 +161,22 @@ export class GraphView {
     const lit = this.focus ? this.focus.nodes.has(n.id) || this.pathNodes.has(n.id) || big
       : st ? this._storyLit(n.id) : true;
     const important = big || this.pathNodes.has(n.id) || this.expanded.has(n.id) || this.focus?.nodes.has(n.id)
-      || planned || (current && st.current.size <= 30);
+      || planned || (current && st.named.has(n.id));
     const showLabel = important || (this.nodes.size <= this.labelThreshold && lit);
     const name = n.label_en || n.label_es || n.id;
     const rank = st?.order.get(n.id);
+    // Dense graph: an older expanded node (not on the path, not part of this step) keeps only its
+    // order badge, so 25 overlapping names don't bury the path. The last few expansions stay named.
+    const badgeOnly = !!rank && this.nodes.size > this.labelThreshold && rank <= st.order.size - GraphView.NAMED_RECENT
+      && !big && !this.pathNodes.has(n.id) && !active && !planned && !current && !this.focus?.nodes.has(n.id);
     const fill = lit ? c : this.colors.dim;
     // A planned node (the agent's next call) pulses once as it lights up, then keeps a dashed ring.
     const next = planned && !this.expanded.has(n.id);
     const pulse = next && this.rising.has(n.id) ? 9 * Math.sin(Math.PI * this._rise(n.id)) : 0;
+    const sug = this._ranks?.get(n.id);
+    if (sug) return this._rankedStyle(n, sug, name, rank, c);
     return {
-      label: showLabel ? (rank ? `${orderBadge(rank)} ${name}` : name) : "",
+      label: !showLabel ? "" : badgeOnly ? orderBadge(rank) : rank ? `${orderBadge(rank)} ${name}` : name,
       color: { background: fill, border: active || next ? this.colors.fresh : big ? css("--text") : "#ffffff",
                highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
       borderWidth: active ? 5 : next ? 3 : 1.5,
@@ -169,6 +201,8 @@ export class GraphView {
     // A sandbox edge never takes a path colour: it stays pink and dashed so it can't pass for Wikidata.
     if (e.origin === "sandbox") color = this.colors.sandbox;
     const onPath = (showS && shortest.has(e.id)) || (showW && strongest.has(e.id));
+    const replaced = !onPath && this.prevPath.has(e.id) && e.origin !== "sandbox";
+    if (replaced) { color = this.colors.strongest; width = 2; dashes = [5, 6]; }
     const st = this.focus ? null : this.story;
     const current = !!st?.currentEdges.has(e.id);
     if (current && !onPath && e.origin !== "sandbox") { color = this.colors.fresh; width = 2.5; }
@@ -179,12 +213,21 @@ export class GraphView {
     const branch = !!st && ((this._onTrail(e.subject) && st.planned.has(e.object)) || (st.planned.has(e.subject) && this._onTrail(e.object)));
     const trail = !!st && ((this._onTrail(e.subject) && this._onTrail(e.object)) || branch);
     if (branch && !onPath && !current) { color = this.colors.fresh; width = 2.5; }
-    const lit = onPath || this.focus?.edges.has(e.id) || e.origin === "sandbox" || current || trail;
+    const lit = onPath || replaced || this.focus?.edges.has(e.id) || e.origin === "sandbox" || current || trail;
     const dimmed = (this.focus || st || (this.mode !== "none" && (shortest.size || strongest.size))) && !lit;
-    const fade = Math.min(this._fade(e.subject), this._fade(e.object)) * (branch ? 0.25 + 0.75 * Math.min(this._rise(e.subject), this._rise(e.object)) : 1);
+    const fade = Math.min(this._fade(e.subject), this._fade(e.object)) * (branch ? 0.25 + 0.75 * Math.min(this._rise(e.subject), this._rise(e.object)) : 1)
+      * (replaced ? 0.55 : 1);
+    // A step that adds many nodes (e.g. 100 films) would print "cast member" on every edge: then only
+    // path edges and a clicked edge keep their relation name.
+    const crowded = !!st && st.current.size > GraphView.STORY_LABELS_ALL && !onPath && !this.focus?.edges.has(e.id);
+    // A plain trail edge (two expanded nodes, not on the path) stays visible but unnamed: its label sat
+    // mid-canvas on long pale edges and read as a word floating in empty space.
+    const unnamed = !!st && !onPath && !replaced && !current && !branch && !this.focus?.edges.has(e.id) && e.origin !== "sandbox";
     return { color: { color: dimmed ? this.colors.dim : color, highlight: this.colors.select, hover: this.colors.select, opacity: fade },
              width, dashes, label: e.origin === "sandbox" ? `${e.label} (sandbox)` : e.label || e.predicate,
-             font: { color: dimmed ? "rgba(0,0,0,0)" : css("--muted") } };
+             // A hidden label also drops its white outline (vis draws it even for transparent text,
+             // which left white gaps along the edges).
+             font: dimmed || crowded || unnamed ? { color: "rgba(0,0,0,0)", strokeWidth: 0 } : { color: css("--muted"), strokeWidth: 2 } };
   }
 
   /**
@@ -351,6 +394,22 @@ export class GraphView {
     if (n) this.nodesDS.update({ id: qid, label: this._nodeStyle(n).label, mass: 6, fixed: { x: true, y: true } });
   }
 
+  /**
+   * Pin nodes where they stand (path nodes once a path appears): leaves on a path would otherwise keep
+   * drifting with the physics, out of the frame the step camera computed once (behind the step card).
+   * Nodes still growing out of their parent are pinned when their tween has ended.
+   */
+  pinNodes(ids) {
+    const pin = (list) => {
+      const ok = list.filter((id) => this.nodesDS.get(id));
+      if (ok.length) this.nodesDS.update(ok.map((id) => ({ id, fixed: { x: true, y: true } })));
+    };
+    const all = [...ids], growing = new Set(this.growing.map((g) => g.id));
+    pin(all.filter((id) => !growing.has(id)));
+    const later = all.filter((id) => growing.has(id));
+    if (later.length) setTimeout(() => pin(later), this.growthRemaining() + 50);
+  }
+
   /** Branch tweens still running: when the last one ends (ms from now), 0 if none. */
   growthRemaining() {
     if (!this.growing.length) return 0;
@@ -361,29 +420,27 @@ export class GraphView {
     clearTimeout(this._traceTimer);
     const ids = (o) => new Set(o?.result ? o.result.hops.map((h) => h.edge_id) : []);
     const cmp = sandboxComparison || comparison;
-    this.pathEdges = { shortest: ids(cmp?.shortest), strongest: ids(cmp?.strongest), sandbox: new Set() };
-    this.pathNodes = new Set();
-    for (const r of [cmp?.shortest?.result, cmp?.strongest?.result]) if (r) r.nodes.forEach((n) => this.pathNodes.add(n.qid));
+    // Demo choice: only the strongest path is shown (the backend still computes both).
+    this.pathEdges = { shortest: new Set(), strongest: ids(cmp?.strongest), sandbox: new Set() };
+    this.pathNodes = new Set(cmp?.strongest?.result ? cmp.strongest.result.nodes.map((n) => n.qid) : []);
     this.restyleAll();
   }
 
   /**
    * Like setPaths, but the new paths are DRAWN: one hop every MOTION.trace ms, from the people
-   * towards the middle (shortest and strongest together). Used when a path first appears or improves.
+   * towards the middle (strongest path only). Used when a path first appears or improves.
    */
   revealPaths(comparison) {
     clearTimeout(this._traceTimer);
-    const hops = (o) => (o?.result ? o.result.hops.map((h) => h.edge_id) : []);
-    const nodes = (o) => (o?.result ? o.result.nodes.map((n) => n.qid) : []);
-    const sh = hops(comparison?.shortest), st = hops(comparison?.strongest);
-    const shN = nodes(comparison?.shortest), stN = nodes(comparison?.strongest);
-    const total = Math.max(sh.length, st.length);
+    const r = comparison?.strongest?.result;
+    const st = r ? r.hops.map((h) => h.edge_id) : [], stN = r ? r.nodes.map((n) => n.qid) : [];
+    const total = st.length;
     if (!total) { this.setPaths(comparison); return; }
     let k = 0;
     const draw = () => {
       k += 1;
-      this.pathEdges = { shortest: new Set(sh.slice(0, k)), strongest: new Set(st.slice(0, k)), sandbox: new Set() };
-      this.pathNodes = new Set([...shN.slice(0, k + 1), ...stN.slice(0, k + 1)]);
+      this.pathEdges = { shortest: new Set(), strongest: new Set(st.slice(0, k)), sandbox: new Set() };
+      this.pathNodes = new Set(stN.slice(0, k + 1));
       this.restyleAll();
       if (k < total) this._traceTimer = setTimeout(draw, MOTION.trace);
     };
@@ -393,6 +450,11 @@ export class GraphView {
   }
 
   setMode(mode) { this.mode = mode; this.restyleAll(); }
+
+  /** The path a stronger one just replaced: drawn faint and dashed for this step only ([] clears). */
+  setPreviousPath(edgeIds) {
+    this.prevPath = new Set(edgeIds || []);
+  }
 
   setFocus(focus) {
     const nodes = new Set(focus?.nodes || []), edges = new Set(focus?.edges || []);  // accepts Sets or arrays
@@ -464,26 +526,27 @@ export class GraphView {
   }
 
   /**
-   * Step-through camera: glide (ease-in-out) to frame `nodeIds` in the canvas area below `topInset`
-   * pixels (the step card). The target is computed ONCE, from where growing branches will END, so
+   * Step-through camera: glide (ease-in-out) to frame `nodeIds` in the canvas area the step card
+   * leaves free: `inset` is {top, left} in pixels (a number means a top inset). The target is computed ONCE, from where growing branches will END, so
    * the camera follows one smooth curve instead of chasing moving nodes. If the nodes are already
    * comfortably in view it does not move at all. Never calls network.stabilize() (calling it while
    * the simulation runs unbalances vis-network's render counter and freezes later view animations,
    * which then undo every mouse zoom/drag). A user drag or wheel zoom stops the glide at once.
    */
-  frameStory(focus, topInset = 0, duration = MOTION.camera) {
+  frameStory(focus, inset = 0, duration = MOTION.camera) {
     this.stopCamera();
+    const box = this._freeBox(inset);
     // focus: {center, around}. The view is centred on `center` (e.g. the parent whose branches grow)
     // and zoomed out just enough to keep `around` (where those branches will end) in frame.
     const center = [...(focus.center || [])], ids = [...new Set([...center, ...(focus.around || [])])];
-    const target = this._frameTarget(ids, topInset, center);
+    const target = this._frameTarget(ids, box, center);
     if (!target) return;
     const from = { scale: this.network.getScale(), pos: this.network.getViewPosition() };
     const settle = (scale) => {
       this.labelZoom = Math.min(4, Math.max(1, 1 / scale));
       this.nodesDS.update([...this.nodes.values()].map((n) => ({ id: n.id, font: this._nodeStyle(n).font })));
     };
-    if (this._inView(ids, topInset, from.scale, target.scale, center)) { settle(from.scale); return; }
+    if (this._inView(ids, box, from.scale, target.scale, center)) { settle(from.scale); return; }
     settle(target.scale);
     duration = Math.max(duration, this.growthRemaining() + 350);
     const t0 = performance.now();
@@ -498,8 +561,65 @@ export class GraphView {
     this._camRaf = requestAnimationFrame(tick);
   }
 
-  /** Where a node will be once its branch has grown (its current position otherwise). */
+  /**
+   * Lay a path out the way it reads: its nodes glide (MOTION.camera, eased) to evenly spaced points on
+   * the line between the two people, so "connected" LOOKS connected and screen distance stops
+   * contradicting the hop count. `qids` runs from one person to the other; the people stay put (and
+   * are pinned, so the line holds). `bow` bends the line into an arc (canvas units, perpendicular),
+   * used when a stronger path replaces one already laid out straight. The nodes stay pinned there.
+   */
+  straightenPath(qids, { bow = 0, duration = MOTION.camera } = {}) {
+    const ids = qids.filter((id) => this.nodesDS.get(id));
+    if (ids.length < 3) return;
+    const a = this.network.getPosition(ids[0]), b = this.network.getPosition(ids[ids.length - 1]);
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, px = -dy / len, py = dx / len;
+    const n = ids.length - 1;
+    const moves = ids.slice(1, -1).map((id, i) => {
+      const k = (i + 1) / n, arc = bow * Math.sin(Math.PI * k);
+      return { id, from: this._finalPosition(id), to: { x: a.x + dx * k + px * arc, y: a.y + dy * k + py * arc } };
+    });
+    // Entities that merely sit on the line would read as part of the path ("Paulo → ③ → UN"): they
+    // glide off it, sideways, to CLEAR canvas units from the nearest segment.
+    const CLEAR = 70, pts = [a, ...moves.map((m) => m.to), b], onPath = new Set(ids);
+    for (const id of this.nodes.keys()) {
+      if (onPath.has(id) || this.hidden.has(id) || !this.nodesDS.get(id)) continue;
+      const q = this._finalPosition(id);
+      let best = null;
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const s = pts[i], e = pts[i + 1], vx = e.x - s.x, vy = e.y - s.y, l2 = vx * vx + vy * vy || 1;
+        const u = Math.max(0, Math.min(1, ((q.x - s.x) * vx + (q.y - s.y) * vy) / l2));
+        const cx = s.x + u * vx, cy = s.y + u * vy, d = Math.hypot(q.x - cx, q.y - cy);
+        if (!best || d < best.d) best = { d, cx, cy, vx, vy };
+      }
+      if (!best || best.d >= CLEAR) continue;
+      // away from the line, on the side the node already is (or "up" when it sits exactly on it)
+      let nx = q.x - best.cx, ny = q.y - best.cy, nl = Math.hypot(nx, ny);
+      if (nl < 1e-6) { const l = Math.hypot(best.vx, best.vy) || 1; nx = best.vy / l; ny = -best.vx / l; nl = 1; }
+      moves.push({ id, from: q, to: { x: best.cx + (nx / nl) * CLEAR, y: best.cy + (ny / nl) * CLEAR }, aside: true });
+    }
+    // A node still growing out of its parent stops growing: it goes to its place on the path instead.
+    const moving = new Set(moves.filter((m) => !m.aside).map((m) => m.id));
+    this.growing = this.growing.filter((g) => !moves.some((m) => m.aside && m.id === g.id));
+    this.growing = this.growing.filter((g) => !moving.has(g.id));
+    this.targets = new Map(moves.map((m) => [m.id, m.to]));
+    this.nodesDS.update([ids[0], ids[ids.length - 1], ...moving].map((id) => ({ id, fixed: { x: true, y: true } })));
+    if (this._straightRaf) cancelAnimationFrame(this._straightRaf);
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - t0) / duration), e = easeInOut(t);
+      for (const m of moves) {
+        if (this.nodesDS.get(m.id)) this.network.moveNode(m.id, m.from.x + (m.to.x - m.from.x) * e, m.from.y + (m.to.y - m.from.y) * e);
+      }
+      if (t < 1) this._straightRaf = requestAnimationFrame(tick);
+      else { this._straightRaf = null; this.targets = new Map(); }
+    };
+    this._straightRaf = requestAnimationFrame(tick);
+  }
+
+  /** Where a node will be once its branch has grown or its path glide ends (its current position otherwise). */
   _finalPosition(id) {
+    const to = this.targets.get(id);
+    if (to) return to;
     const g = this.growing.find((x) => x.id === id);
     if (g && this.nodesDS.get(g.origin)) {
       const p = this.network.getPosition(g.origin);
@@ -509,29 +629,32 @@ export class GraphView {
   }
 
   /** True when every node is inside the free area and the zoom is not far from the ideal one. */
-  _inView(ids, topInset, scale, idealScale, center = []) {
+  _inView(ids, box, scale, idealScale, center = []) {
     if (scale < idealScale * 0.6 || scale > idealScale * 1.8) return false;
-    const { width, height } = this.container.getBoundingClientRect();
-    const midY = (topInset + height - 40) / 2, freeH = height - 40 - topInset;
+    const { top, left, width, height, bottom } = box;
+    const midX = (left + width) / 2, freeW = width - left;
+    const midY = (top + height - bottom) / 2, freeH = height - bottom - top;
     const offCentre = center.filter((id) => this.nodesDS.get(id)).some((id) => {
       const p = this.network.canvasToDOM(this._finalPosition(id));
-      return Math.abs(p.x - width / 2) > width * 0.2 || Math.abs(p.y - midY) > freeH * 0.2;
+      return Math.abs(p.x - midX) > freeW * 0.2 || Math.abs(p.y - midY) > freeH * 0.2;
     });
     if (offCentre) return false;
     const margin = 110;  // room for the label beside a node
     return ids.filter((id) => this.nodesDS.get(id) && !this.hidden.has(id)).every((id) => {
       const p = this.network.canvasToDOM(this._finalPosition(id));
-      return p.x > margin && p.x < width - margin && p.y > topInset + 20 && p.y < height - 60;
+      return p.x > left + margin && p.x < width - margin && p.y > top + 20 && p.y < height - 60;
     });
   }
 
   // ---- step effects (presentation only: they depict what a tool does, never its result) ----------
 
   stopFx() {
-    if (!this._fxRaf) return;
-    cancelAnimationFrame(this._fxRaf);
-    this._fxRaf = null;
-    this._ping = null;
+    const had = this._fxRaf || this._ranks;
+    if (this._fxRaf) cancelAnimationFrame(this._fxRaf);
+    if (this._rankRaf) cancelAnimationFrame(this._rankRaf);
+    this._fxRaf = null; this._rankRaf = null;
+    this._ping = null; this._ranks = null;
+    if (!had) return;
     this.restyleAll();
     this.network.redraw();
   }
@@ -540,7 +663,7 @@ export class GraphView {
    * Run an effect until stopFx() (the next step) or for `duration` ms. Frames are throttled to
    * ~25 fps: the effects restyle hundreds of edges per frame.
    */
-  _runFx(duration, frame, minGap = 40) {
+  _runFx(duration, frame, minGap = 40, onDone = null) {
     this.stopFx();
     const t0 = performance.now();
     let last = -Infinity;
@@ -548,7 +671,7 @@ export class GraphView {
       const ms = now - t0, t = Number.isFinite(duration) ? Math.min(1, ms / duration) : 0;
       if (now - last >= minGap) { last = now; frame(t, ms); }
       if (t < 1) this._fxRaf = requestAnimationFrame(tick);
-      else { this._fxRaf = null; this.restyleAll(); }
+      else { this._fxRaf = null; onDone?.(); this.restyleAll(); }
     };
     this._fxRaf = requestAnimationFrame(tick);
   }
@@ -610,8 +733,8 @@ export class GraphView {
    * node of its branch (forward only); each edge's colour fades back to normal once its ping arrives,
    * and after a short rest in normal colours the branch's next ping leaves. Each branch loops on its
    * own depth (node-local timer). Edges keep their usual style;
-   * the part of an edge the ping has already crossed is painted a pastel hue (by its direction around
-   * its person), so colour spreads outward with the pings. Each edge's
+   * the part of an edge the ping has already crossed is painted in a light tint of the path colour, so
+   * the search visibly spreads outward. Each edge's
    * ping sets off a little later than its neighbours (random `jit`), so they don't move in lockstep.
    */
   fxPathSearch(rules, hopMs = 800) {
@@ -631,7 +754,6 @@ export class GraphView {
         if (!best || h < best.h) best = { id: e.id, root, near, far, h };
       }
       if (best && pos[best.far] && pos[best.root] && !this.hidden.has(best.far) && !this.hidden.has(best.near)) {
-        best.hue = Math.round((this._angle(pos, best.root, pos[best.far]) * 180) / Math.PI);
         best.jit = Math.random() * PING_JITTER;  // this edge's ping leaves a little late
         best.paint = !onPath(best.id);           // path edges keep their path colour
         pings.push(best);
@@ -649,7 +771,10 @@ export class GraphView {
     }
     for (const g of pings) g.cycle = depth.get(g.branch) * hopMs + PING_FADE + PING_REST;  // ms
     this._runFx(Infinity, () => this.network.redraw(), 0);  // redraw every frame: the dots move smoothly
-    this._ping = { pings, t0: performance.now(), hopMs };
+    // One colour, the path colour: the pings ARE the path search. (A rainbow by direction read as noise.)
+    const hex = this.colors.strongest.replace("#", "");
+    const rgb = hex.length === 6 ? [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)) : [217, 119, 6];
+    this._ping = { pings, t0: performance.now(), hopMs, rgb: rgb.join(",") };
   }
 
   /**
@@ -691,7 +816,7 @@ export class GraphView {
           const pt = this._edgePoint(g.id, g.near, (frac * i) / n);
           i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y);
         }
-        ctx.strokeStyle = `hsla(${g.hue},65%,72%,${(0.95 * alpha).toFixed(3)})`;
+        ctx.strokeStyle = `rgba(${p.rgb},${(0.45 * alpha).toFixed(3)})`;
         ctx.lineWidth = Math.max(2, bw + 0.8);
         ctx.stroke();
       }
@@ -702,8 +827,8 @@ export class GraphView {
         const f = Math.max(0, frac - k * 0.035);
         const pt = this._edgePoint(g.id, g.near, f);
         ctx.beginPath();
-        ctx.fillStyle = `hsla(${g.hue},70%,${k ? 78 : 62}%,${k ? 0.45 - k * 0.13 : 1})`;
-        if (!k) { ctx.shadowColor = `hsl(${g.hue},70%,70%)`; ctx.shadowBlur = 6; }
+        ctx.fillStyle = `rgba(${p.rgb},${k ? 0.45 - k * 0.13 : 1})`;
+        if (!k) { ctx.shadowColor = `rgba(${p.rgb},0.6)`; ctx.shadowBlur = 6; }
         ctx.arc(pt.x, pt.y, r * (1 - k * 0.2), 0, 2 * Math.PI);
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -715,9 +840,12 @@ export class GraphView {
   /**
    * get_search_status: a radar beam sweeps around each person and lights, in soft green, exactly the
    * candidates the backend ranks (rank_frontier): reached through expanded nodes, not expanded
-   * themselves, not hubs, under the hop limit, and with links still unknown. Loops until the next step.
+   * themselves, not hubs, under the hop limit, and with links still unknown.
+   * With `ranked` (the suggestions the agent was shown, recorded in the tool.completed event) the beam
+   * sweeps once and the graph then settles on the ranking: the suggested nodes stand out, brightest
+   * at #1, each with a "#k" pill. Without it (older recordings) the sweep loops until the next step.
    */
-  fxFrontierScan(rules, period = 4500) {
+  fxFrontierScan(rules, ranked = null, period = 4500) {
     const { source, target } = this.endpoints;
     const through = new Set([...this.expanded]);
     const ds = this._searchHops(source, rules, through), dt = this._searchHops(target, rules, through);
@@ -734,14 +862,17 @@ export class GraphView {
     }
     const ids = [...new Set([...cands, source, target])];
     const ring = this.colors.fresh, fill = this.colors.freshSoft, tail = 1.1, lit = new Set();
-    this._runFx(Infinity, (_, ms) => {
+    const once = Array.isArray(ranked);
+    const frame = (t, ms) => {
       const pos = this.network.getPositions(ids);
-      const beam = ((ms / period) * 2 * Math.PI) % (2 * Math.PI);
+      // once: a single turn plus the tail, so the last candidates fade before the ranking appears
+      const beam = once ? t * (2 * Math.PI + tail) : ((ms / period) * 2 * Math.PI) % (2 * Math.PI);
       const updates = [];
       for (const id of cands) {
-        const behind = (beam - this._angle(pos, root.get(id), pos[id]) + 2 * Math.PI) % (2 * Math.PI);
+        let behind = beam - this._angle(pos, root.get(id), pos[id]);
+        behind = once ? behind : (behind + 2 * Math.PI) % (2 * Math.PI);
         const st = this._nodeStyle(this.nodes.get(id));
-        if (behind < tail) {
+        if (behind >= 0 && behind < tail) {
           const glow = 1 - behind / tail;  // brightest right under the beam, fading behind it (comet tail)
           updates.push({ id, opacity: Math.max(st.opacity, 0.35 + 0.65 * glow), borderWidth: 1.5 + 3.5 * glow, size: st.size + 5 * glow,
                          color: { ...st.color, border: ring, background: glow > 0.35 ? fill : st.color.background } });
@@ -752,7 +883,68 @@ export class GraphView {
         }
       }
       if (updates.length) this.nodesDS.update(updates);
+    };
+    if (!once) { this._runFx(Infinity, frame); return; }
+    const shown = ranked.filter((s) => this.nodes.has(s.qid) && !this.hidden.has(s.qid));
+    this._runFx(RANK_SWEEP, frame, 40, () => {
+      if (!shown.length) return;
+      this._ranks = new Map(shown.map((s) => [s.qid, s]));
+      this._ranksT0 = performance.now();
+      // the "#k" pills pop in one after another, in rank order; redraw until the last has landed
+      const until = this._ranksT0 + (shown.length - 1) * RANK_STAGGER + RANK_POP;
+      const tick = (now) => {
+        this.network.redraw();
+        this._rankRaf = now < until ? requestAnimationFrame(tick) : null;
+      };
+      this._rankRaf = requestAnimationFrame(tick);
     });
+  }
+
+  /** How a ranked suggestion looks: soft green, the higher the rank the bigger and brighter. */
+  _rankedStyle(n, sug, name, orderRank, c) {
+    const k = Math.max(1, this._ranks.size), strength = 1 - (0.55 * (sug.rank - 1)) / Math.max(1, k - 1);
+    const big = this._role(n) === "source" || this._role(n) === "target";
+    const base = big ? 24 : n.kind === "person" ? 10 : 8 + Math.min(9, Math.log1p(n.degree || 0));
+    return {
+      label: orderRank ? `${orderBadge(orderRank)} ${name}` : name,
+      color: { background: this.colors.freshSoft, border: this.colors.fresh,
+               highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
+      borderWidth: 2 + 2.5 * strength,
+      shapeProperties: { borderDashes: false },
+      shape: n.kind === "person" || big ? "dot" : "square",
+      size: base + 2 + 4 * strength,
+      font: { size: (this.story ? 14 * this.labelZoom : 14), bold: sug.rank <= 3 ? { color: css("--text") } : undefined },
+      opacity: 0.55 + 0.45 * strength,
+    };
+  }
+
+  /** afterDrawing hook: the "#k" pills on ranked suggestions (constant size on screen). */
+  _drawRanks(ctx) {
+    if (!this._ranks) return;
+    const scale = this.network.getScale(), now = performance.now();
+    const px = 11 / scale, padX = 4 / scale, h = 15 / scale;
+    ctx.save();
+    ctx.font = `600 ${px}px system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const [id, sug] of this._ranks) {
+      const bn = this.network.body.nodes[id];
+      if (!bn || bn.options.hidden) continue;
+      const a = Math.min(1, Math.max(0, (now - this._ranksT0 - (sug.rank - 1) * RANK_STAGGER) / RANK_POP));
+      if (a <= 0) continue;
+      const e = easeInOut(a), text = `#${sug.rank}`;
+      const rad = Math.max(bn.shape?.width || 0, bn.shape?.height || 0) / 2 || bn.options.size || 10;
+      const w = ctx.measureText(text).width + 2 * padX;
+      const x = bn.x + rad * 0.8 + w / 2, y = bn.y - rad * 0.8 - (4 / scale) * e;
+      ctx.globalAlpha = e;
+      ctx.fillStyle = this.colors.fresh;
+      ctx.beginPath();
+      ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(text, x, y + 0.5 / scale);
+    }
+    ctx.restore();
   }
 
   /** Fit every visible node in the area below the step card (a decision about the whole search). */
@@ -766,10 +958,21 @@ export class GraphView {
   }
 
   /**
-   * {scale, position} that fits `ids` into the canvas area below `topInset` (legend kept clear).
+   * The canvas area the step card leaves free: {top, left, width, height, bottom}, where `bottom` keeps
+   * the legend clear. `inset` is {top, left} or a number (a top inset).
+   */
+  _freeBox(inset) {
+    const { width, height } = this.container.getBoundingClientRect();
+    const { top = 0, left = 0 } = typeof inset === "number" ? { top: inset } : inset || {};
+    // Never let a card squeeze the free area to nothing (e.g. a very narrow window).
+    return { top: Math.min(top, height * 0.6), left: Math.min(left, width * 0.6), width, height, bottom: 40 };
+  }
+
+  /**
+   * {scale, position} that fits `ids` into the free area of `box` (see _freeBox).
    * With `center`, the frame is centred on those nodes and made symmetric around them.
    */
-  _frameTarget(ids, topInset, center = []) {
+  _frameTarget(ids, box, center = []) {
     const shown = ids.filter((id) => this.nodesDS.get(id) && !this.hidden.has(id));
     if (!shown.length) return null;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -781,11 +984,13 @@ export class GraphView {
       const hx = 1.4 * Math.max(cx - x0, x1 - cx, 60), hy = 1.4 * Math.max(cy - y0, y1 - cy, 60);
       x0 = cx - hx; x1 = cx + hx; y0 = cy - hy; y1 = cy + hy;
     }
-    const { width, height } = this.container.getBoundingClientRect();
-    const pad = 70, bottom = 40, freeH = Math.max(150, height - topInset - bottom);  // bottom: the legend
-    const scale = Math.max(0.15, Math.min(1.1, width / (x1 - x0 + 2 * pad), freeH / (y1 - y0 + 2 * pad)));
+    const { top, left, width, height, bottom } = box;
+    // Sideways a node needs room for its label (centred under it, often wider than the node): the same
+    // 110 px margin _inView checks, else a label slid behind the step card on the left.
+    const pad = 70, padX = 110, freeW = Math.max(200, width - left), freeH = Math.max(150, height - top - bottom);
+    const scale = Math.max(0.15, Math.min(1.1, freeW / (x1 - x0 + 2 * padX), freeH / (y1 - y0 + 2 * pad)));
     // moveTo centres `position` in the canvas; shift it so the frame sits in the free area.
-    return { scale, position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - (topInset - bottom) / 2 / scale } };
+    return { scale, position: { x: (x0 + x1) / 2 - left / 2 / scale, y: (y0 + y1) / 2 - (top - bottom) / 2 / scale } };
   }
 
   fitTo(nodeIds) {

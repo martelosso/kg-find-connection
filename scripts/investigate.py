@@ -24,12 +24,10 @@ sys.path.insert(0, str(ROOT))
 
 from src.config import load_policy, load_search_config  # noqa: E402
 from src.investigations.baseline import run_deterministic  # noqa: E402
-from src.graph.paths import compare_paths  # noqa: E402
-from src.investigations.events import Event  # noqa: E402
-from src.investigations.replay import normalized_events, reconstruct, trace_dict  # noqa: E402
+from src.investigations.recording import RecordError, entry_yaml, prepare_recording, write_recording  # noqa: E402
 from src.investigations.service import CASES_DIR, DEFAULT_GRAPH_PATH, TRACES_DIR  # noqa: E402
 from src.investigations.state import InvestigationState  # noqa: E402
-from src.wikidata.offline import FixtureProvider, SqlitePeopleGraphProvider, build_case_fixture  # noqa: E402
+from src.wikidata.offline import SqlitePeopleGraphProvider  # noqa: E402
 
 
 def describe(state: InvestigationState) -> None:
@@ -117,69 +115,20 @@ def main(argv: list[str] | None = None) -> int:
         describe(state)
     if not args.record:
         return 0
-    return record(args, state, provider, policy, search, run)
+    return record(args, state, provider, policy, search)
 
 
-def record(args, state, provider, policy, search, run) -> int:
-    if state.status == "failed":
-        print("not recording a failed investigation", file=sys.stderr)
-        return 1
-    if not (state.comparison and state.comparison.shortest.result):
-        print("not recording: no path was found (demo cases must show a real connection)", file=sys.stderr)
-        return 1
-    expanded = [r.qid for r in state.expansions if r.error is None]
-    cap = max(500, search.budgets.max_edges_per_expansion)
-    fixture = build_case_fixture(provider, args.record, expanded + [args.source, args.target],
-                                 policy.properties.keys(), cap=cap)
-    trace = trace_dict(state, args.record, {"provider": provider.name, "snapshot": provider.snapshot,
-                                            "strategy": state.strategy, "model": state.events.events[0].payload.get("model"),
-                                            "policy_version": policy.version, "search_version": search.version})
-    # Verification. Deterministic runs must be reproduced exactly from the fixture alone. LLM runs
-    # cannot be re-run identically, so their trace must rebuild the same graph and paths, and the
-    # backend must recompute the same paths from that graph.
-    if state.strategy == "deterministic":
-        replayed = run(FixtureProvider([fixture]))
-        if normalized_events(replayed.events.events) != normalized_events(state.events.events):
-            print("fixture does NOT reproduce the run; not writing files", file=sys.stderr)
-            return 2
-        how = "fixture reproduces the run exactly"
-    else:
-        events = [Event.model_validate(e) for e in trace["events"]]
-        graph, cmp = reconstruct(events)
-        recomputed = compare_paths(graph, args.source, args.target, policy, state.groups)
-        if cmp != state.comparison or recomputed != state.comparison:
-            print("trace does NOT rebuild the same paths; not writing files", file=sys.stderr)
-            return 2
-        how = "trace rebuilds the same graph and paths"
-
-    args.cases_dir.mkdir(parents=True, exist_ok=True)
-    args.traces_dir.mkdir(parents=True, exist_ok=True)
-    fx_path = args.cases_dir / f"{args.record}.json"
-    tr_path = args.traces_dir / f"{args.record}.json"
-    fx_path.write_text(json.dumps(fixture, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    tr_path.write_text(json.dumps(trace, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"\nwrote {fx_path} and {tr_path} ({how})")
-    s, t = state.graph.node(args.source), state.graph.node(args.target)
-    strategy = "AI agent" if state.strategy == "agent" else "deterministic exploration"
-    title = args.title or f"{s.label()} ↔ {t.label()}"
-    entry = [
-        f"  - id: {args.record}",
-        f"    title: {json.dumps(title, ensure_ascii=False)}",
-        f"    source_qid: {args.source}",
-        f"    source_label: {json.dumps(s.label(), ensure_ascii=False)}",
-        f"    target_qid: {args.target}",
-        f"    target_label: {json.dumps(t.label(), ensure_ascii=False)}",
-    ]
-    if state.groups != policy.default_groups:
-        entry.append(f"    groups: {sorted(state.groups)}")
-    entry += [
-        f"    fixture: data/fixtures/cases/{args.record}.json",
-        f"    trace: data/fixtures/event_traces/{args.record}.json",
-        f"    notes: {json.dumps(f'Recorded {strategy} run.', ensure_ascii=False)}",
-        f"    verified_on: {json.dumps(str(provider.snapshot))}",
-    ]
+def record(args, state, provider, policy, search) -> int:
+    """Same checks as the workbench's "Save as demo replay" (src/investigations/recording.py)."""
+    try:
+        rec = prepare_recording(state, provider, policy, search, args.record, title=args.title)
+    except RecordError as err:
+        print(f"not recording: {err.message}", file=sys.stderr)
+        return 2 if err.code == "not_reproducible" else 1
+    fx_path, tr_path = write_recording(rec, args.cases_dir, args.traces_dir)
+    print(f"\nwrote {fx_path} and {tr_path} ({rec.verification})")
     print("\nAdd to config/demo_cases.yaml after checking the paths above:\n")
-    print("\n".join(entry))
+    print(entry_yaml(rec.entry), end="")
     return 0
 
 

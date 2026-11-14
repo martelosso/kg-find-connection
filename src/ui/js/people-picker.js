@@ -19,7 +19,7 @@ export class PeoplePicker {
 
   async _query() {
     clearTimeout(this.timer);
-    this.value = null; this.hint.textContent = "";
+    this.value = null; this.hint.textContent = ""; this.input.title = "";
     const q = this.input.value.trim();
     if (q.length < 2) { this.items = []; this._render(); return; }
     const seq = ++this.seq;
@@ -54,10 +54,12 @@ export class PeoplePicker {
   set(m) {
     this.value = m;
     this.input.value = m.label_en || m.label_es || m.qid;
-    this.hint.textContent = `${m.qid} · ${m.degree} links`;
+    // The ID and link count go in a tooltip: a line under the input made the toolbar two rows tall.
+    this.hint.textContent = "";
+    this.input.title = `${m.qid}${m.degree != null ? ` · ${m.degree} links` : ""}`;
     this._close();
     this.onPick?.(m);
   }
 
-  clear() { this.value = null; this.input.value = ""; this.hint.textContent = ""; }
+  clear() { this.value = null; this.input.value = ""; this.input.title = ""; this.hint.textContent = ""; }
 }

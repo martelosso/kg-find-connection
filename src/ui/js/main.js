@@ -5,10 +5,11 @@
 import { api, streamEvents } from "./api.js";
 import { $, el, wikidataLink } from "./dom.js";
 import { GraphView } from "./graph-view.js";
-import { InvestigationModel, label, pathsText } from "./investigation.js";
+import { InvestigationModel, label } from "./investigation.js";
 import { PathComparison } from "./path-comparison.js";
 import { PeoplePicker } from "./people-picker.js";
-import { StepBook, describeStep, orderBadge, toolPurpose, toolTarget } from "./steps.js";
+import { StepBook, describeStep, describeTail, meetingPoint, orderBadge, pathChain, pathChains, resultHeadline, strengthSummary,
+         toolAction, toolPurpose, whyStronger } from "./steps.js";
 import { Timeline } from "./timeline.js";
 import { TurtleEditor } from "./turtle-editor.js";
 
@@ -21,13 +22,14 @@ const model = new InvestigationModel();
 let es = null;
 let health = null;
 let sandbox = null;          // last overlay response
-let pathMode = "both";
+let pathMode = "strongest";
 let turtleTimer = null;
 let turtleStale = false;
 let shownEdgeIds = null;     // Wikidata edges in the Turtle the editor was given (null = all)
 // Step-through presentation (plan §2): every run is stepped. Its events are buffered in `book` and
 // revealed one step at a time with Next / Back; nothing plays itself out.
 let stepRun = false;         // a run is being stepped through
+let quietApply = false;      // applying the folded tail: no green flash for its new statements
 let stepIndex = -1;          // last revealed step (-1 = none yet)
 const book = new StepBook();
 
@@ -43,26 +45,42 @@ const editor = new TurtleEditor($("#cm-wrap"), {
 const pickSource = new PeoplePicker($("#pick-source"), { placeholder: "From: name or QID" });
 const pickTarget = new PeoplePicker($("#pick-target"), { placeholder: "To: name or QID" });
 
-// Groups that are off by default (the weak ones) sit behind one "Weak links" button so the toolbar
-// stays on two rows on a 1366px projector. A weak group that is switched on stays visible.
+// Relationship groups live in one "Relations ▾" menu (checkboxes), so the toolbar stays on one row:
+// the groups on by default first, then the weak ones. The button shows how many are on.
 function renderGroups(groups) {
-  let open = false;
-  const weak = [];
-  const buttons = groups.map(([id, text, on, title]) => {
-    const b = el("button", { class: `tog${on ? " on" : ""}`, "data-group": id, type: "button", title: title || text }, text);
-    b.addEventListener("click", () => { b.classList.toggle("on"); sync(); });
-    if (!on) weak.push(b);
-    return b;
-  });
-  const more = el("button", { class: "tog more", type: "button", title: "Show weak relationship groups (off by default)" });
-  more.addEventListener("click", () => { open = !open; sync(); });
-  function sync() {
-    for (const b of weak) b.hidden = !open && !b.classList.contains("on");
-    more.textContent = open ? "Weak links ◂" : `Weak links (${weak.length}) ▸`;
-  }
-  sync();
-  $("#groups").replaceChildren(...buttons, ...(weak.length ? [more] : []));
+  // Under the "Weak links" heading the "(weak)" suffix of each label would only repeat it.
+  const row = ([id, text, on, title]) => el("label", { class: "menu-item", title: title || text },
+    el("input", { type: "checkbox", "data-group": id, checked: on, on: { change: syncGroupCount } }), " ",
+    on ? text : String(text).replace(/\s*\(weak\)\s*$/i, ""));
+  const strong = groups.filter((g) => g[2]), weak = groups.filter((g) => !g[2]);
+  $("#groups").replaceChildren(...strong.map(row),
+    weak.length ? el("div", { class: "menu-sep" }, "Weak links (off by default)") : null, ...weak.map(row));
+  syncGroupCount();
 }
+function enabledGroups() { return [...document.querySelectorAll("#groups input[data-group]:checked")].map((b) => b.dataset.group); }
+function syncGroupCount() {
+  $("#groups-count").textContent = `${enabledGroups().length}/${document.querySelectorAll("#groups input[data-group]").length}`;
+}
+// A small dropdown: the button toggles the panel; a click outside or Escape closes it.
+function dropdown(button, panel) {
+  const set = (open) => { panel.hidden = !open; button.setAttribute("aria-expanded", String(open)); button.classList.toggle("on", open); };
+  button.addEventListener("click", (e) => { e.stopPropagation(); set(panel.hidden); });
+  panel.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => set(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") set(false); });
+}
+dropdown($("#groups-btn"), $("#groups"));
+
+// Mode: a two-way switch. It also follows the run on screen (a replay of an agent run shows "AI agent").
+function getMode() { return $("#mode .on")?.dataset.mode || "deterministic"; }
+function setMode(mode) {
+  const b = $(`#mode [data-mode="${mode}"]`);
+  if (!b) return;
+  for (const x of document.querySelectorAll("#mode button")) {
+    x.classList.toggle("on", x === b); x.setAttribute("aria-checked", String(x === b));
+  }
+}
+for (const b of document.querySelectorAll("#mode button")) b.addEventListener("click", () => setMode(b.dataset.mode));
 renderGroups(GROUPS);
 
 // ---- startup ----------------------------------------------------------------------------------
@@ -78,11 +96,13 @@ async function refreshHealth() {
     $("#conn").className = "sd";
     $("#conn-text").textContent = "Server online";
     $("#provider").textContent = prov;
-    const agentOpt = $("#mode option[value=agent]");
-    agentOpt.disabled = !health.agent.available;
-    agentOpt.textContent = health.agent.available ? `AI agent (${health.agent.model})` : "AI agent (unavailable: no API key)";
-    if (!health.agent.available && $("#mode").value === "agent") $("#mode").value = "deterministic";
-    $("#mode option[value=deterministic]").disabled = !health.provider;
+    const agentBtn = $('#mode [data-mode="agent"]'), detBtn = $('#mode [data-mode="deterministic"]');
+    agentBtn.disabled = !health.agent.available;
+    agentBtn.title = health.agent.available ? `LLM agent (${health.agent.model}): the model chooses every tool call`
+      : "LLM agent unavailable: no API key on the server";
+    detBtn.disabled = !health.provider;
+    detBtn.title = "Deterministic baseline: a fixed frontier-ranking rule chooses every expansion (no LLM)";
+    if (!health.agent.available && getMode() === "agent" && !model.id) setMode("deterministic");
   } catch {
     $("#conn").className = "sd err";
     $("#conn-text").textContent = "Server offline";
@@ -93,8 +113,13 @@ async function loadCases() {
   try {
     const { cases } = await api.demoCases();
     const sel = $("#replay");
-    sel.replaceChildren(el("option", { value: "" }, cases.some((c) => c.trace) ? "Replay a demo case…" : "No recorded demo cases yet"),
-      ...cases.filter((c) => c.trace).map((c) => el("option", { value: c.id }, c.title)));
+    // Grouped by who explored, so the titles can stay short ("(AI agent)" is said by the group).
+    const recorded = cases.filter((c) => c.trace);
+    const isAgent = (c) => c.mode === "agent" || /\(AI agent\)\s*$/.test(c.title || "");
+    const opt = (c) => el("option", { value: c.id }, String(c.title || c.id).replace(/\s*\(AI agent\)\s*$/, ""));
+    const group = (label, list) => list.length ? el("optgroup", { label }, ...list.map(opt)) : null;
+    sel.replaceChildren(el("option", { value: "" }, recorded.length ? "Demo replays…" : "No recorded demo cases yet"),
+      group("LLM agent", recorded.filter(isAgent)), group("Deterministic baseline (no LLM)", recorded.filter((c) => !isAgent(c))));
     sel.disabled = !cases.some((c) => c.trace);
     window.__demoCases = cases;
   } catch { /* health shows offline */ }
@@ -111,13 +136,16 @@ setInterval(refreshHealth, 15000);
     if (!qid) continue;
     try { const res = await api.searchPeople(qid); if (res.matches[0]) picker.set(res.matches[0]); } catch {}
   }
-  if (q.get("mode")) $("#mode").value = q.get("mode");
+  if (q.get("mode")) setMode(q.get("mode"));
 })();
 
 // ---- run control ------------------------------------------------------------------------------
-$("#go").addEventListener("click", () => start());
+// One button: Explore when idle, Stop while a run is open (it used to be a separate Cancel button).
+$("#go").addEventListener("click", async () => {
+  if (model.id && model.status === "running") { try { await api.cancel(model.id); } catch {} return; }
+  start();
+});
 $("#replay").addEventListener("change", () => { if ($("#replay").value) start($("#replay").value); });
-$("#cancel").addEventListener("click", async () => { if (model.id) try { await api.cancel(model.id); } catch {} });
 $("#reset").addEventListener("click", () => {
   // A stepped run stays "running" until its last step is shown: stop it on the server too, then
   // re-enable Explore and the replay picker (they are disabled while a run is open).
@@ -130,8 +158,8 @@ $("#reset").addEventListener("click", () => {
 function resetAll() {
   es?.close(); es = null;
   model.reset(); graph.reset(); timeline.clear();
-  book.reset(); stepRun = false; stepIndex = -1; $("#step-card").hidden = true;
-  sandbox = null; pathMode = "both"; turtleStale = false;
+  book.reset(); stepRun = false; stepIndex = -1; $("#step-card").hidden = true; saveState = null;
+  sandbox = null; pathMode = "strongest"; turtleStale = false;
   paths.update({ comparison: null, sandbox: null, answer: null, status: "idle" });
   editor.setText("", []);
   $("#inspector").hidden = true;
@@ -144,9 +172,9 @@ async function start(replayCase) {
   if (replayCase) body = { mode: "replay", case_id: replayCase, replay_delay_seconds: 0 };
   else {
     if (!pickSource.value || !pickTarget.value) { setStatus("error", "Pick both people from the suggestions first."); return; }
-    const groups = [...document.querySelectorAll("#groups .tog.on")].map((b) => b.dataset.group);
-    if (!groups.length) { setStatus("error", "Enable at least one relationship group."); return; }
-    body = { source_qid: pickSource.value.qid, target_qid: pickTarget.value.qid, mode: $("#mode").value, groups };
+    const groups = enabledGroups();
+    if (!groups.length) { setStatus("error", "Enable at least one relation group."); return; }
+    body = { source_qid: pickSource.value.qid, target_qid: pickTarget.value.qid, mode: getMode(), groups };
   }
   setStatus("busy", replayCase ? "Loading replay…" : "Starting…");
   try {
@@ -167,7 +195,14 @@ async function start(replayCase) {
 }
 
 function setRunning(on) {
-  $("#go").disabled = on; $("#cancel").disabled = !on; $("#replay").disabled = on || !(window.__demoCases || []).some((c) => c.trace);
+  // While a run is open the switch shows that run's strategy and the menu its setup: lock both.
+  $("#mode").classList.toggle("locked", on);
+  $("#mode").title = on ? "The strategy of the run on screen (Reset or wait for the end to change it)" : "Who decides what to explore next";
+  $("#groups-btn").disabled = on;
+  $("#go").textContent = on ? "Stop" : "Explore";
+  $("#go").classList.toggle("primary", !on);
+  $("#go").title = on ? "Stop this run (what was found so far stays on screen)" : "Start exploring between the two people";
+  $("#replay").disabled = on || !(window.__demoCases || []).some((c) => c.trace);
   $("#apply-sandbox").disabled = !editor.isDirty || !canEditSandbox();
   $("#clear-sandbox").disabled = !sandbox?.sandbox_edges?.length || on;
 }
@@ -176,6 +211,9 @@ function setRunning(on) {
 function onEvent(ev) {
   if (stepRun) {
     if (book.push(ev)) {
+      // Run over: the search for a stronger path that found none becomes one step (never a step the
+      // presenter has already seen).
+      if (book.done) book.foldTail(Math.max(stepIndex, 0));
       if (stepIndex < 0 && book.isComplete(0)) nextStep();  // the setup step shows on its own
       else renderStepCard();
     }
@@ -191,6 +229,7 @@ function applyEvent(ev) {
   switch (ev.type) {
     case "investigation.started":
       setBadges(p);
+      setMode(p.strategy === "agent" ? "agent" : "deterministic");  // the switch shows the run on screen
       setStatus("busy", p.run_mode === "replay" ? `Replaying recorded case “${p.replay_of}” (recorded ${fmtTime(p.recorded_at)})` : "Exploring…");
       paths.update({ status: "running" });
       break;
@@ -204,7 +243,7 @@ function applyEvent(ev) {
     case "graph.expanded":
       graph.markExpanded(p.expanded_qid);
       graph.addNodes(change.addedNodes.map((id) => model.nodes.get(id)), { origin: p.expanded_qid });
-      graph.addEdges(change.addedEdges.map((id) => model.edges.get(id)), { fresh: true });
+      graph.addEdges(change.addedEdges.map((id) => model.edges.get(id)), { fresh: !quietApply });
       graph.applyCap();
       scheduleTurtle();
       break;
@@ -231,7 +270,7 @@ function finish() {
     const found = f.outcome === "path_found";
     setStatus(model.status === "completed" ? "ok" : "warn",
       `${model.status === "completed" ? "Completed" : "Partial result"}: ${found ? "connection found" : "no connection found"} `
-      + `(${String(f.stop_reason).replaceAll("_", " ")}) · among explored relationships only`);
+      + `(${String(f.stop_reason).replaceAll("_", " ")}) · within the explored subgraph only`);
   }
   if (!stepRun) graph.fitWhenSettled(model.comparison?.shortest?.result ? model.pathNodeIds() : null);  // stepping frames itself
   loadTurtle();
@@ -241,14 +280,32 @@ function finish() {
 function nextStep() {
   if (!stepRun || stepIndex >= book.lastComplete) return;
   stepIndex += 1;
-  for (const ev of book.steps[stepIndex].events) applyEvent(ev);
+  // The folded "looked further, nothing stronger" step adds its entities greyed out: bright green
+  // would say "look here!" while the card says it led nowhere.
+  quietApply = book.steps[stepIndex].kind === "tail";
+  try { for (const ev of book.steps[stepIndex].events) applyEvent(ev); } finally { quietApply = false; }
   afterStep();
 }
+
 
 /** Back one step: re-fold the model up to that step and trim the views (no network rebuild). */
 function backStep() {
   if (!stepRun || stepIndex <= 0) return;
-  stepIndex -= 1;
+  refoldTo(stepIndex - 1);
+  afterStep();
+}
+
+/** Unfold the "looked for a stronger path" step and walk into its first call. */
+function unfoldTail() {
+  if (!book.folded || book.folded !== book.steps[stepIndex]) return;
+  const i = book.unfoldTail();
+  refoldTo(i - 1);
+  nextStep();
+}
+
+/** Show the state right after step i: model, graph, timeline and path panel (no network rebuild). */
+function refoldTo(i) {
+  stepIndex = i;
   model.reset();
   for (const s of book.steps.slice(0, stepIndex + 1)) for (const ev of s.events) model.apply(ev);
   graph.retainOnly(new Set(model.nodes.keys()), new Set(model.edges.keys()), model.expanded);
@@ -259,7 +316,6 @@ function backStep() {
   if (!model.final) setRunning(true);
   updateCounts();
   scheduleTurtle();
-  afterStep();
 }
 
 function afterStep() {
@@ -272,13 +328,24 @@ function afterStep() {
   // The turn's planned calls: their target nodes and the branches to them show from the decision on.
   const turn = step.kind === "decision" ? stepIndex : step.kind === "call" ? step.parent ?? null : null;
   const planned = turn === null ? [] : book.plan(turn).map((t) => t.qid).filter(Boolean);
-  graph.setStory({ order: [...model.expanded], current: now ? d.nodeIds : [], currentEdges: now ? d.edgeIds : [],
-                   active: now ? d.expandedQids : [], planned });
+  const live = now && step.kind !== "tail";  // the tail's arrivals stay greyed: they led nowhere better
+  graph.setPreviousPath(d.pathEvent === "improved" && d.prevPath ? d.prevPath.hops.map((h) => h.edge_id) : []);
+  graph.setStory({ order: [...model.expanded], current: live ? d.nodeIds : [], currentEdges: live ? d.edgeIds : [],
+                   active: live ? d.expandedQids : [], planned, calm: !!d.pathEvent });
   timeline.markCurrent(step.events.map((e) => e.event_id));
   renderStepCard();
-  // Camera: frame the trail plus what this step added, below the step card.
-  const card = $("#step-card");
-  const inset = card.hidden ? 0 : card.getBoundingClientRect().bottom - $("#network").getBoundingClientRect().top + 8;
+  // Camera: frame the trail plus what this step added, beside the step card (a column at the top left),
+  // or below it when it is minimized to its title row.
+  const inset = cardInset();
+  // Once a path exists its nodes hold still, so the frame below stays on it (leaves would drift away).
+  if (step.kind === "result" || d.pathEvent) graph.pinNodes(model.pathNodeIds());
+  // A path moment lays the path out as a line between the two people (an arc when it replaces an
+  // earlier path, whose dashed line stays straight), so on screen it reads as the chain on the card.
+  if (d.pathEvent && d.pathResult?.hops?.length) {
+    const prior = book.steps.slice(0, stepIndex).filter((s) => s.pathEvent).length;
+    const r = d.pathResult;
+    graph.straightenPath([r.hops[0].from_qid, ...r.hops.map((h) => h.to_qid)], { bow: prior ? (prior % 2 ? -170 : 170) : 0 });
+  }
   const focus = cameraFocus(step, d, planned);
   if (focus.center.size || focus.around.size) graph.frameStory(focus, inset);
   // Tools that do not touch the graph get an effect that depicts what they do.
@@ -287,11 +354,19 @@ function afterStep() {
   // Both follow the backend's own rules (hub cap, hop limit) so only what is really computed moves.
   const rules = { isHub: isHubNode, maxHops: model.meta?.max_hops ?? 6 };
   if (tool === "compute_paths" || tool === "inspect_path") graph.fxPathSearch(rules);
-  else if (tool === "get_search_status") graph.fxFrontierScan(rules);
+  else if (tool === "get_search_status") graph.fxFrontierScan(rules, d.tools[0]?.suggestions ?? null);
   if (step.kind !== "result") {
-    setStatus("busy", `Step-through: ${stepIndex <= 0 ? "start" : `step ${stepIndex} of ${book.count - 1}${book.done ? "" : "+"}`}`
-      + " · Next ▶ (→, Space, Page Down) · ◀ Back (←, Page Up)");
+    // The card already says which step this is; the status bar only adds the keys.
+    setStatus("busy", "Keys: → or Space = next step · ← = back");
   }
+}
+
+/** The part of the graph the step card covers, as the camera's {top, left} inset in pixels. */
+function cardInset() {
+  const card = $("#step-card");
+  if (card.hidden) return { top: 0, left: 0 };
+  const c = card.getBoundingClientRect(), n = $("#network").getBoundingClientRect();
+  return card.classList.contains("min") ? { top: c.bottom - n.top + 8, left: 0 } : { top: 0, left: c.right - n.left + 8 };
 }
 
 function renderStepCard() {
@@ -345,8 +420,12 @@ function cameraFocus(step, d, planned) {
         if (e.object === q && model.expanded.has(e.subject)) add(center, e.subject);
       }
     }
+  } else if (d.tools[0]?.tool === "get_search_status" && d.tools[0].suggestions?.length) {
+    // the ranking: both people and every suggestion the agent was shown
+    add(around, model.source?.id, model.target?.id, ...d.tools[0].suggestions.map((g) => g.qid));
   } else if (step.kind === "result") add(around, ...model.pathNodeIds());
-  else if (d.pathEvent) add(around, ...model.pathNodeIds(), ...d.expandedQids);
+  else if (step.kind === "tail") add(around, ...model.pathNodeIds(), ...d.expandedQids);  // the path and where it looked
+  else if (d.pathEvent) add(around, ...model.pathNodeIds(), ...d.expandedQids, ...(d.prevPath?.nodes || []).map((n) => n.qid));
   else if (d.nodeIds.length || d.edgeIds.length) { add(center, ...d.expandedQids); add(around, ...d.nodeIds); }
   return { center, around };
 }
@@ -368,34 +447,122 @@ function trailLine() {
     first ? "… → " : "", shown.join(" → "));
 }
 
+/** "Diana, Princess of Wales's side" for "source": the people, not the search's jargon. */
+function sideName(side) {
+  const who = side === "source" ? model.source : side === "target" ? model.target : null;
+  return who ? `${label(who)}'s side` : `${side} side`;
+}
+
+/**
+ * Did this pick come from the tools? After a path exists: the improvement-lead list the agent was
+ * handed (book.leadsFor); before: get_search_status's ranking (rankNote). Null when neither was recorded.
+ */
+function guidanceTag(qid, i) {
+  const leads = qid ? book.leadsFor(i) : null;
+  if (!leads) return rankNote(qid, i);
+  const hit = leads.leads.find((l) => l.qid === qid);
+  return hit
+    ? el("span", { class: "rank-note hit" }, `lead #${hit.rank} from the tools: a stronger path could pass through it`)
+    : el("span", { class: "rank-note miss" }, leads.leads.length
+      ? `not on the tools' ${leads.leads.length} improvement leads: the agent's own pick`
+      : "the tools listed no improvement leads: the agent's own pick");
+}
+
+/**
+ * Honesty when the recording lacks what the tools showed the agent: without it the audience would
+ * credit the model with picks that may have come straight from a tool's list.
+ */
+function guidanceNote(i) {
+  const kind = book.unrecordedGuidance(i);
+  if (kind === "leads") {
+    return el("div", { class: "guidance" }, "Since a path exists, each tool result also hands the agent a list of improvement leads "
+      + "(entities a stronger path could still pass through). This recording didn't store that list, so we can't show whether these picks came from it.");
+  }
+  if (kind === "ranking") {
+    return el("div", { class: "guidance" }, "get_search_status handed the agent a ranked list just before this turn. "
+      + "This recording didn't store it, so we can't show whether these picks followed it.");
+  }
+  return null;
+}
+
+/** Has an earlier step already called this tool? (Its plain-words description is shown once.) */
+function toolSeenBefore(tool) {
+  return book.steps.slice(0, stepIndex).some((s) => s.events.some((e) => e.type === "tool.started" && e.payload.tool === tool));
+}
+
+/**
+ * The path moment, in words. First path: where the two people's sides met, and the chain. A stronger
+ * path: why it beats the old one (from the hops' own strengths), then both chains, old one faded.
+ */
+function pathMoment(d) {
+  if (!d.pathEvent || !d.pathResult) return null;
+  const now = pathChain(d.pathResult);
+  if (d.pathEvent === "first") {
+    const m = meetingPoint(now, d.sides, d.expandedQids[0], d.edgeIds);
+    return [
+      el("div", { class: "star" }, m ? ["★ The two sides met at ", el("b", {}, m.meet.label), "!"] : "★ This connected the two sides!"),
+      m ? el("div", { class: "res" }, `${sideName(m.already)} had already reached ${m.meet.label}; `,
+        m.viaThisStep ? "this step found the link " : "the link is ", el("b", {}, `${m.from.label} —${m.rel.label}→ ${m.to.label}`), ".") : null,
+      chainBlock(now, "Strongest path so far")];
+  }
+  const before = d.prevPath ? pathChain(d.prevPath) : null;
+  return [
+    el("div", { class: "star" }, "★ A stronger path replaced the old one."),
+    before ? el("div", { class: "res" }, whyStronger(before, now)) : null,
+    chainBlock(now, "Now"),
+    before ? chainBlock(before, "Before (dashed in the graph)", true) : null];
+}
+
+/**
+ * Where the backend ranked `qid` in the list the agent had just been shown before deciding step i
+ * (book.rankingFor: an earlier turn's status check, graph unchanged since), e.g. "ranked #2 by the
+ * backend" or "not in the backend's top 8 of 86"; null when there is no such list.
+ */
+function rankNote(qid, i) {
+  const last = qid ? book.rankingFor(i) : null;
+  if (!last) return null;
+  const hit = last.suggestions.find((g) => g.qid === qid);
+  const where = `step ${last.step}`;
+  return hit
+    ? el("span", { class: "rank-note hit" }, `ranked #${hit.rank} by get_search_status (${where})`)
+    : el("span", { class: "rank-note miss" }, `not in get_search_status's top ${last.suggestions.length}`
+      + `${last.total ? ` of ${last.total}` : ""} (${where}): the agent's own pick`);
+}
+
 /** The result of one tool call: the call's own counts, or the backend state right after it. */
 function callResult(t, d) {
   if (t.error) return [el("div", { class: "res err" }, `✗ ${t.error.code}: ${t.error.message}`)];
   const lines = [];
   if (t.returned !== null) {
     if (!t.addedNodes && !t.addedEdges) {
-      lines.push(el("div", { class: "res" }, `${t.returned} relationships returned, all already in the graph: nothing new.`));
+      lines.push(el("div", { class: "res" }, `${t.returned} statements returned, all already in the explored subgraph: nothing new.`));
     } else {
-      lines.push(el("div", { class: "res" }, `${t.returned} relationships returned → `,
-        el("b", { class: "fresh" }, `${t.addedNodes} new nodes, ${t.addedEdges} new edges`), " (green in the graph)"));
+      lines.push(el("div", { class: "res" }, `${t.returned} statements returned → `,
+        el("b", { class: "fresh" }, `${t.addedNodes} new entities, ${t.addedEdges} new statements`), " (green in the graph)"));
     }
     if (t.truncated) {
       lines.push(el("div", { class: "res warn" },
-        `Cut at ${t.returned}${t.capHit ? ` (${t.capHit.replaceAll("_", " ")})` : ""}: Wikidata has more for this node.`));
+        `Cut at ${t.returned}${t.capHit ? ` (${t.capHit.replaceAll("_", " ")})` : ""}: Wikidata has more statements for this entity.`));
     }
   } else if (t.tool === "compute_paths" || t.tool === "inspect_path") {
     const c = model.comparison;
-    lines.push(el("div", { class: "res" }, c?.shortest?.result || c?.strongest?.result
-      ? `Connected: ${pathsText(c)}`
-      : `No connection yet among the ${model.nodes.size} explored nodes and ${model.edges.size} edges.`));
+    const w = c?.strongest?.result ? pathChain(c.strongest.result) : null;
+    lines.push(el("div", { class: "res" }, w
+      ? `Path found: ${w.hops} hop${w.hops === 1 ? "" : "s"}, ${strengthSummary(w)}.`
+      : `No path yet in the explored subgraph (${model.nodes.size} entities, ${model.edges.size} statements).`));
   } else if (t.tool === "get_search_status") {
     const b = model.meta?.budgets || {};
-    lines.push(el("div", { class: "res" }, `So far: ${model.nodes.size} nodes and ${model.edges.size} edges explored, `
+    lines.push(el("div", { class: "res" }, `Explored subgraph: ${model.nodes.size} entities, ${model.edges.size} statements · `
       + `${model.expanded.size} of ${b.max_provider_requests ?? "?"} expansions used.`));
-  }
-  if (d.pathEvent) {
-    lines.push(el("div", { class: "star" }, d.pathEvent === "first" ? "★ This connected the two sides! " : "★ A better path appeared: ",
-      d.paths || ""));
+    if (t.suggestions?.length) {
+      lines.push(el("div", { class: "res" }, `Tool result: the top ${t.suggestions.length}`
+        + (t.frontierSize ? ` of ${t.frontierSize} frontier entities` : " frontier entities") + ", exactly as the agent saw them:"));
+      lines.push(el("ol", { class: "ranks" }, ...t.suggestions.map((g) => el("li", {},
+        el("span", { class: "rank-pill" }, `#${g.rank}`), " ", el("b", {}, g.label || g.qid),
+        el("span", { class: "muted" }, ` · ${sideName(g.side)} · ${g.hops} hop${g.hops === 1 ? "" : "s"}`)))));
+    } else if (t.ok) {
+      lines.push(el("div", { class: "res" }, "Lit in green in the graph: the frontier, the explored entities the search could expand next."));
+    }
   }
   return lines;
 }
@@ -403,72 +570,220 @@ function callResult(t, d) {
 function callBlock(t, d) {
   const order = [...model.expanded];
   const rank = t.qid ? order.indexOf(t.qid) + 1 : 0;
+  // Plain words first ("Expand Neymar"); the real tool name stays visible, small, for the curious.
   return el("div", { class: "call" },
+    el("div", { class: "call-label" }, model.isAgent ? "Tool call and its result" : "Expansion and its result"),
     el("div", { class: "call-head" }, rank ? el("span", { class: "badge-n" }, orderBadge(rank)) : null,
-      el("span", { class: "tool-name" }, t.tool), el("b", {}, toolTarget(t))),
-    el("div", { class: "purpose" }, toolPurpose(t)),
+      el("b", {}, toolAction(t)), t.side ? el("span", { class: "muted small" }, sideName(t.side)) : null,
+      el("span", { class: "spacer" }), el("span", { class: "tool-name" }, t.tool)),
+    // What the tool does is explained the first time it appears; after that the name is enough.
+    toolSeenBefore(t.tool) ? null : el("div", { class: "purpose" }, toolPurpose(t, sideName)),
     callResult(t, d));
 }
 
 function stepBody(step, d) {
   const b = model.meta?.budgets || {};
   const toolRows = model.timeline.filter((r) => r.kind === "tool").length;
-  const foot = el("div", { class: "foot" }, [
-    `requests ${model.expanded.size}/${b.max_provider_requests ?? "?"}`,
-    `nodes ${model.nodes.size}/${b.max_explored_nodes ?? "?"}`,
-    model.isAgent ? `tool calls ${toolRows}/${b.max_agent_tool_calls ?? "?"}` : null,
-  ].filter(Boolean).join(" · "));
+  const foot = budgetMeter([
+    ["expansions", model.expanded.size, b.max_provider_requests],
+    ["entities", model.nodes.size, b.max_explored_nodes],
+    model.isAgent ? ["tool calls", toolRows, b.max_agent_tool_calls] : null,
+  ]);
   const turnNo = (i) => book.steps.slice(0, i + 1).filter((s) => s.kind === "decision").length;
   switch (step.kind) {
     case "setup": {
       const m = model.meta || {};
-      return [el("div", { class: "who" }, m.strategy === "agent" ? `AI agent · ${m.model || "model"}` : "Deterministic exploration (no AI)"),
+      return [el("div", { class: "who" }, m.strategy === "agent" ? `LLM agent · ${m.model || "model"}` : "Deterministic baseline (no LLM)"),
         el("div", { class: "decision" }, `Find a connection between ${label(model.source)} and ${label(model.target)}.`),
-        el("div", { class: "small muted" }, `Relationship groups: ${(m.groups || []).join(", ")} · at most ${m.max_hops} hops`), foot];
+        el("div", { class: "small muted" }, `Relation groups: ${(m.groups || []).join(", ")} · at most ${m.max_hops} hops`),
+        el("div", { class: "small muted" }, "Where things sit on screen is only for readability: what connects two entities is a line (a statement), not how close they are drawn."),
+        foot];
     }
     case "decision": {
       // The calls the model issued in this turn (all decided at once); each one is the next step.
       const plan = book.plan(stepIndex);
-      const items = plan.length ? plan.map((t) => [el("span", { class: "tool-name" }, t.tool), " ", toolTarget(t)])
+      const items = plan.length ? plan.map((t) => [el("b", {}, toolAction(t)), t.side ? el("span", { class: "muted small" }, ` · ${sideName(t.side)}`) : null,
+          t.tool === "get_neighbors" ? [" ", guidanceTag(t.qid || t.arguments?.qid, stepIndex)] : null])
         : (step.events[0].payload.tool_calls || []).map((name) => [el("span", { class: "tool-name" }, name)]);
-      return [el("div", { class: "who agent" }, `The agent decides · turn ${turnNo(stepIndex)}`),
-        el("div", { class: "decision agent" }, d.decision ? `“${d.decision}”` : "(no text: the model called tools without writing a decision)"),
+      return [el("div", { class: "who agent" }, `Agent turn ${turnNo(stepIndex)} · the model's message`),
+        el("div", { class: "decision agent" }, d.decision ? `“${d.decision}”` : "(no message: the model went straight to its tool calls)"),
         items.length ? el("div", { class: "plan" },
-          el("div", { class: "muted small" }, items.length === 1 ? "Its next call:" : `Its next ${items.length} calls, one per step:`),
+          el("div", { class: "muted small" }, items.length === 1 ? "Its tool call:" : `Its ${items.length} tool calls (one step each):`),
           el("ol", {}, ...items.map((x) => el("li", {}, x)))) : null,
-        trailLine(), foot];
+        guidanceNote(stepIndex), trailLine(), foot];
     }
     case "call": {
       const t = d.tools[0];
       const parent = step.parent ?? null;
       const why = parent !== null ? describeStep(book.steps[parent]).decision : null;
+      // The agent's reasoning leads; what the backend did for it is the supporting box below.
       return [el("div", { class: "who agent" }, parent !== null
-          ? `Turn ${turnNo(parent)} · call ${step.callNo} of ${book.callCount(stepIndex)}` : "Tool call"),
+          ? `Agent turn ${turnNo(parent)} · tool call ${step.callNo} of ${book.callCount(stepIndex)}` : "Tool call"),
+        why ? el("div", { class: "decision agent" }, `“${why}”`) : null,
+        t?.tool === "get_neighbors" && guidanceTag(t.qid, stepIndex)
+          ? el("div", { class: "small" }, guidanceTag(t.qid, stepIndex)) : null,
         t ? callBlock(t, d) : null,
-        why ? el("div", { class: "why" }, el("span", { class: "muted" }, "The agent's reason for this turn: "), `“${why}”`) : null,
-        trailLine(), foot];
+        // On a path moment the path is the story; the exploration order stays in the graph's ①②③ badges.
+        pathMoment(d), d.pathEvent ? null : trailLine(), foot];
     }
     case "expansion": {
       const t = d.tools[0];
-      return [el("div", { class: "who" }, "Backend rule (no AI): expand the best-ranked frontier node"),
-        el("div", { class: "rule" }, d.rule || ""), t ? callBlock(t, d) : null, trailLine(), foot];
+      return [el("div", { class: "who" }, "Deterministic baseline (no LLM): expand the top-ranked frontier entity"),
+        el("div", { class: "rule" }, d.rule || ""), t ? callBlock(t, d) : null, pathMoment(d), d.pathEvent ? null : trailLine(), foot];
     }
+    case "tail": return tailBody(step, foot);
     default: {
+      // The finale: the connection itself as a chain of people, works and organizations, then the
+      // summary and an honest scope line. The full hop details stay in the History pane.
       const r = d.result || {};
-      const found = r.outcome === "path_found";
-      const head = r.type === "investigation.failed" ? "Failed" : r.type === "investigation.completed" ? "Completed" : "Partial result";
-      return [el("div", { class: "who" }, head),
-        el("div", { class: "decision" }, r.error && !found ? `${r.error.code}: ${r.error.message}`
-          : found ? r.paths : "No connection among the explored relationships."),
-        r.answer ? el("div", { class: "small" }, r.answer) : null,
-        el("div", { class: "small muted" }, `stop: ${String(r.stop || "?").replaceAll("_", " ")} · among explored relationships only`),
-        trailLine(), foot];
+      const h = resultHeadline(r);
+      const chains = r.outcome === "path_found" ? pathChains(r.comparison || model.comparison) : [];
+      const a = label(model.source), b = label(model.target);
+      const plural = (n) => `a ${n}-hop path`;
+      const headline = chains.length
+        // "connected through", not "N apart": the strongest path may be longer than the shortest one.
+        ? `${a} and ${b} are connected by ${plural(chains[0].hops)}.`
+        : h.tone === "err" ? "The run failed before connecting the two people."
+        : `No path connects ${a} and ${b} in the explored subgraph.`;
+      return [el("div", { class: `who result ${h.tone}` }, h.head),
+        el("div", { class: "decision" }, headline),
+        ...chains.map((ch) => chainBlock(ch)),
+        // Folded: the chain already shows the path, and a long summary would push the graph off screen.
+        r.answer ? el("details", { class: "summary" }, el("summary", {}, r.answerSource === "agent"
+          ? "The agent's final answer (grounding check passed)" : "Template answer from the verified path (no LLM)"), el("div", {}, r.answer)) : null,
+        el("div", { class: "scope" }, h.scope), saveReplayBlock(r), foot];
     }
   }
 }
 
+// ---- save as demo replay ----------------------------------------------------------------------
+// A finished LIVE run with a path can be kept as a demo case: the server re-checks it (same rules as
+// scripts/investigate.py --record), writes its fixture and trace, and adds it to Demo replays.
+// The block's state survives card re-renders (live runs re-render the card on every event).
+let saveState = null;  // {open, busy, caseId, title, error, saved} for the current run
+
+function saveReplayBlock(r) {
+  if (!model.id || model.isReplay || r.outcome !== "path_found" || r.type === "investigation.failed") return null;
+  const s = saveState ||= { open: false, busy: false, caseId: "", title: "", error: null, saved: null };
+  if (s.saved) {
+    return el("div", { class: "save-replay saved" }, `✓ Saved as demo replay “${s.saved.title}” (${s.saved.id}). `,
+      el("span", { class: "muted" }, "It is now in Demo replays."));
+  }
+  if (!s.open) {
+    return el("div", { class: "save-replay" }, el("button", { class: "mini", type: "button",
+      title: "Keep this run as a recorded demo case (fixture + event trace + demo_cases.yaml entry)",
+      on: { click: openSave } }, "Save as demo replay…"));
+  }
+  const field = (label, key, attrs) => el("label", { class: "save-field" }, el("span", { class: "muted small" }, label),
+    el("input", { type: "text", value: s[key], spellcheck: "false", disabled: s.busy, ...attrs,
+      on: { input: (e) => { s[key] = e.target.value; }, keydown: (e) => { if (e.key === "Enter") doSave(); e.stopPropagation(); } } }));
+  return el("div", { class: "save-replay open" },
+    el("div", { class: "save-title" }, "Save as demo replay"),
+    field("Case id (lowercase, digits, hyphens)", "caseId", { maxlength: "64", pattern: "[a-z0-9-]+" }),
+    field("Title shown in Demo replays", "title", { maxlength: "200" }),
+    s.error ? el("div", { class: "res err" }, s.error) : null,
+    el("div", { class: "save-actions" },
+      el("button", { class: "btn primary", type: "button", disabled: s.busy, on: { click: doSave } }, s.busy ? "Checking…" : "Save"),
+      el("button", { class: "btn", type: "button", disabled: s.busy, on: { click: () => { s.open = false; s.error = null; renderStepCard(); } } }, "Cancel"),
+      el("span", { class: "muted small" }, "The server re-checks that the recording rebuilds this exact result before saving.")));
+}
+
+async function openSave() {
+  const s = saveState;
+  s.open = true; s.error = null;
+  try {
+    const sug = await api.recordSuggestion(model.id);
+    s.caseId ||= sug.case_id; s.title ||= sug.title;
+  } catch (err) { s.error = err.message; }
+  renderStepCard();
+  $("#step-card .save-field input")?.focus();
+}
+
+async function doSave() {
+  const s = saveState;
+  if (!s || s.busy) return;
+  s.busy = true; s.error = null; renderStepCard();
+  try {
+    const res = await api.record(model.id, s.caseId.trim(), s.title.trim());
+    s.saved = res.case; s.open = false;
+    loadCases();  // the new case appears in Demo replays right away
+  } catch (err) {
+    s.error = err.message;
+  } finally {
+    s.busy = false;
+    renderStepCard();
+  }
+}
+
+/**
+ * The folded tail: everything the run did after the strongest path last changed, in one card. Only
+ * recorded facts: what was expanded, what it added, the agent's own reason, and that the path stayed.
+ */
+function tailBody(step, foot) {
+  const t = describeTail(step, book.latestLeads(stepIndex - 1));
+  const names = t.expansions.map((x) => label(model.nodes.get(x.qid)) || x.label);
+  const shown = names.slice(0, 8).join(", ") + (names.length > 8 ? `, and ${names.length - 8} more` : "");
+  const others = Object.entries(t.otherCalls).map(([tool, n]) => `${n}× ${tool}`).join(", ");
+  const leadLine = t.fromLeads !== null && t.expansions.length
+    ? el("div", { class: "res" }, `${t.fromLeads} of these ${t.expansions.length} expansions were on the tools' list of improvement leads`
+      + (t.expansions.length - t.fromLeads ? `; ${t.expansions.length - t.fromLeads} were the agent's own picks.` : "."))
+    : model.isAgent ? el("div", { class: "guidance" }, "Once a path exists, each tool result hands the agent a list of improvement leads "
+      + "(entities a stronger path could still pass through). This recording didn't store that list, so we can't show how many of these picks came from it.")
+    : null;
+  return [
+    el("div", { class: `who${model.isAgent ? " agent" : ""}` }, model.isAgent
+      ? `The agent looks for a stronger path · ${t.steps} steps in one`
+      : `Deterministic baseline (no LLM): a few more expansions to check for a stronger path · ${t.steps} steps in one`),
+    el("div", { class: "decision" }, "Nothing stronger turned up: the path found at ",
+      el("b", {}, `step ${step.pathStep}`), " is still the strongest."),
+    t.reason ? el("div", { class: "why" }, el("span", { class: "muted" }, "The model's message when it kept going: "), `“${t.reason}”`) : null,
+    t.expansions.length ? el("div", { class: "res" }, `Expanded ${t.expansions.length} more entit${t.expansions.length === 1 ? "y" : "ies"}: `, el("b", {}, shown), ".") : null,
+    t.expansions.length ? el("div", { class: "res" }, `${t.addedNodes} new entities, ${t.addedEdges} new statements `
+      + "(greyed out in the graph): none of them gave a stronger path.") : null,
+    leadLine,
+    others ? el("div", { class: "res muted small" }, `Also: ${others}.`) : null,
+    el("button", { class: "mini unfold", type: "button", on: { click: unfoldTail } }, `Step through these ${t.steps} steps one by one`),
+    foot];
+}
+
+/**
+ * The budget as small meters: quiet grey while there is room, amber from 80%, red when used up (the
+ * run stops there), so the presenter only notices it when it matters.
+ */
+function budgetMeter(rows) {
+  return el("div", { class: "budget" }, rows.filter(Boolean).map(([name, used, max]) => {
+    const f = max ? Math.min(1, used / max) : 0;
+    const level = !max ? "" : f >= 1 ? " full" : f >= 0.8 ? " near" : "";
+    return el("span", { class: `meter${level}`, title: `${name}: ${used} of ${max ?? "?"} allowed in this run` },
+      el("span", { class: "m-name" }, name),
+      el("span", { class: "m-bar" }, el("i", { style: `width:${Math.round(100 * f)}%` })),
+      el("span", { class: "m-num" }, `${used}/${max ?? "?"}`));
+  }));
+}
+
+/** One path as a chain: Neymar —acted in→ xXx … → Snoop Dogg, coloured like its path in the graph. */
+function chainBlock(ch, title = "Strongest connection", faded = false) {
+  const items = [];
+  ch.nodes.forEach((n, i) => {
+    if (i) {
+      const rel = ch.rels[i - 1];
+      items.push(el("span", { class: `rel ${rel.word || ""}${rel.sandbox ? " sandbox" : ""}`,
+        title: `${rel.pid} · ${rel.group}${rel.word ? ` · ${rel.word} link (strength ${rel.strength})` : ""}` }, rel.label, " →"));
+    }
+    const chip = wikidataLink(n.qid, n.label);
+    chip.className = `node k-${n.role || n.kind}`;
+    chip.title = `${n.qid} · open in Wikidata`;
+    items.push(chip);
+  });
+  return el("div", { class: `chain ${ch.mode}${faded ? " faded" : ""}`, title: `weighted cost ${ch.cost.toFixed(2)} (lower = stronger)` },
+    el("div", { class: "chain-head" }, el("b", {}, title),
+      el("span", { class: "muted" }, ` · ${ch.hops} hop${ch.hops === 1 ? "" : "s"}`)),
+    el("div", { class: "chain-row" }, ...items),
+    // The replaced path skips its strength line: the "why stronger" sentence already compares them.
+    !faded && ch.rels.some((r) => r.word) ? el("div", { class: "chain-strength" }, strengthSummary(ch)) : null);
+}
+
 $("#step-next").addEventListener("click", nextStep);
-$("#step-hide").addEventListener("click", () => { $("#step-card").hidden = true; });
 // "−" / "+": minimize to the title row. It stays minimized across steps until reopened.
 function setMinimized(box, button, min, what) {
   box.classList.toggle("min", min);
@@ -551,7 +866,7 @@ function showPaths(mode) {
   const ids = mode === "none" ? [] : (() => {
     const c = useSandbox ? sandbox.comparison : model.comparison;
     const pick = (o) => (o?.result ? o.result.hops.map((h) => h.edge_id) : []);
-    return [...(mode !== "strongest" ? pick(c?.shortest) : []), ...(mode !== "shortest" ? pick(c?.strongest) : [])];
+    return pick(c?.strongest);  // the demo shows the strongest path only
   })();
   editor.showGraphSelection({ edges: ids });
   if (ids.length) graph.fitTo(new Set(ids.flatMap((id) => { const e = graph.edges.get(id); return e ? [e.subject, e.object] : []; })));
@@ -588,7 +903,7 @@ function showInspector({ nodes, edges }) {
       inspectorHead(`${n.kind} · ${label(n) || n.id}`),
       el("div", {}, el("b", {}, label(n)), " ", wikidataLink(n.id, n.id)),
       n.label_es && n.label_es !== n.label_en ? el("div", { class: "small muted" }, `es: ${n.label_es}`) : null,
-      el("div", { class: "small muted" }, `${n.degree} links in the snapshot · ${known} in the explored graph`
+      el("div", { class: "small muted" }, `${n.degree} statements in the snapshot (degree) · ${known} in the explored subgraph`
         + `${model.expanded.has(n.id) ? " · expanded" : ""}`)].filter(Boolean));
   }
 }
@@ -627,8 +942,8 @@ function applySandbox(res) {
   sandbox = res;
   graph.addEdges(res.sandbox_edges);
   paths.update({ sandbox: res.sandbox_edges.length ? res : null });
-  if (res.sandbox_edges.length) { paths.tab = "sandbox"; paths.render(); showPaths("both"); }
-  else { paths.tab = "shortest"; paths.render(); showPaths(pathMode); }
+  if (res.sandbox_edges.length) { paths.tab = "sandbox"; paths.render(); showPaths("strongest"); }
+  else { paths.tab = "strongest"; paths.render(); showPaths(pathMode); }
   $("#clear-sandbox").disabled = !res.sandbox_edges.length;
   const warn = res.warnings.length ? ` · ${res.warnings.length} warning${res.warnings.length === 1 ? "" : "s"} (see Paths)` : "";
   setStatus(res.sandbox_edges.length ? "warn" : "ok", res.sandbox_edges.length
@@ -645,14 +960,17 @@ function setStatus(kind, text) {
 
 function setBadges(p) {
   const live = $("#badge-mode"), strat = $("#badge-strategy");
-  if (!p) { live.className = "badge idle"; live.textContent = "IDLE"; strat.hidden = true; return; }
+  if (!p) { live.hidden = true; strat.hidden = true; return; }
+  live.hidden = false;
   const replay = p.run_mode === "replay";
   live.className = `badge ${replay ? "replay" : "live"}`;
-  live.textContent = replay ? `REPLAY · recorded ${fmtTime(p.recorded_at)}` : "LIVE";
-  live.title = replay ? "Recorded events played back. Not a fresh exploration." : "Running now against the local Wikidata snapshot.";
+  live.textContent = replay ? `REPLAY · ${fmtTime(p.recorded_at)}` : "LIVE";
+  live.title = replay ? `Recorded ${fmtTime(p.recorded_at)} and played back. Not a fresh exploration.`
+    : "Running now against the local Wikidata snapshot.";
   strat.hidden = false;
   strat.className = `badge ${p.strategy === "agent" ? "agent" : "det"}`;
-  strat.textContent = p.strategy === "agent" ? `AI agent${p.model ? ` · ${p.model}` : ""}` : "Deterministic exploration (no AI)";
+  strat.textContent = p.strategy === "agent" ? `${p.model || "LLM agent"}` : "baseline";
+  strat.title = p.strategy === "agent" ? `Explored by the LLM agent (${p.model || "model"})` : "Explored by the deterministic baseline (no LLM)";
 }
 
 function updateCounts() {
@@ -668,8 +986,8 @@ $("#fit").addEventListener("click", () => graph.fitTo());
 function fmtTime(iso) { return iso ? String(iso).slice(0, 16).replace("T", " ") : "?"; }
 
 // ---- collapsible panes & drag --------------------------------------------------------------------
-// Source (left) and Result + timeline (right) collapse to a thin strip: the "−" in the pane bar, the
-// strip itself and (for the source) the graph bar's "Source" button all toggle it.
+// Source (left) and History (right) collapse to a thin strip: the "−"/"+" in the pane bar or the
+// strip itself toggle it.
 function togglePane(cls, button, what) {
   document.body.classList.add("pane-anim");  // the pane slides (CSS --t-ui) instead of snapping
   const min = document.body.classList.toggle(cls);
@@ -680,11 +998,9 @@ function togglePane(cls, button, what) {
 }
 function toggleSource(e) {
   e?.stopPropagation();
-  const min = togglePane("src-min", $("#src-min"), "the source pane");
-  $("#toggle-src").classList.toggle("on", !min);
+  togglePane("src-min", $("#src-min"), "the source pane");
 }
-function toggleSide(e) { e?.stopPropagation(); togglePane("side-min", $("#side-min"), "the result and timeline"); }
-$("#toggle-src").addEventListener("click", toggleSource);
+function toggleSide(e) { e?.stopPropagation(); togglePane("side-min", $("#side-min"), "the history (result and timeline)"); }
 $("#src-min").addEventListener("click", toggleSource);
 $("#epane .pane-bar").addEventListener("click", () => { if (document.body.classList.contains("src-min")) toggleSource(); });
 $("#side-min").addEventListener("click", toggleSide);

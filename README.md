@@ -74,7 +74,7 @@ uv run python scripts/investigate.py Q7186 Q37463 --agent            # LLM agent
 uv run python scripts/benchmark_investigations.py --pairs 30         # recall vs. the complete graph
 ```
 
-**Workbench:** run `uv run python -m src.server` and open http://localhost:5000/. Pick two people, choose deterministic or AI agent (or a recorded replay), and watch the graph grow. It has a timeline, Shortest/Strongest tabs, a Turtle source that highlights in both directions, and a sandbox for hypothetical edges. The legacy retail assistant moved to `/legacy`.
+**Workbench:** run `uv run python -m src.server` and open http://localhost:5000/. Pick two people, choose deterministic or AI agent (or a recorded replay), and watch the graph grow. It shows the strongest path (the shortest is computed but not shown), a timeline, a Turtle source that highlights in both directions, and a sandbox for hypothetical edges. The legacy retail assistant moved to `/legacy`.
 
 **Before a workshop:** run `uv run python -m src.preflight --online` and follow [`docs/workshop-runbook.md`](docs/workshop-runbook.md) (setup, the click-by-click demo flow, and what to do when something fails).
 

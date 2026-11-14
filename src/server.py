@@ -209,6 +209,20 @@ def api_turtle(inv_id: str):
     return jsonify(proj.model_dump())
 
 
+@app.route("/api/investigations/<inv_id>/record", methods=["GET", "POST"])
+def api_record(inv_id: str):
+    """Save a finished live run as a demo replay. GET: a suggested case id and title. POST
+    ``{"case_id": "...", "title": "..."}``: verify, write fixture + trace, append to demo_cases.yaml."""
+    svc = _service()
+    if request.method == "GET":
+        return jsonify(svc.suggested_case(inv_id))
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body.get("case_id"), str):
+        return jsonify({"error": {"code": "invalid_request", "message": "case_id is required"}}), 400
+    title = body.get("title") if isinstance(body.get("title"), str) else ""
+    return jsonify(svc.record(inv_id, body["case_id"].strip(), title[:200])), 201
+
+
 @app.route("/api/investigations/<inv_id>/overlay", methods=["GET", "POST", "DELETE"])
 def api_overlay(inv_id: str):
     """Sandbox overlay. POST ``{"text": "<turtle>"}``: sbx: statements become hypothetical edges."""

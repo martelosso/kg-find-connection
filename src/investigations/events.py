@@ -20,6 +20,7 @@ EventType = Literal[
     "agent.decision",
     "tool.started",
     "tool.completed",
+    "tool.leads",          # agent runs: the improvement leads a tool result handed the agent (a record only)
     "graph.expanded",
     "paths.updated",
     "investigation.completed",

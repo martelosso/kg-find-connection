@@ -33,6 +33,8 @@ export const api = {
   overlay: (id) => request("GET", `/api/investigations/${id}/overlay`),
   setOverlay: (id, text, shownEdgeIds) => request("POST", `/api/investigations/${id}/overlay`, { text, shown_edge_ids: shownEdgeIds ?? null }),
   clearOverlay: (id) => request("DELETE", `/api/investigations/${id}/overlay`),
+  recordSuggestion: (id) => request("GET", `/api/investigations/${id}/record`),
+  record: (id, caseId, title) => request("POST", `/api/investigations/${id}/record`, { case_id: caseId, title }),
 };
 
 /**

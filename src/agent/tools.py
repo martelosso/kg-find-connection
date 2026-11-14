@@ -109,6 +109,7 @@ class Toolbox:
         self.state, self.provider, self.policy, self.search = state, provider, policy, search
         self.finished_summary: str | None = None
         self.consecutive_no_progress = 0
+        self.last_frontier_size = 0  # candidates rank_frontier found at the last status call (all, not just the top)
         self._handlers: dict[str, Callable[[Any, int, str], dict[str, Any]]] = {
             "resolve_person": self._resolve_person,
             "get_neighbors": self._get_neighbors,
@@ -135,10 +136,19 @@ class Toolbox:
             except (ValueError, ValidationError) as exc:
                 raise ToolError("invalid_arguments", str(exc)[:500]) from exc
             if name == "get_neighbors":
-                return self._handlers[name](args, step, decision)  # emits its own tool events
+                result = self._handlers[name](args, step, decision)  # emits its own tool events
+                self._record_leads(name, step, result)
+                return result
             ev.emit("tool.started", {"tool": name, "step": step, "arguments": args.model_dump()})
             result = {"ok": True, **self._handlers[name](args, step, decision)}
-            ev.emit("tool.completed", {"tool": name, "step": step, "ok": True})
+            completed: dict[str, Any] = {"tool": name, "step": step, "ok": True}
+            if name == "get_search_status":
+                # Record exactly the ranked list the agent was shown, so the UI can display it (and
+                # compare it with the agent's next choice) without recomputing anything.
+                completed["suggestions"] = [{"rank": i + 1, **s} for i, s in enumerate(result["suggestions"])]
+                completed["frontier_size"] = self.last_frontier_size
+            ev.emit("tool.completed", completed)
+            self._record_leads(name, step, result)
             return result
         except ToolError as exc:
             error = {"code": exc.code, "message": exc.message}
@@ -147,6 +157,17 @@ class Toolbox:
             if name == "get_neighbors":
                 self.consecutive_no_progress += 1
             return {"ok": False, "error": error}
+
+    def _record_leads(self, name: str, step: int, result: dict[str, Any]) -> None:
+        """Record the improvement leads a tool result handed the agent (a `tool.leads` event), so the UI
+        can show whether the agent's next picks came from the tools' list or were its own idea."""
+        if not result.get("ok", True) or "improvement_leads" not in result:
+            return
+        self.state.events.emit("tool.leads", {
+            "tool": name, "step": step, "stronger_path_possible": result["stronger_path_possible"],
+            "improvement_leads": [{"rank": i + 1, **lead} for i, lead in enumerate(result["improvement_leads"])],
+            "more_leads": result.get("more_leads", 0),
+        })
 
     # ---- tools --------------------------------------------------------------------------------
 
@@ -237,8 +258,10 @@ class Toolbox:
 
     def status(self) -> dict[str, Any]:
         st, b = self.state, self.state.budgets
-        cands = rank_frontier(st.graph, st.source_qid, st.target_qid, st.expanded, self.policy,
-                              self.search.frontier, st.groups)[: self.search.agent.status_frontier_size]
+        ranked = rank_frontier(st.graph, st.source_qid, st.target_qid, st.expanded, self.policy,
+                               self.search.frontier, st.groups)
+        self.last_frontier_size = len(ranked)
+        cands = ranked[: self.search.agent.status_frontier_size]
         return {
             "explored_nodes": len(st.graph.nodes),
             "explored_edges": len(st.graph.edges),

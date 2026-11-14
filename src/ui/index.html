@@ -10,7 +10,7 @@
 <script src="/vendor/vis-network.min.js"></script>
 <script type="module" src="/js/main.js"></script>
 </head>
-<body>
+<body class="src-min side-min">
 
 <header id="toolbar">
   <span class="wordmark">Six Degrees of Knowledge</span>
@@ -18,18 +18,21 @@
   <div class="picker" id="pick-source"></div>
   <span class="arrow">↔</span>
   <div class="picker" id="pick-target"></div>
-  <select id="mode" title="Exploration strategy">
-    <option value="agent">AI agent</option>
-    <option value="deterministic" selected>Deterministic (no AI)</option>
-  </select>
-  <div class="groups" id="groups" title="Relationship groups the search may use"></div>
+  <div class="seg" id="mode" role="radiogroup" title="Who chooses each expansion: the LLM agent, or the deterministic baseline">
+    <button type="button" role="radio" data-mode="agent">LLM agent</button>
+    <button type="button" role="radio" data-mode="deterministic" class="on">Baseline</button>
+  </div>
+  <div class="menu" id="groups-menu">
+    <button class="btn" id="groups-btn" type="button" aria-haspopup="true" aria-expanded="false"
+            title="Relation groups (sets of Wikidata properties) the search may use">Relations <span class="count" id="groups-count"></span> ▾</button>
+    <div class="menu-panel card" id="groups" hidden></div>
+  </div>
   <button class="btn primary" id="go" type="button">Explore</button>
-  <button class="btn" id="cancel" type="button" disabled>Cancel</button>
-  <button class="btn" id="reset" type="button">Reset</button>
+  <button class="btn" id="reset" type="button" title="Clear the graph and both people">Reset</button>
   <div class="sep"></div>
-  <select id="replay" title="Play back a recorded demo case" disabled><option value="">Replay…</option></select>
+  <select id="replay" title="Play back a recorded demo case" disabled><option value="">Demo replays…</option></select>
   <div class="spacer"></div>
-  <span class="badge idle" id="badge-mode">IDLE</span>
+  <span class="badge" id="badge-mode" hidden></span>
   <span class="badge det" id="badge-strategy" hidden></span>
 </header>
 
@@ -40,7 +43,7 @@
       <span class="spacer"></span>
       <span class="pill warn" id="src-dirty" hidden>edited</span>
       <button class="mini" id="src-stale" hidden title="The graph grew while you were editing">reload</button>
-      <button class="mini min" id="src-min" type="button" title="Collapse the source pane">−</button>
+      <button class="mini min" id="src-min" type="button" title="Expand the source pane">+</button>
     </div>
     <div id="cm-wrap"></div>
     <div class="pane-foot">
@@ -59,7 +62,6 @@
       Graph <span class="muted" id="counts"></span>
       <span class="spacer"></span>
       <button class="mini" id="show-all" hidden type="button"></button>
-      <button class="mini on" id="toggle-src" type="button" title="Show or hide the Turtle source pane">Source</button>
       <button class="mini" id="fit" type="button">Fit</button>
     </div>
     <div id="net-wrap">
@@ -73,7 +75,6 @@
           <button class="btn" id="step-back" type="button" title="Previous step (← or Page Up)">◀ Back</button>
           <button class="btn primary" id="step-next" type="button" title="Next step (→, Space or Page Down)">Next ▶</button>
           <button class="mini min" id="step-min" type="button" title="Minimize this card (Back / Next stay available)">−</button>
-          <button class="mini" id="step-hide" type="button" title="Hide this card (it comes back on Next or Back)">×</button>
         </div>
         <div id="step-progress" title="Progress through the run"><i></i></div>
         <div id="step-body"></div>
@@ -87,8 +88,7 @@
         <span><i class="sq" style="background:var(--c-org)"></i>organization</span>
         <span><i class="sq" style="background:var(--c-work)"></i>film / music</span>
         <span><i class="ln" style="background:var(--c-fresh)"></i>new · next</span>
-        <span><i class="ln" style="background:var(--c-shortest)"></i>shortest</span>
-        <span><i class="ln" style="background:var(--c-strongest)"></i>strongest</span>
+        <span><i class="ln" style="background:var(--c-strongest)"></i>strongest path</span>
         <span><i class="ln dash" style="border-color:var(--c-sandbox)"></i>sandbox</span>
       </div>
     </div>
@@ -96,8 +96,8 @@
 
   <aside id="side">
     <section class="side-sec" id="paths-sec">
-      <div class="pane-bar"><span class="ptitle">Result</span><span class="spacer"></span>
-        <button class="mini min" id="side-min" type="button" title="Collapse the result and timeline">−</button></div>
+      <div class="pane-bar"><span class="ptitle">History</span><span class="spacer"></span>
+        <button class="mini min" id="side-min" type="button" title="Expand the history (result and timeline)">+</button></div>
       <div id="paths"></div>
     </section>
     <section class="side-sec grow">

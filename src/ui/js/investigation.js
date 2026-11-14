@@ -5,7 +5,7 @@
 
 export const TERMINAL = new Set(["investigation.completed", "investigation.partial", "investigation.failed"]);
 export const EVENT_TYPES = ["investigation.started", "identity.resolved", "agent.decision", "tool.started",
-  "tool.completed", "graph.expanded", "paths.updated", ...TERMINAL];
+  "tool.completed", "tool.leads", "graph.expanded", "paths.updated", ...TERMINAL];  // must list every type the server emits (SSE listens per type)
 
 export class InvestigationModel {
   constructor() { this.reset(); }
@@ -61,7 +61,7 @@ export class InvestigationModel {
 
   pathNodeIds() {
     const c = this.comparison, out = new Set();
-    for (const r of [c?.shortest?.result, c?.strongest?.result]) if (r) r.nodes.forEach((n) => out.add(n.qid));
+    c?.strongest?.result?.nodes.forEach((n) => out.add(n.qid));  // the demo shows the strongest path only
     return out;
   }
 
@@ -76,7 +76,7 @@ export class InvestigationModel {
     switch (ev.type) {
       case "investigation.started":
         this.meta = p; this.status = "running";
-        row({ kind: "start", text: `Started · ${p.strategy === "agent" ? "AI agent" : "deterministic exploration"} · groups: ${p.groups.join(", ")} · max ${p.max_hops} hops` });
+        row({ kind: "start", text: `Started · ${p.strategy === "agent" ? "LLM agent" : "deterministic baseline"} · groups: ${p.groups.join(", ")} · max ${p.max_hops} hops` });
         break;
       case "identity.resolved":
         this.source = p.source; this.target = p.target;
@@ -112,7 +112,7 @@ export class InvestigationModel {
       }
       case "paths.updated":
         this.comparison = p.comparison;
-        row({ kind: "paths", text: pathsText(p.comparison), edgeIds: [...new Set([...this.pathEdgeIds().shortest, ...this.pathEdgeIds().strongest])] });
+        row({ kind: "paths", text: pathsText(p.comparison), edgeIds: this.pathEdgeIds("strongest").strongest });
         break;
       default:
         if (TERMINAL.has(ev.type)) {
@@ -131,8 +131,7 @@ export class InvestigationModel {
 export function label(n) { return n?.label_en || n?.label_es || n?.label || n?.id || n?.qid || "?"; }
 
 export function pathsText(c) {
-  const s = c?.shortest?.result, w = c?.strongest?.result;
-  if (!s) return "No path among explored relationships yet";
-  if (c.same_path) return `Path found: ${s.hop_count} hop${s.hop_count === 1 ? "" : "s"} (shortest = strongest)`;
-  return `Paths: shortest ${s.hop_count} hops · strongest ${w.hop_count} hops (cost ${w.total_cost.toFixed(2)} vs ${s.total_cost.toFixed(2)})`;
+  const w = c?.strongest?.result;  // the demo shows the strongest path only
+  if (!w) return "No path in the explored subgraph yet";
+  return `Strongest path: ${w.hop_count} hop${w.hop_count === 1 ? "" : "s"} · cost ${w.total_cost.toFixed(2)}`;
 }

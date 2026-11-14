@@ -1,13 +1,14 @@
-// Result comparison: Shortest / Strongest tabs (+ Sandbox when an overlay is active), hop lists with
-// relationship names, PIDs, per-hop cost and Wikidata links, and the explored-graph qualification.
+// Result: the strongest path (+ a Sandbox tab when an overlay is active), hop list with relationship
+// names, PIDs, per-hop cost and Wikidata links, and the explored-graph qualification.
+// Demo choice: only the strongest path is shown; the backend still computes the shortest as well.
 
 import { el, wikidataLink } from "./dom.js";
 
 export class PathComparison {
   constructor(container, { onShow } = {}) {
     this.root = container;
-    this.onShow = onShow;     // (mode) => void : "shortest" | "strongest" | "both" | "none"
-    this.tab = "shortest";
+    this.onShow = onShow;     // (mode) => void : "strongest" | "none"
+    this.tab = "strongest";
     this.comparison = null;
     this.sandbox = null;      // {comparison, warnings, sandbox_edges}
     this.answer = null;
@@ -27,11 +28,11 @@ export class PathComparison {
     const c = this.comparison;
     const parts = [];
     if (this.answer) parts.push(this._answer(this.answer));
-    if (!c?.shortest?.result) {
+    if (!c?.strongest?.result) {
       parts.push(el("div", { class: "empty" }, this.status === "running"
-        ? "Exploring… paths appear as soon as the explored graph connects the two people."
-        : this.status === "idle" ? "Results will appear here." : "No connection among the explored relationships."));
-      if (this.sandbox?.comparison?.shortest?.result) parts.push(this._tabs(), this._body());
+        ? "Exploring… a path appears as soon as the explored subgraph connects the two people."
+        : this.status === "idle" ? "Results will appear here." : "No path in the explored subgraph."));
+      if (this.sandbox?.comparison?.strongest?.result) parts.push(this._tabs(), this._body());
       this.root.replaceChildren(...parts);
       return;
     }
@@ -40,16 +41,13 @@ export class PathComparison {
   }
 
   _tabs() {
-    const c = this.comparison, w = c?.strongest?.result, s = c?.shortest?.result;
+    const w = this.comparison?.strongest?.result;
     const tab = (id, text, sub) => el("button", { class: `ptab${this.tab === id ? " on" : ""}`, "data-tab": id,
-      on: { click: () => { this.tab = id; this.onShow?.(id === "sandbox" ? "both" : id); this.render(); } } }, text, sub ? el("small", {}, sub) : null);
-    const tabs = [
-      tab("shortest", "Shortest", s ? `${s.hop_count} hop${s.hop_count === 1 ? "" : "s"}` : "—"),
-      tab("strongest", "Strongest", w ? `cost ${w.total_cost.toFixed(2)}` : "—"),
-    ];
+      on: { click: () => { this.tab = id; this.onShow?.("strongest"); this.render(); } } }, text, sub ? el("small", {}, sub) : null);
+    const tabs = [tab("strongest", "Strongest path", w ? `${w.hop_count} hop${w.hop_count === 1 ? "" : "s"} · cost ${w.total_cost.toFixed(2)}` : "—")];
     if (this.sandbox?.sandbox_edges?.length) tabs.push(tab("sandbox", "With sandbox", `${this.sandbox.sandbox_edges.length} edit${this.sandbox.sandbox_edges.length === 1 ? "" : "s"}`));
     return el("div", { class: "ptabs" }, ...tabs,
-      el("button", { class: "ptab ghost", title: "Show both paths on the graph", on: { click: () => this.onShow?.("both") } }, "Both"),
+      el("button", { class: "ptab ghost", title: "Show the path on the graph", on: { click: () => this.onShow?.("strongest") } }, "Show"),
       el("button", { class: "ptab ghost", title: "Remove path emphasis", on: { click: () => this.onShow?.("none") } }, "Off"));
   }
 
@@ -59,17 +57,14 @@ export class PathComparison {
       const sc = this.sandbox?.comparison;
       return el("div", { class: "pbody" },
         el("div", { class: "banner sandbox" }, "Hypothetical: includes presenter sandbox edges, which are NOT Wikidata statements."),
-        sc?.shortest?.result ? [this._card("Shortest with sandbox", sc.shortest.result), sc.same_path ? null : this._card("Strongest with sandbox", sc.strongest.result)]
+        sc?.strongest?.result ? this._card("Strongest with sandbox", sc.strongest.result)
           : el("div", { class: "empty" }, "No path even with the sandbox edges."),
         this._warnings());
     }
-    const r = this.tab === "strongest" ? c.strongest.result : c.shortest.result;
-    const same = c.same_path ? el("div", { class: "note" }, "Shortest and strongest are the same path here.") : null;
     return el("div", { class: "pbody" },
-      this._card(this.tab === "strongest" ? "Strongest · lowest weighted cost" : "Shortest · fewest relationships", r),
-      same,
+      this._card("Strongest · lowest weighted cost", c.strongest.result),
       el("div", { class: "note" },
-        `Scope: ${c.scope === "explored_graph" ? "shortest/strongest among the explored relationships only, not all of Wikidata" : "complete within the configured snapshot"}. `,
+        `Scope: ${c.scope === "explored_graph" ? "strongest within the explored subgraph only, not all of Wikidata" : "complete within the configured snapshot"}. `,
         "A shared employer, school, sports team or organization is an association, not proof that people met. ",
         "Statements are what Wikidata records, not verified facts."),
       this._warnings());
@@ -96,10 +91,10 @@ export class PathComparison {
   _answer(a) {
     const agent = a.summary_source === "agent";
     return el("div", { class: `answer${agent ? "" : " backend"}` },
-      el("div", { class: "small muted" }, agent ? "Agent summary · checked: mentions only entities on the returned paths"
-        : "Summary generated from the backend's verified results"),
+      el("div", { class: "small muted" }, agent ? "The agent's final answer · grounding check passed: it names only entities on the verified path"
+        : "Template answer from the verified path (no LLM)"),
       el("div", {}, a.summary),
-      a.unverified_mentions?.length ? el("div", { class: "small warn" }, `The agent's own summary was rejected: it mentioned ${a.unverified_mentions.join(", ")}, which are not on any returned path.`) : null);
+      a.unverified_mentions?.length ? el("div", { class: "small warn" }, `Grounding check failed: the agent's answer named ${a.unverified_mentions.join(", ")}, which is not on the verified path, so the template answer is shown instead.`) : null);
   }
 
   _warnings() {
