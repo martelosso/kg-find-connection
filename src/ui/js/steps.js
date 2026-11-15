@@ -16,7 +16,7 @@
 // Only text the run actually emitted is shown: the agent's visible decision summary and backend
 // facts (tool arguments, results, paths, budgets). Nothing is reconstructed or invented.
 
-import { TERMINAL, pathsText } from "./investigation.js";
+import { TERMINAL, pathsText, plainWords } from "./investigation.js";
 
 export class StepBook {
   constructor() { this.reset(); }
@@ -241,10 +241,10 @@ export const MIN_FOLD = 3;
  */
 export function describeTail(step, leadsBefore = null) {
   const started = new Map(), expansions = [], otherCalls = {}, isLead = new Set();
-  let addedNodes = 0, addedEdges = 0, reason = null, leads = leadsBefore, fromLeads = leadsBefore ? 0 : null;
+  let addedNodes = 0, addedEdges = 0, reason = null, reasonVerbatim = null, leads = leadsBefore, fromLeads = leadsBefore ? 0 : null;
   for (const ev of step.events) {
     const p = ev.payload;
-    if (ev.type === "agent.decision" && !reason && p.summary && p.tool_calls?.length) reason = tidyClip(p.summary);
+    if (ev.type === "agent.decision" && !reason && p.summary && p.tool_calls?.length) { reason = plainWords(tidyClip(p.summary)); reasonVerbatim = p.summary; }
     else if (ev.type === "tool.leads") { leads = p.improvement_leads || []; fromLeads ??= 0; }
     else if (ev.type === "tool.started") {
       started.set(p.step, p);
@@ -260,7 +260,7 @@ export function describeTail(step, leadsBefore = null) {
     }
   }
   for (const s of started.values()) otherCalls[s.tool] = (otherCalls[s.tool] || 0) + 1;
-  return { steps: step.members.length, expansions, otherCalls, reason, addedNodes, addedEdges, fromLeads };
+  return { steps: step.members.length, expansions, otherCalls, reason, reasonVerbatim, addedNodes, addedEdges, fromLeads };
 }
 
 /**
@@ -282,7 +282,8 @@ export function describeStep(step) {
     const p = ev.payload;
     switch (ev.type) {
       case "agent.decision":
-        out.decision = tidyClip(p.summary || null);
+        out.decision = plainWords(tidyClip(p.summary || null));
+        out.decisionVerbatim = p.summary || null;
         break;
       case "tool.started": {
         const t = { step: p.step, tool: p.tool, qid: p.qid || null, label: p.label || null, side: p.side || null,
@@ -316,7 +317,7 @@ export function describeStep(step) {
       default:
         if (TERMINAL.has(ev.type)) {
           out.result = { type: ev.type, outcome: p.outcome || null, stop: p.stop_reason || null,
-                         error: p.error || null, answer: p.answer?.summary || null,
+                         error: p.error || null, answer: plainWords(p.answer?.summary || null), answerVerbatim: p.answer?.summary || null,
                          answerSource: p.answer?.summary_source || null, paths: pathsText(p.comparison),
                          comparison: p.comparison || null };
         }
@@ -405,6 +406,20 @@ export function strengthSummary(chain) {
     const n = by[w].length, labels = [...new Set(by[w])].join(", ");
     return i === 0 ? `${n} ${w} link${n === 1 ? "" : "s"} (${labels})` : `${n} ${w} (${labels})`;
   }).join(" · ");
+}
+
+/**
+ * The honesty rule for a chain that runs through something shared rather than a person-to-person
+ * link: "Through United Nations: a shared organisation is an association, not proof that they met."
+ * Null when every intermediate entity is a person.
+ */
+const SHARED = { organization: "organisation", work: "film or record", place: "birthplace", position: "position" };
+export function associationNote(chain) {
+  const mids = (chain?.nodes || []).slice(1, -1).filter((n) => n.kind !== "person");
+  if (!mids.length) return null;
+  const kinds = [...new Set(mids.map((n) => SHARED[n.kind] || "entity"))];
+  const what = kinds.length === 1 ? `a shared ${kinds[0]}` : "a shared organisation, work or place";
+  return `Through ${mids.map((n) => n.label).join(", ")}: ${what} is an association, not proof that they met.`;
 }
 
 /**

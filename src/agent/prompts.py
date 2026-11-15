@@ -37,7 +37,8 @@ Rules:
   so plainly.
 - Before each tool call, write one short sentence explaining your decision (shown to the audience).
   The audience is learning knowledge graphs and agentic AI: name tools, entities and statements;
-  never say "backend".
+  never say "backend". Never quote numbers from tool results (costs, best_possible_cost, scores,
+  degrees) or field names: say "stronger", "weaker", "a close relative", "well connected" instead.
 """
 
 

@@ -6,10 +6,10 @@ import { api, streamEvents } from "./api.js";
 import { $, el, wikidataLink } from "./dom.js";
 import { entityIcon } from "./glyphs.js";
 import { GraphView } from "./graph-view.js";
-import { InvestigationModel, label } from "./investigation.js";
+import { InvestigationModel, label, verbatimTitle } from "./investigation.js";
 import { PathComparison } from "./path-comparison.js";
 import { PeoplePicker } from "./people-picker.js";
-import { StepBook, describeStep, describeTail, meetingPoint, orderBadge, pathChain, pathChains, resultHeadline, strengthSummary,
+import { StepBook, associationNote, describeStep, describeTail, meetingPoint, orderBadge, pathChain, pathChains, resultHeadline, strengthSummary,
          toolAction, toolPurpose, whyStronger } from "./steps.js";
 import { Timeline } from "./timeline.js";
 import { TurtleEditor } from "./turtle-editor.js";
@@ -696,7 +696,7 @@ function stepBody(step, d) {
           t.tool === "get_neighbors" ? [" ", guidanceTag(t.qid || t.arguments?.qid, stepIndex)] : null])
         : (step.events[0].payload.tool_calls || []).map((name) => [el("span", { class: "tool-name" }, name)]);
       return [el("div", { class: "who agent" }, `Agent turn ${turnNo(stepIndex)} · the model's message`),
-        el("div", { class: "decision agent" }, d.decision ? `“${d.decision}”` : "(no message: the model went straight to its tool calls)"),
+        el("div", { class: "decision agent", title: verbatimTitle(d.decisionVerbatim) }, d.decision ? `“${d.decision}”` : "(no message: the model went straight to its tool calls)"),
         items.length ? el("div", { class: "plan" },
           el("div", { class: "muted small" }, items.length === 1 ? "Its tool call:" : `Its ${items.length} tool calls (one step each):`),
           el("ol", {}, ...items.map((x) => el("li", {}, x)))) : null,
@@ -705,11 +705,12 @@ function stepBody(step, d) {
     case "call": {
       const t = d.tools[0];
       const parent = step.parent ?? null;
-      const why = parent !== null ? describeStep(book.steps[parent]).decision : null;
+      const pd = parent !== null ? describeStep(book.steps[parent]) : null;
+      const why = pd?.decision || null;
       // The agent's reasoning leads; what the backend did for it is the supporting box below.
       return [el("div", { class: "who agent" }, parent !== null
           ? `Agent turn ${turnNo(parent)} · tool call ${step.callNo} of ${book.callCount(stepIndex)}` : "Tool call"),
-        why ? el("div", { class: "decision agent" }, `“${why}”`) : null,
+        why ? el("div", { class: "decision agent", title: verbatimTitle(pd.decisionVerbatim) }, `“${why}”`) : null,
         t?.tool === "get_neighbors" && guidanceTag(t.qid, stepIndex)
           ? el("div", { class: "small" }, guidanceTag(t.qid, stepIndex)) : null,
         t ? callBlock(t, d) : null,
@@ -740,7 +741,7 @@ function stepBody(step, d) {
         ...chains.map((ch) => chainBlock(ch)),
         // Folded: the chain already shows the path, and a long summary would push the graph off screen.
         r.answer ? el("details", { class: "summary" }, el("summary", {}, r.answerSource === "agent"
-          ? "The agent's final answer (grounding check passed)" : "Template answer from the verified path (no LLM)"), el("div", {}, r.answer)) : null,
+          ? "The agent's final answer (grounding check passed)" : "Template answer from the verified path (no LLM)"), el("div", { title: verbatimTitle(r.answerVerbatim) }, r.answer)) : null,
         el("div", { class: "scope" }, h.scope), saveReplayBlock(r), foot];
     }
   }
@@ -826,7 +827,7 @@ function tailBody(step, foot) {
       : `Deterministic baseline (no LLM): a few more expansions to check for a stronger path · ${t.steps} steps in one`),
     el("div", { class: "decision" }, "Nothing stronger turned up: the path found at ",
       el("b", {}, `step ${step.pathStep}`), " is still the strongest."),
-    t.reason ? el("div", { class: "why" }, el("span", { class: "muted" }, "The model's message when it kept going: "), `“${t.reason}”`) : null,
+    t.reason ? el("div", { class: "why", title: verbatimTitle(t.reasonVerbatim) }, el("span", { class: "muted" }, "The model's message when it kept going: "), `“${t.reason}”`) : null,
     t.expansions.length ? el("div", { class: "res" }, `Expanded ${t.expansions.length} more entit${t.expansions.length === 1 ? "y" : "ies"}: `, el("b", {}, shown), ".") : null,
     t.expansions.length ? el("div", { class: "res" }, `${t.addedNodes} new entities, ${t.addedEdges} new statements `
       + "(greyed out in the graph): none of them gave a stronger path.") : null,
@@ -876,7 +877,8 @@ function chainBlock(ch, title = "Strongest connection", faded = false) {
       el("span", { class: "muted" }, ` · ${ch.hops} hop${ch.hops === 1 ? "" : "s"}`)),
     el("div", { class: "chain-row" }, ...items),
     // The replaced path skips its strength line: the "why stronger" sentence already compares them.
-    !faded && ch.rels.some((r) => r.word) ? el("div", { class: "chain-strength" }, strengthSummary(ch)) : null);
+    !faded && ch.rels.some((r) => r.word) ? el("div", { class: "chain-strength" }, strengthSummary(ch)) : null,
+    !faded && associationNote(ch) ? el("div", { class: "chain-strength" }, associationNote(ch)) : null);
 }
 
 $("#step-next").addEventListener("click", nextStep);

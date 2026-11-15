@@ -2,6 +2,7 @@
 // path updates and the final outcome. Rows with edge IDs highlight those edges when clicked.
 
 import { el } from "./dom.js";
+import { verbatimTitle } from "./investigation.js";
 
 export class Timeline {
   constructor(container, { onSelectRow } = {}) {
@@ -48,7 +49,7 @@ export class Timeline {
     const clickable = row.edgeIds?.length > 0;
     const li = el("li", { class: `row ${row.kind}${row.status === "error" ? " error" : ""}${row.parent ? " nested" : ""}${clickable ? " clickable" : ""}${this.selected === row.eventId ? " sel" : ""}`,
                           title: clickable ? "Click to highlight these edges in the graph" : null });
-    if (row.kind === "decision") li.append(el("span", { class: "tag" }, "agent"), " ", row.text);
+    if (row.kind === "decision") li.append(el("span", { class: "tag" }, "agent"), " ", el("span", { title: verbatimTitle(row.verbatim) }, row.text));
     else if (row.kind === "tool") {
       const target = row.qid ? [" ", el("b", {}, row.label || row.qid), el("span", { class: "muted" }, ` · ${row.side} side`)] : [];
       li.append(el("span", { class: "tool-name" }, row.tool), ...target);

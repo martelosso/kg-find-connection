@@ -3,6 +3,7 @@
 // Demo choice: only the strongest path is shown; the backend still computes the shortest as well.
 
 import { el, wikidataLink } from "./dom.js";
+import { plainWords, verbatimTitle } from "./investigation.js";
 
 export class PathComparison {
   constructor(container, { onShow } = {}) {
@@ -93,7 +94,7 @@ export class PathComparison {
     return el("div", { class: `answer${agent ? "" : " backend"}` },
       el("div", { class: "small muted" }, agent ? "The agent's final answer · grounding check passed: it names only entities on the verified path"
         : "Template answer from the verified path (no LLM)"),
-      el("div", {}, a.summary),
+      el("div", { title: verbatimTitle(a.summary) }, plainWords(a.summary)),
       a.unverified_mentions?.length ? el("div", { class: "small warn" }, `Grounding check failed: the agent's answer named ${a.unverified_mentions.join(", ")}, which is not on the verified path, so the template answer is shown instead.`) : null);
   }
 

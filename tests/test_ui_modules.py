@@ -7,6 +7,7 @@ Skipped when Node.js is not installed.
 """
 
 import json
+import re
 import shutil
 import subprocess
 
@@ -249,7 +250,8 @@ console.log(JSON.stringify(out));
     lula = out["lula-snoop-agent"]
     assert lula["folded"] and lula["tail"]["steps"] >= 15 and len(lula["tail"]["expansions"]) >= 10
     lula_decisions = [e["payload"].get("summary") for e in traces["lula-snoop-agent"] if e["type"] == "agent.decision"]
-    assert lula["tail"]["reason"] in lula_decisions                   # the agent's own words, quoted verbatim
+    assert lula["tail"]["reasonVerbatim"] in lula_decisions           # the agent's own words, kept verbatim
+    assert lula["tail"]["reason"] and not re.search(r"\d\.\d", lula["tail"]["reason"])  # shown without costs
     assert lula["tail"]["addedNodes"] > 0 and lula["tail"]["otherCalls"].get("compute_paths", 0) >= 1
     assert out["diana-churchill"]["folded"]                          # deterministic: expansions after the first path
 
@@ -413,3 +415,62 @@ def test_browser_subscribes_to_every_server_event_type(root, tmp_path):
     out = run_node(root, tmp_path, "const { EVENT_TYPES } = await mod('investigation.js');\n"
                                    "console.log(JSON.stringify(EVENT_TYPES));\n", {})
     assert sorted(out) == sorted(get_args(EventType))
+
+
+def test_agent_messages_are_shown_without_cost_figures(root, tmp_path):
+    """Recorded agent messages quote costs the screen never explains ("cost 3.947", "best_possible_cost
+    0.865", "(degree 58)"). Every recorded message, as shown, has no decimal number or field name and
+    still reads as a sentence; the exact words stay in a tooltip."""
+    msgs = []
+    for f in sorted((root / "data" / "fixtures" / "event_traces").glob("*agent*.json")):
+        for ev in json.loads(f.read_text(encoding="utf-8"))["events"]:
+            p = ev["payload"]
+            if ev["type"] == "agent.decision" and p.get("summary"):
+                msgs.append(p["summary"])
+            if isinstance(p.get("answer"), dict) and p["answer"].get("summary"):
+                msgs.append(p["answer"]["summary"])
+    samples = ["A path now exists (cost 3.947) but a stronger one is possible.",
+               "Pelé (degree 58) is a strong hub-like connector.",
+               "The best_possible_cost is stuck at 1.479 and rising — the strong family links are exhausted.",
+               "Still 3.718. Let me expand Harry.",
+               "The best possible cost has risen to 2.293, still below 3.0, so a stronger path may exist.",
+               "Expand Ada Lovelace and Charles Babbage."]
+    script = """
+const { plainWords, verbatimTitle } = await mod('investigation.js');
+console.log(JSON.stringify({ shown: data.msgs.map(plainWords), samples: data.samples.map(plainWords),
+                             titles: data.samples.map(verbatimTitle) }));
+"""
+    out = run_node(root, tmp_path, script, {"msgs": msgs, "samples": samples})
+    assert len(msgs) > 50
+    for raw, shown in zip(msgs, out["shown"]):
+        assert not re.search(r"\d\.\d|_cost|degree \d|\(\s*\)|\s[,.;]|  ", shown), (raw, shown)
+        assert len(shown) > 0.6 * len(raw) - 40, (raw, shown)   # numbers go, the sentence stays
+    assert out["samples"] == [
+        "A path now exists but a stronger one is possible.",
+        "Pelé is a strong hub-like connector.",
+        "The best possible cost keeps rising — the strong family links are exhausted.",
+        "No stronger path yet. Let me expand Harry.",
+        "The best possible cost has risen, so a stronger path may exist.",
+        "Expand Ada Lovelace and Charles Babbage."]
+    assert "cost 3.947" in out["titles"][0] and out["titles"][-1] is None
+
+
+def test_paths_through_shared_entities_say_it_is_an_association(root, tmp_path):
+    """A chain through an organisation, film or place carries the honesty rule; a chain of people does not."""
+    def chain(*kinds):
+        return {"nodes": [{"label": f"N{i}", "kind": k} for i, k in enumerate(kinds)]}
+    script = """
+const { associationNote } = await mod('steps.js');
+console.log(JSON.stringify(data.map(associationNote)));
+"""
+    out = run_node(root, tmp_path, script, [
+        chain("person", "organization", "person", "person"),
+        chain("person", "work", "person", "work", "person"),
+        chain("person", "organization", "person", "work", "person"),
+        chain("person", "person", "person"),
+        chain("person", "person")])
+    assert out == [
+        "Through N1: a shared organisation is an association, not proof that they met.",
+        "Through N1, N3: a shared film or record is an association, not proof that they met.",
+        "Through N1, N3: a shared organisation, work or place is an association, not proof that they met.",
+        None, None]
