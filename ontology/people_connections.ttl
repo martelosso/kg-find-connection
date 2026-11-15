@@ -1,0 +1,301 @@
+# People connections: the small teaching ontology of Six Degrees of Knowledge.
+#
+# What this file is: the MEANING of the people graph. Which kinds of things exist (classes),
+# which Wikidata properties connect them (and between which kinds), and how each relation
+# group should be read: a direct tie between two people, or a shared affiliation that is an
+# association and not proof that they met.
+#
+# What it is not: a copy of Wikidata's schema (the graph keeps Wikidata's own property IDs,
+# wdt:P26 etc., and this file only interprets them), and not the ranking policy. How strong a
+# relation counts, which groups are on by default and the hub caps live in
+# config/relationships.yaml. A test checks that both files list the same properties and groups.
+#
+# Domains and ranges describe THIS people graph (statements are kept when their subject is a
+# person, or for works and "founded by" when their object is), not Wikidata as a whole.
+#
+# Owner: the Six Degrees project. Change it on purpose, bump owl:versionInfo, and keep
+# config/relationships.yaml in step.
+
+@prefix ex:   <https://example.org/six-degrees/ontology#> .
+@prefix wd:   <http://www.wikidata.org/entity/> .
+@prefix wdt:  <http://www.wikidata.org/prop/direct/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+<https://example.org/six-degrees/ontology> a owl:Ontology ;
+    rdfs:label "People connections"@en ;
+    rdfs:comment "Classes, relation groups and Wikidata properties of the Six Degrees people graph. A mapping layer over Wikidata, not a replacement."@en ;
+    owl:versionInfo "1" .
+
+# ---------------------------------------------------------------------------------------------
+# Classes: the kinds of entity in the graph (ex:nodeKind is the kind name the graph uses)
+# ---------------------------------------------------------------------------------------------
+
+ex:Person a owl:Class ;
+    rdfs:label "Person"@en , "Persona"@es ;
+    rdfs:comment "A human: a Wikidata item that is an instance of human (Q5)."@en ;
+    ex:wikidataClass wd:Q5 ;
+    ex:nodeKind "person" .
+
+ex:Organization a owl:Class ;
+    rdfs:label "Organization"@en , "Organización"@es ;
+    rdfs:comment "An employer, school, society, sports team or party that people are linked to."@en ;
+    ex:nodeKind "organization" .
+
+ex:Work a owl:Class ;
+    rdfs:label "Film / music"@en , "Obra"@es ;
+    rdfs:comment "A film, series, song or album whose credits name people."@en ;
+    ex:nodeKind "work" .
+
+ex:Place a owl:Class ;
+    rdfs:label "Place"@en , "Lugar"@es ;
+    rdfs:comment "A place where people were born."@en ;
+    ex:nodeKind "place" .
+
+ex:Position a owl:Class ;
+    rdfs:label "Position"@en , "Cargo"@es ;
+    rdfs:comment "A role people held, such as a seat in a parliament."@en ;
+    ex:nodeKind "position" .
+
+ex:Award a owl:Class ;
+    rdfs:label "Award"@en , "Premio"@es ;
+    rdfs:comment "A prize or honour people received. The graph files these under the kind other."@en ;
+    ex:nodeKind "other" .
+
+# ---------------------------------------------------------------------------------------------
+# How to read a relation: a direct tie, or a shared affiliation
+# ---------------------------------------------------------------------------------------------
+
+ex:DirectTie a ex:LinkType ;
+    rdfs:label "Direct tie"@en , "Vínculo directo"@es ;
+    rdfs:comment "Wikidata records a relationship between the two people themselves."@en .
+
+ex:SharedAffiliation a ex:LinkType ;
+    rdfs:label "Shared affiliation"@en , "Afiliación compartida"@es ;
+    rdfs:comment "Two people are linked to the same organization, work or place. An association, not proof that they met."@en .
+
+# ---------------------------------------------------------------------------------------------
+# Relation groups: the sets of properties the presenter (and the LLM agent) switch on and off
+# ---------------------------------------------------------------------------------------------
+
+ex:family a ex:RelationGroup ;
+    rdfs:label "Family"@en , "Familia"@es ;
+    rdfs:comment "Family, partners and relatives recorded on a person."@en ;
+    ex:linkType ex:DirectTie .
+
+ex:mentorship a ex:RelationGroup ;
+    rdfs:label "Teacher / student"@en , "Maestro / alumno"@es ;
+    rdfs:comment "Recorded academic or artistic teacher-student relationships."@en ;
+    ex:linkType ex:DirectTie .
+
+ex:institutional a ex:RelationGroup ;
+    rdfs:label "Shared institution"@en , "Institución compartida"@es ;
+    rdfs:comment "Employer, school, membership, sports team and founder links."@en ;
+    ex:linkType ex:SharedAffiliation .
+
+ex:works a ex:RelationGroup ;
+    rdfs:label "Shared film / music"@en , "Obra compartida (cine / música)"@es ;
+    rdfs:comment "Credits recorded on a film, series, song or album."@en ;
+    ex:linkType ex:SharedAffiliation .
+
+ex:birthplace a ex:RelationGroup ;
+    rdfs:label "Birthplace (weak)"@en , "Lugar de nacimiento (débil)"@es ;
+    rdfs:comment "Being born in the same town says nothing about knowing each other."@en ;
+    ex:linkType ex:SharedAffiliation .
+
+ex:position a ex:RelationGroup ;
+    rdfs:label "Position held (weak)"@en , "Cargo ocupado (débil)"@es ;
+    rdfs:comment "Roles such as a parliamentary seat, held by many people over time."@en ;
+    ex:linkType ex:SharedAffiliation .
+
+ex:awards a ex:RelationGroup ;
+    rdfs:label "Awards (weak)"@en , "Premios (débil)"@es ;
+    rdfs:comment "Shared recognition, not contact."@en ;
+    ex:linkType ex:SharedAffiliation .
+
+ex:party a ex:RelationGroup ;
+    rdfs:label "Political party (weak)"@en , "Partido político (débil)"@es ;
+    rdfs:comment "Membership of a political party. Large parties are hubs."@en ;
+    ex:linkType ex:SharedAffiliation .
+
+ex:influence a ex:RelationGroup ;
+    rdfs:label "Influence (weak)"@en , "Influencia (débil)"@es ;
+    rdfs:comment "An intellectual influence between two people, often across centuries. Not contact."@en ;
+    ex:linkType ex:DirectTie .
+
+# ---------------------------------------------------------------------------------------------
+# Properties: Wikidata's own property IDs, interpreted. Edges keep Wikidata's direction.
+# ---------------------------------------------------------------------------------------------
+
+# Family. father, mother and child are NOT declared inverses of each other: the inverse of
+# "child" is "father OR mother", and Wikidata often records only one side.
+
+wdt:P26 a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:label "spouse"@en , "cónyuge"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+wdt:P22 a owl:ObjectProperty ;
+    rdfs:label "father"@en , "padre"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+wdt:P25 a owl:ObjectProperty ;
+    rdfs:label "mother"@en , "madre"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+wdt:P40 a owl:ObjectProperty ;
+    rdfs:label "child"@en , "hijo/a"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+wdt:P3373 a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:label "sibling"@en , "hermano/a"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+wdt:P451 a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:label "unmarried partner"@en , "pareja"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+wdt:P1038 a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:label "relative"@en , "pariente"@es ;
+    rdfs:comment "Cousins, in-laws, uncles: the exact kinship is a qualifier the graph does not keep."@en ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:family .
+
+# Teacher / student. Here the inverses are exact: "student of" read backwards is "student".
+
+wdt:P1066 a owl:ObjectProperty ;
+    rdfs:label "student of"@en , "alumno/a de"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    owl:inverseOf wdt:P802 ;
+    ex:relationGroup ex:mentorship .
+
+wdt:P802 a owl:ObjectProperty ;
+    rdfs:label "student"@en , "alumno/a"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    owl:inverseOf wdt:P1066 ;
+    ex:relationGroup ex:mentorship .
+
+wdt:P184 a owl:ObjectProperty ;
+    rdfs:label "doctoral advisor"@en , "director/a de tesis"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    owl:inverseOf wdt:P185 ;
+    ex:relationGroup ex:mentorship .
+
+wdt:P185 a owl:ObjectProperty ;
+    rdfs:label "doctoral student"@en , "doctorando/a"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    owl:inverseOf wdt:P184 ;
+    ex:relationGroup ex:mentorship .
+
+# Shared institution: person -> organization, except "founded by", which Wikidata records on
+# the organization.
+
+wdt:P108 a owl:ObjectProperty ;
+    rdfs:label "employer"@en , "empleador"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Organization ;
+    ex:relationGroup ex:institutional .
+
+wdt:P69 a owl:ObjectProperty ;
+    rdfs:label "educated at"@en , "educado/a en"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Organization ;
+    ex:relationGroup ex:institutional .
+
+wdt:P463 a owl:ObjectProperty ;
+    rdfs:label "member of"@en , "miembro de"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Organization ;
+    ex:relationGroup ex:institutional .
+
+wdt:P54 a owl:ObjectProperty ;
+    rdfs:label "member of sports team"@en , "miembro del equipo deportivo"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Organization ;
+    ex:relationGroup ex:institutional .
+
+wdt:P112 a owl:ObjectProperty ;
+    rdfs:label "founded by"@en , "fundado/a por"@es ;
+    rdfs:domain ex:Organization ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:institutional .
+
+# Shared film / music: Wikidata records credits on the work, pointing at the person.
+
+wdt:P161 a owl:ObjectProperty ;
+    rdfs:label "cast member"@en , "reparto"@es ;
+    rdfs:domain ex:Work ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:works .
+
+wdt:P57 a owl:ObjectProperty ;
+    rdfs:label "director"@en , "dirección"@es ;
+    rdfs:domain ex:Work ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:works .
+
+wdt:P58 a owl:ObjectProperty ;
+    rdfs:label "screenwriter"@en , "guion"@es ;
+    rdfs:domain ex:Work ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:works .
+
+wdt:P86 a owl:ObjectProperty ;
+    rdfs:label "composer"@en , "compositor/a"@es ;
+    rdfs:domain ex:Work ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:works .
+
+wdt:P175 a owl:ObjectProperty ;
+    rdfs:label "performer"@en , "intérprete"@es ;
+    rdfs:domain ex:Work ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:works .
+
+# Weak links, most of them off by default.
+
+wdt:P19 a owl:ObjectProperty ;
+    rdfs:label "place of birth"@en , "lugar de nacimiento"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Place ;
+    ex:relationGroup ex:birthplace .
+
+wdt:P39 a owl:ObjectProperty ;
+    rdfs:label "position held"@en , "cargo ocupado"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Position ;
+    ex:relationGroup ex:position .
+
+wdt:P166 a owl:ObjectProperty ;
+    rdfs:label "award received"@en , "premio recibido"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Award ;
+    ex:relationGroup ex:awards .
+
+wdt:P102 a owl:ObjectProperty ;
+    rdfs:label "member of political party"@en , "miembro del partido"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Organization ;
+    ex:relationGroup ex:party .
+
+wdt:P737 a owl:ObjectProperty ;
+    rdfs:label "influenced by"@en , "influido/a por"@es ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Person ;
+    ex:relationGroup ex:influence .

@@ -24,6 +24,7 @@ async function request(method, url, body) {
 
 export const api = {
   health: () => request("GET", "/api/health"),
+  ontology: () => request("GET", "/api/people-ontology"),
   demoCases: () => request("GET", "/api/demo-cases"),
   searchPeople: (q, limit = 8) => request("GET", `/api/people/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   start: (body) => request("POST", "/api/investigations", body),

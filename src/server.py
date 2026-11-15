@@ -19,6 +19,7 @@ from flask import Flask, Response, current_app, jsonify, redirect, request, send
 from openai import OpenAI
 
 from .investigations.service import InvestigationService, ServiceError, provider_from_env
+from .ontology import OntologyError, load_people_ontology
 from .ontology_agent import (
     DEFAULT_DATA_PATH,
     DEFAULT_MODEL,
@@ -106,6 +107,20 @@ def _service_error(error: ServiceError):
 @app.get("/api/health")
 def api_health():
     return jsonify(_service().health())
+
+
+@app.get("/api/people-ontology")
+def api_people_ontology():
+    """The teaching ontology (ontology/people_connections.ttl) plus the policy's weights, for the
+    workbench's Ontology view. Checked against config/relationships.yaml on first load."""
+    view = current_app.config.get("PEOPLE_ONTOLOGY")
+    if view is None:
+        try:
+            view = load_people_ontology(_service().policy)
+        except (OSError, OntologyError) as exc:
+            return jsonify({"error": {"code": "ontology_invalid", "message": str(exc)}}), 500
+        current_app.config["PEOPLE_ONTOLOGY"] = view
+    return jsonify(view.model_dump())
 
 
 @app.get("/api/people/search")

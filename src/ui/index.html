@@ -44,13 +44,14 @@
 <div id="main">
   <section id="epane" aria-label="Turtle source">
     <div class="pane-bar">
-      <span class="ptitle">Source</span> <span class="fname">Turtle</span> <span class="muted" id="src-scope"></span>
+      <span class="ptitle">Source</span> <span class="fname" id="src-fname">Turtle</span> <span class="muted" id="src-scope"></span>
       <span class="spacer"></span>
       <span class="pill warn" id="src-dirty" hidden>edited</span>
       <button class="mini" id="src-stale" hidden title="The graph grew while you were editing">reload</button>
       <button class="mini min" id="src-min" type="button" title="Expand the source pane">+</button>
     </div>
     <div id="cm-wrap"></div>
+    <div id="onto-cm"></div>
     <div class="pane-foot">
       <span class="sd" id="parse-dot"></span><span id="parse-text">No source yet</span>
       <span class="spacer"></span>
@@ -66,6 +67,10 @@
     <div class="pane-bar">
       Graph <span class="muted" id="counts"></span>
       <span class="spacer"></span>
+      <div class="seg small" id="view-seg" role="radiogroup" title="Data: the explored statements · Ontology: the classes and relations they are allowed to use">
+        <button type="button" role="radio" data-view="data" class="on" aria-checked="true">Data</button>
+        <button type="button" role="radio" data-view="ontology" aria-checked="false">Ontology</button>
+      </div>
       <button class="mini" id="show-all" hidden type="button"></button>
       <button class="mini" id="fit" type="button">Fit</button>
     </div>
@@ -84,6 +89,10 @@
         <div id="step-progress" title="Progress through the run"><i></i></div>
         <div id="step-body"></div>
       </div>
+      </div>
+      <div id="ontology-view">
+        <div id="onto-net"></div>
+        <div id="onto-caption" class="card"></div>
       </div>
       <div id="inspector" class="card" hidden></div>
       <div id="legend">

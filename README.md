@@ -15,6 +15,7 @@ This repository is being extended into **Six Degrees of Knowledge**, an agentic 
 |---|---|
 | [`graph-view/live-editor.html`](graph-view/live-editor.html) | Standalone live Turtle editor (CodeMirror 5) with a vis-network graph and two-way highlighting. It works offline, using the libraries vendored in `src/ui/vendor/`. The workbench is built on its parser, theme and highlighting. |
 | [`graph-view/visualize.html`](graph-view/visualize.html) | Older standalone Turtle graph visualizer (legacy). |
+| [`ontology/people_connections.ttl`](ontology/people_connections.ttl) | The people graph's teaching ontology: classes, relation groups and the 26 Wikidata properties with domain and range. Shown in the workbench's **Ontology** view; a test keeps it in step with `config/relationships.yaml`. |
 | [`ontology/ontology.owl.ttl`](ontology/ontology.owl.ttl), [`data/mock_data.ttl`](data/mock_data.ttl) | Hand-written supermarket/retail ontology and instance data (legacy). |
 | [`src/ontology_agent.py`](src/ontology_agent.py) | Retail assistant that queries the graph with SPARQL through an LLM on OpenRouter, from the terminal (legacy). |
 | [`src/server.py`](src/server.py) + [`src/ui/`](src/ui/) | Flask app: the Six Degrees workbench at `/` (`src/ui/index.html`, `js/`, `css/`, `vendor/`), the investigation API under `/api/`, and the legacy retail assistant at `/legacy`. |
@@ -104,6 +105,7 @@ Third-party frontend libraries and their licenses are listed in [`docs/third-par
 │   ├── live-editor.html
 │   └── visualize.html        # legacy viewer (loads ../src/ui/vendor/vis-network.min.js)
 ├── ontology/
+│   ├── people_connections.ttl  # teaching ontology of the people graph (Ontology view)
 │   ├── ontology.owl.ttl      # legacy retail ontology
 │   └── your_own_ontology.owl.ttl
 ├── src/

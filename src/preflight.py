@@ -5,6 +5,7 @@
 
 Checks (✓ ok, ! warning, ✗ failure → non-zero exit):
 - configuration files load and validate;
+- the teaching ontology (ontology/people_connections.ttl) parses and agrees with the policy;
 - every demo case's replay trace loads, rebuilds its graph, and the backend recomputes exactly the
   recorded paths; its endpoints and snapshot match the case; its fixture loads;
 - the people graph (if installed) opens, has label search indexes and answers a search;
@@ -48,6 +49,16 @@ def _checks_config(out: list[Check]) -> None:
                                          f"hub cap {policy.pathfinding.max_intermediate_degree}{by_kind}"))
     except Exception as exc:  # noqa: BLE001 - report anything
         out.append(Check("fail", "config", f"{type(exc).__name__}: {exc}"))
+
+
+def _checks_ontology(out: list[Check]) -> None:
+    from .ontology import load_people_ontology
+    try:
+        view = load_people_ontology(load_policy())
+        out.append(Check("ok", "ontology", f"people_connections.ttl v{view.version}: {len(view.classes)} classes, "
+                         f"{len(view.groups)} relation groups, {len(view.properties)} properties, agrees with the policy"))
+    except Exception as exc:
+        out.append(Check("fail", "ontology", f"{type(exc).__name__}: {exc}"))
 
 
 def _checks_cases(out: list[Check], root: Path, cases_path: Path | None = None) -> None:
@@ -175,6 +186,7 @@ def run_checks(root: Path = ROOT, *, online: bool = False, port: bool = True,
                cases_path: Path | None = None) -> list[Check]:
     out: list[Check] = []
     _checks_config(out)
+    _checks_ontology(out)
     _checks_cases(out, root, cases_path)
     _checks_graph(out, root)
     _checks_assets(out, root)

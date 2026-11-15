@@ -191,6 +191,28 @@ body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180de
 /* ── Graph ── */
 #net-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
 #network { position: absolute; inset: 0; }
+/* ── Ontology view: the schema diagram replaces the data graph, its Turtle replaces the data Turtle ── */
+#ontology-view { position: absolute; inset: 0; display: none; background: var(--bg); }
+#onto-net { position: absolute; inset: 0; }
+#onto-caption { position: absolute; left: 14px; top: 14px; z-index: 5; width: 300px; max-width: calc(100% - 28px); padding: 14px 16px;
+  display: grid; gap: 7px; font-size: 12.5px; line-height: 1.45; }
+#onto-caption .oc-title { font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+#onto-caption .oc-head { font-size: 15px; font-weight: 800; }
+#onto-caption .oc-key { display: grid; gap: 4px; color: var(--muted); font-size: 11.5px; }
+#onto-caption .oc-key i { display: inline-block; width: 22px; vertical-align: middle; margin-right: 6px; border-radius: 3px; }
+#onto-cm { flex: 1; position: relative; overflow: hidden; display: none; }
+#onto-cm .CodeMirror { position: absolute; inset: 0; height: auto; }
+body.view-onto #ontology-view { display: block; }
+body.view-onto #network, body.view-onto #overlays, body.view-onto #legend, body.view-onto #show-all, body.view-onto #fit { visibility: hidden; }
+body.view-onto #onto-cm { display: block; }
+body.view-onto #cm-wrap, body.view-onto #epane .pane-foot, body.view-onto #src-scope, body.view-onto #src-dirty, body.view-onto #src-stale { display: none; }
+body.src-min.view-onto #onto-cm { display: none; }
+.seg.small { height: 28px; padding: 2px; }
+.seg.small button { padding: 0 11px; font-size: 11.5px; text-transform: none; letter-spacing: 0; }
+.seg button[data-view="ontology"].on { background: var(--road); }
+.onto-rule { display: grid; gap: 3px; padding: 7px 9px; border-radius: var(--r-ctl); background: var(--surface2); }
+.onto-rule .mini { justify-self: start; margin-top: 2px; }
+.rules-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 #legend { position: absolute; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 14px;
   font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface); border-radius: var(--r-ctl); max-width: calc(100% - 24px); }
 #legend > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
@@ -407,3 +429,5 @@ body.pane-anim #epane, body.pane-anim #side { transition: width var(--t-ui) var(
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
 }
+.onto-props { margin: 2px 0 0; padding-left: 18px; display: grid; gap: 3px; }
+body.view-onto #network .vis-tooltip { display: none !important; }

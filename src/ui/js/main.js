@@ -7,9 +7,11 @@ import { $, el, wikidataLink } from "./dom.js";
 import { entityIcon } from "./glyphs.js";
 import { GraphView } from "./graph-view.js";
 import { InvestigationModel, label, verbatimTitle } from "./investigation.js";
+import { ruleFor, rulesFor, shortGroup } from "./ontology.js";
+import { OntologyView } from "./ontology-view.js";
 import { PathComparison } from "./path-comparison.js";
 import { PeoplePicker } from "./people-picker.js";
-import { StepBook, associationNote, describeStep, describeTail, meetingPoint, orderBadge, pathChain, pathChains, resultHeadline, strengthSummary,
+import { StepBook, associationNote, describeStep, describeTail, meetingPoint, orderBadge, pathChain, pathChains, resultHeadline, strengthSummary, strengthWord,
          toolAction, toolPurpose, whyStronger } from "./steps.js";
 import { Timeline } from "./timeline.js";
 import { TurtleEditor } from "./turtle-editor.js";
@@ -53,6 +55,11 @@ const editor = new TurtleEditor($("#cm-wrap"), {
   onStatus: (s) => setParseStatus(s),
   onDirty: (dirty) => { $("#src-dirty").hidden = !dirty; $("#apply-sandbox").disabled = !dirty || !canEditSandbox(); },
 });
+// The Ontology view (Data | Ontology in the graph pane): the schema the data is an instance of.
+const ontoView = new OntologyView($("#onto-net"), $("#onto-cm"), { onSelect: onOntologySelect });
+let onto = null;             // /api/people-ontology: ontology/people_connections.ttl + policy weights
+let view = "data";           // "data" | "ontology"
+let srcWasMin = null;        // the source pane's state before the Ontology view opened it
 const pickSource = new PeoplePicker($("#pick-source"), { placeholder: "From: name or QID" });
 const pickTarget = new PeoplePicker($("#pick-target"), { placeholder: "To: name or QID" });
 
@@ -71,6 +78,7 @@ function renderGroups(groups) {
 function enabledGroups() { return [...document.querySelectorAll("#groups input[data-group]:checked")].map((b) => b.dataset.group); }
 function syncGroupCount() {
   $("#groups-count").textContent = `${enabledGroups().length}/${document.querySelectorAll("#groups input[data-group]").length}`;
+  if (view === "ontology") renderOntology();  // a group switched on/off shows at once in the diagram
 }
 // A small dropdown: the button toggles the panel; a click outside or Escape closes it.
 function dropdown(button, panel) {
@@ -172,6 +180,7 @@ renderGroups(GROUPS);
 async function refreshHealth() {
   try {
     health = await api.health();
+    if (!onto) loadOntology();
     graph.maxVisible = health.ui?.max_visible_nodes || graph.maxVisible;
     if (!optionsFromServer && health.limits) { optionsFromServer = true; renderOptions(); }  // once, like the groups
     if (!groupsFromPolicy && Array.isArray(health.groups) && health.groups.length) {
@@ -251,6 +260,7 @@ function resetAll() {
   $("#inspector").hidden = true;
   setBadges(null);
   updateCounts();
+  if (view === "ontology") renderOntology();
 }
 
 async function start(replayCase) {
@@ -367,6 +377,7 @@ function finish() {
 // ---- step-through ---------------------------------------------------------------------------------
 function nextStep() {
   if (!stepRun || stepIndex >= book.lastComplete) return;
+  if (view === "ontology") setView("data");  // stepping tells the story in the data graph
   stepIndex += 1;
   // The folded "looked further, nothing stronger" step adds its entities greyed out: bright green
   // would say "look here!" while the card says it led nowhere.
@@ -379,6 +390,7 @@ function nextStep() {
 /** Back one step: re-fold the model up to that step and trim the views (no network rebuild). */
 function backStep() {
   if (!stepRun || stepIndex <= 0) return;
+  if (view === "ontology") setView("data");
   refoldTo(stepIndex - 1);
   afterStep();
 }
@@ -685,7 +697,7 @@ function stepBody(step, d) {
       const m = model.meta || {};
       return [el("div", { class: "who" }, m.strategy === "agent" ? `LLM agent · ${m.model || "model"}` : "Deterministic baseline (no LLM)"),
         el("div", { class: "decision" }, `Find a connection between ${label(model.source)} and ${label(model.target)}.`),
-        el("div", { class: "small muted" }, `Relation groups: ${(m.groups || []).join(", ")} · at most ${m.max_hops} hops`),
+        ontologyLine(m),
         el("div", { class: "small muted" }, "Where things sit on screen is only for readability: what connects two entities is a line (a statement), not how close they are drawn."),
         foot];
     }
@@ -739,6 +751,7 @@ function stepBody(step, d) {
       return [el("div", { class: `who result ${h.tone}` }, h.head),
         el("div", { class: "decision" }, headline),
         ...chains.map((ch) => chainBlock(ch)),
+        chains.length ? rulesBlock() : null,
         // Folded: the chain already shows the path, and a long summary would push the graph off screen.
         r.answer ? el("details", { class: "summary" }, el("summary", {}, r.answerSource === "agent"
           ? "The agent's final answer (grounding check passed)" : "Template answer from the verified path (no LLM)"), el("div", { title: verbatimTitle(r.answerVerbatim) }, r.answer)) : null,
@@ -992,7 +1005,8 @@ function showInspector({ nodes, edges }) {
         el("b", {}, "—", e.origin === "sandbox" ? e.label : wikidataLink(e.property_url, e.label), "→"), " ",
         wikidataLink(e.object, label(o) || e.object)),
       el("div", { class: "small muted mono" }, `${e.subject} ${e.origin === "sandbox" ? "sbx" : "wdt"}:${e.predicate} ${e.object}`),
-      el("div", { class: "small muted" }, `group ${e.group || "?"} · source ${e.source} · edge ${e.id}`));
+      el("div", { class: "small muted" }, `group ${e.group || "?"} · source ${e.source} · edge ${e.id}`),
+      ruleBox(e.predicate));
   } else {
     const n = model.nodes.get(nodes[0]);
     if (!n) return;
@@ -1004,6 +1018,141 @@ function showInspector({ nodes, edges }) {
       el("div", { class: "small muted" }, `${n.degree} statements in the snapshot (degree) · ${known} in the explored subgraph`
         + `${model.expanded.has(n.id) ? " · expanded" : ""}`)].filter(Boolean));
   }
+}
+
+// ---- ontology view ---------------------------------------------------------------------------------
+async function loadOntology() {
+  try {
+    onto = await api.ontology();
+    ontoView.load(onto);
+    if (view === "ontology") renderOntology();
+    if (stepRun) renderStepCard();  // the setup card's "Show the ontology" button
+  } catch { onto = null; }
+}
+
+/** The relation groups of the run on screen (replays included), else the Relations menu. */
+function runGroups() { return model.id && model.meta?.groups ? model.meta.groups : enabledGroups(); }
+/** The PIDs the current strongest path walks (empty before a path exists). */
+function pathPids() { return (model.comparison?.strongest?.result?.hops || []).map((h) => h.pid); }
+
+function setView(v, sel = null) {
+  if (v === "ontology" && !onto) { setStatus("error", "The ontology is not loaded yet (is the server online?)."); loadOntology(); return; }
+  for (const b of document.querySelectorAll("#view-seg button")) {
+    b.classList.toggle("on", b.dataset.view === v); b.setAttribute("aria-checked", String(b.dataset.view === v));
+  }
+  if (v !== view) {
+    view = v;
+    document.body.classList.toggle("view-onto", v === "ontology");
+    $("#inspector").hidden = true;
+    if (v === "ontology") {
+      // The ontology's Turtle is half the point: open the source pane, and close it again on the way back.
+      srcWasMin = document.body.classList.contains("src-min");
+      if (srcWasMin) togglePane("src-min", $("#src-min"), "the source pane");
+      $("#src-fname").textContent = "people_connections.ttl · ontology (read-only)";
+      renderOntology();
+      setTimeout(() => ontoView.shown(captionInset()), 0);
+    } else {
+      $("#src-fname").textContent = "Turtle";
+      if (srcWasMin && !document.body.classList.contains("src-min")) togglePane("src-min", $("#src-min"), "the source pane");
+      srcWasMin = null;
+      editor.refresh(); graph.network.redraw();
+      return;
+    }
+  }
+  if (v === "ontology") { ontoView.select(sel || {}); onOntologySelect(sel || {}); }
+}
+for (const b of document.querySelectorAll("#view-seg button")) b.addEventListener("click", () => setView(b.dataset.view));
+
+/** The width of the graph area the ontology caption covers (plus a margin). */
+function captionInset() {
+  const c = $("#onto-caption").getBoundingClientRect(), n = $("#onto-net").getBoundingClientRect();
+  return c.width ? c.right - n.left + 16 : 0;
+}
+
+function renderOntology() {
+  if (!onto) return;
+  const used = pathPids();
+  ontoView.setRun({ enabled: runGroups(), used: new Set(used) });
+  const on = new Set(runGroups());
+  const key = (style, text) => el("span", {}, el("i", { style }), text);
+  $("#onto-caption").replaceChildren(
+    el("div", { class: "oc-title" }, `Ontology · people_connections.ttl v${onto.version}`),
+    el("div", { class: "oc-head" }, `${onto.classes.length} classes · ${onto.properties.length} Wikidata properties · ${onto.groups.length} relation groups`),
+    el("div", {}, "The rules of this knowledge graph: which kinds of entity exist and which properties may connect them. "
+      + "Every statement in the data is one instance of an arrow here, and keeps Wikidata's direction (a film points at its cast)."),
+    el("div", {}, model.id && model.meta
+      ? `In this run the ${model.isAgent ? "LLM agent" : "baseline"} may use ${on.size} of the ${onto.groups.length} relation groups; its tools refuse the rest.`
+      : `${on.size} of the ${onto.groups.length} relation groups are switched on (Relations ▾).`),
+    el("div", { class: "oc-key" },
+      key("height:6px;background:var(--road)", `thicker = stronger link (the weights come from the policy, relationships.yaml v${onto.policy_version})`),
+      key("height:3px;background:repeating-linear-gradient(90deg,var(--road-mid) 0 6px,transparent 6px 10px)", "dashed = switched off for this run"),
+      used.length ? key("height:6px;background:var(--c-strongest)", "gold = used by the strongest connection") : null),
+    el("div", { class: "small muted" }, "Click an arrow or a class to see its Turtle; select Turtle lines to find them here."));
+}
+
+const propertyLink = (pid, text) => wikidataLink(`https://www.wikidata.org/wiki/Property:${pid}`, text);
+
+/** The detail box for a diagram selection (a class, or an arrow = one relation group between two classes). */
+function onOntologySelect(sel) {
+  const box = $("#inspector");
+  const cls = sel?.classes?.[0], arr = sel?.arrows?.[0];
+  if (!onto || !ontoView.schema || (!cls && !arr)) { box.hidden = true; return; }
+  box.hidden = false;
+  if (cls) {
+    const c = onto.classes.find((x) => x.id === cls);
+    const arrows = ontoView.schema.arrows.filter((a) => a.from === cls || a.to === cls);
+    box.replaceChildren(inspectorHead(`Class · ${c.label}`),
+      el("div", {}, el("b", {}, c.label), c.label_es ? el("span", { class: "muted" }, ` · es: ${c.label_es}`) : null),
+      el("div", {}, c.comment),
+      cls === "Person" ? el("div", { class: "small muted" }, "In Wikidata: instance of ", wikidataLink("Q5", "human (Q5)"), ".") : null,
+      el("div", { class: "small muted" }, `${arrows.length} relation arrows touch this class.`));
+    return;
+  }
+  const a = ontoView.schema.arrows.find((x) => x.id === arr);
+  if (!a) { box.hidden = true; return; }
+  const g = onto.groups.find((x) => x.id === a.group) || {};
+  const from = onto.classes.find((x) => x.id === a.from)?.label, to = onto.classes.find((x) => x.id === a.to)?.label;
+  box.replaceChildren(inspectorHead(`Relation group · ${a.groupLabel}`),
+    el("div", {}, el("b", {}, from), " → ", el("b", {}, to), a.enabled ? null : el("span", { class: "muted" }, " · switched off for this run")),
+    el("div", {}, `${a.linkLabel}: ${g.comment || ""}`),
+    a.linkType === "SharedAffiliation" ? el("div", { class: "small muted" }, "Two people linked to the same one are associated; that is not proof that they met.") : null,
+    el("ul", { class: "onto-props" }, ...a.properties.map((p) => el("li", {},
+      propertyLink(p.pid, p.label), el("span", { class: "muted" }, ` (${p.pid}) · ${strengthWord(p.strength)} link`
+        + `${p.symmetric ? " · symmetric" : ""}${p.inverse_of ? ` · inverse of ${p.inverse_of}` : ""} · read backwards: “${p.inverse_label}”`)))));
+}
+
+/** Inspector: the ontology rule a data statement is an instance of, with a jump into the diagram. */
+function ruleBox(pid) {
+  const r = onto && ruleFor(onto, pid);
+  if (!r) return null;
+  return el("div", { class: "onto-rule" },
+    el("div", { class: "small muted" }, "Ontology rule this statement follows"),
+    el("div", {}, el("b", {}, r.domainLabel), ` —${r.label}→ `, el("b", {}, r.rangeLabel), el("span", { class: "muted" }, ` · ${r.groupLabel}`)),
+    el("div", { class: "small muted" }, `${r.linkLabel} · ${r.word} link`
+      + (r.linkType === "SharedAffiliation" ? " · an association, not proof of contact" : "")),
+    el("button", { class: "mini", type: "button", on: { click: () => setView("ontology", { arrows: [r.arrowId] }) } }, "Show in ontology"));
+}
+
+/** Setup card: which relation groups of the ontology this run may use. */
+function ontologyLine(m) {
+  const ids = new Set(m.groups || []);
+  // In the ontology's (and the Relations menu's) order, not the recorded alphabetical one.
+  const names = onto ? onto.groups.filter((g) => ids.has(g.id)).map((g) => shortGroup(g.label)) : [...ids];
+  return el("div", { class: "onto-rule" },
+    el("div", {}, m.strategy === "agent" ? "The LLM agent may only use these relation groups of the ontology (its tools refuse the rest): "
+      : "The search may only follow these relation groups of the ontology: ", el("b", {}, names.join(", ")), `. At most ${m.max_hops} hops.`),
+    onto ? el("button", { class: "mini", type: "button", on: { click: () => setView("ontology") } }, "Show the ontology") : null);
+}
+
+/** Result card: the ontology rules the strongest path is made of. */
+function rulesBlock() {
+  const rules = onto ? rulesFor(onto, pathPids()) : [];
+  if (!rules.length) return null;
+  return el("div", { class: "onto-rule" },
+    el("div", { class: "small muted" }, rules.length === 1 ? "The one ontology rule this connection uses" : `The ${rules.length} ontology rules this connection uses`),
+    el("div", { class: "rules-line" }, ...rules.map((r) => el("span", {}, el("b", {}, r.domainLabel), ` —${r.label}→ `, el("b", {}, r.rangeLabel)))),
+    el("button", { class: "mini", type: "button", on: { click: () => setView("ontology", { arrows: [...new Set(rules.map((r) => r.arrowId))] }) } },
+      "Show in ontology"));
 }
 
 // ---- sandbox -----------------------------------------------------------------------------------
@@ -1091,7 +1240,10 @@ function togglePane(cls, button, what) {
   const min = document.body.classList.toggle(cls);
   button.textContent = min ? "+" : "−";
   button.title = `${min ? "Expand" : "Collapse"} ${what}`;
-  setTimeout(() => { document.body.classList.remove("pane-anim"); editor.refresh(); graph.network.redraw(); }, 480);
+  setTimeout(() => {
+    document.body.classList.remove("pane-anim"); editor.refresh(); graph.network.redraw();
+    if (view === "ontology") ontoView.shown(captionInset());
+  }, 480);
   return min;
 }
 function toggleSource(e) {
@@ -1111,5 +1263,5 @@ $("#paths-sec .pane-bar").addEventListener("click", () => { if (document.body.cl
   window.addEventListener("mouseup", () => { if (on) { on = false; drag.classList.remove("on"); editor.refresh(); } });
 })();
 
-window.__workbench = { model, graph, editor, timeline, paths, book, nextStep, backStep,
+window.__workbench = { model, graph, editor, timeline, paths, book, nextStep, backStep, ontoView, setView,
                        get stepIndex() { return stepIndex; } };  // handy for debugging and E2E checks
