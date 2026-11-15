@@ -139,6 +139,32 @@ class SearchBudgets(_Frozen):
         merged = {k: min(getattr(self, k), v) for k, v in overrides.items()}
         return type(self).model_validate({**self.model_dump(), **merged})
 
+    def within(self, overrides: dict | None, limits: "RunLimits") -> "SearchBudgets":
+        """Apply per-run overrides (the workbench's Options menu): each value may be set anywhere from
+        its minimum up to the hard ceiling in `limits`, never above it. Raises ValueError otherwise."""
+        if not overrides:
+            return self
+        unknown = set(overrides) - set(type(self).model_fields)
+        if unknown:
+            raise ValueError(f"unknown budget fields: {sorted(unknown)}")
+        for k, v in overrides.items():
+            cap = getattr(limits, k)
+            if v > cap:
+                raise ValueError(f"{k} may be at most {cap} (limits in config/search.yaml)")
+        return type(self).model_validate({**self.model_dump(), **overrides})
+
+
+class RunLimits(_Frozen):
+    """Hard ceilings for per-run overrides. A run may set each budget from its minimum up to these,
+    so every run stays bounded however the Options menu is set (hitting a budget ends it as partial)."""
+    max_explored_nodes: int = Field(ge=2)
+    max_explored_edges: int = Field(ge=1)
+    max_edges_per_expansion: int = Field(ge=1)
+    max_provider_requests: int = Field(ge=1)
+    max_agent_tool_calls: int = Field(ge=1)
+    wall_time_seconds: float = Field(gt=0)
+    max_agent_turns: int = Field(ge=1)
+
 
 class FrontierPolicy(_Frozen):
     # Negative = reward well-connected nodes (search v3: -0.5). Bounded so a typo cannot flip the search.
@@ -161,9 +187,27 @@ class UiPolicy(_Frozen):
 class SearchConfig(_Frozen):
     version: int
     budgets: SearchBudgets
+    limits: RunLimits
     frontier: FrontierPolicy
     agent: AgentPolicy
     ui: UiPolicy
+
+    @model_validator(mode="after")
+    def _limits_cover_defaults(self) -> "SearchConfig":
+        for k in type(self.budgets).model_fields:
+            if getattr(self.limits, k) < getattr(self.budgets, k):
+                raise ValueError(f"limits.{k} is below the default budget")
+        if self.limits.max_agent_turns < self.agent.max_turns:
+            raise ValueError("limits.max_agent_turns is below agent.max_turns")
+        return self
+
+    def with_agent_turns(self, max_turns: int | None) -> "SearchConfig":
+        """This config with a per-run agent turn limit (1..limits.max_agent_turns)."""
+        if max_turns is None:
+            return self
+        if max_turns > self.limits.max_agent_turns:
+            raise ValueError(f"max_turns may be at most {self.limits.max_agent_turns} (limits in config/search.yaml)")
+        return self.model_copy(update={"agent": self.agent.model_copy(update={"max_turns": max_turns})})
 
 
 def load_search_config(path: Path | str = DEFAULT_SEARCH_PATH) -> SearchConfig:

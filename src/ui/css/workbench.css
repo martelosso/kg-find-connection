@@ -335,3 +335,16 @@ body.side-min #side .ptitle { writing-mode: vertical-rl; transform: rotate(180de
 #inspector:not([hidden]), .pcard, .answer, .banner { animation: ease-in-up var(--t-ui) var(--ease) both; }
 .btn, .mini, .tog, .ptab, #timeline .row { transition: background-color var(--t-quick) var(--ease), border-color var(--t-quick) var(--ease), color var(--t-quick) var(--ease); }
 body.pane-anim #epane, body.pane-anim #side { transition: width var(--t-ui) var(--ease), min-width var(--t-ui) var(--ease); }
+
+/* Options menu: the next run's budgets (number inputs with their defaults). */
+#options { min-width: 330px; display: grid; gap: 6px; }
+#options .opt-row { display: grid; grid-template-columns: 1fr 78px auto; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 6px; }
+#options .opt-row.changed { background: var(--c-select-bg); }
+#options .opt-row.changed .opt-def { color: var(--text); }
+#options .opt-name small { color: var(--muted); font-size: 11px; }
+#options input[type="number"] { width: 78px; height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: 5px;
+                                background: var(--surface); color: var(--text); font: inherit; text-align: right; }
+#options .opt-def { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+#options .opt-note { font-size: 11.5px; color: var(--muted); max-width: 330px; line-height: 1.35; }
+#options #options-reset { justify-self: start; }
+#options-btn.changed { border-color: var(--accent); }

@@ -82,6 +82,7 @@ class StartRequest(BaseModel):
     case_id: str | None = None  # required for replay
     groups: list[str] | None = None
     budgets: dict[str, float] | None = None
+    max_turns: int | None = Field(default=None, ge=1)  # agent runs: model turns (up to limits.max_agent_turns)
     replay_delay_seconds: float = Field(default=0.6, ge=0, le=5)
 
 
@@ -125,7 +126,8 @@ class InvestigationService:
         except ValueError as exc:
             raise ServiceError(400, "invalid_request", str(exc)) from exc
         try:
-            budgets = self.search.budgets.lowered(req.budgets)
+            budgets = self.search.budgets.within(req.budgets, self.search.limits)
+            search = self.search.with_agent_turns(req.max_turns)
             groups = frozenset(req.groups) if req.groups is not None else self.policy.default_groups
             self.policy.active_pids(groups)  # validates group names
         except ValueError as exc:
@@ -158,7 +160,7 @@ class InvestigationService:
                                    "Use mode 'deterministic' (labelled deterministic exploration) or a replay.")
             state = InvestigationState(req.source_qid, req.target_qid, groups, budgets, strategy="agent",
                                        snapshot=provider.snapshot)
-            return self._launch(state, lambda: run_agent(state, provider, self.policy, self.search, chat),
+            return self._launch(state, lambda: run_agent(state, provider, self.policy, search, chat),
                                 background)
         state = InvestigationState(req.source_qid, req.target_qid, groups, budgets, snapshot=provider.snapshot)
         return self._launch(state, lambda: run_deterministic(state, provider, self.policy, self.search), background)
@@ -301,5 +303,9 @@ class InvestigationService:
             "groups": [{"id": gid, "label": g.label, "label_es": g.label_es, "enabled_by_default": g.enabled_by_default}
                        for gid, g in self.policy.groups.items()],
             "ui": self.search.ui.model_dump(),
+            # The Options menu: defaults, and the ceilings a run may set them up to.
+            "budgets": self.search.budgets.model_dump(),
+            "agent_max_turns": self.search.agent.max_turns,
+            "limits": self.search.limits.model_dump(),
             "agent": self._agent_status(),
         }

@@ -17,6 +17,7 @@ import { TurtleEditor } from "./turtle-editor.js";
 const GROUPS = [["family", "Family", true], ["mentorship", "Teacher/student", true],
                 ["institutional", "Institutions", true], ["works", "Film / music", true]];
 let groupsFromPolicy = false;
+let optionsFromServer = false;
 
 const model = new InvestigationModel();
 let es = null;
@@ -71,6 +72,80 @@ function dropdown(button, panel) {
 }
 dropdown($("#groups-btn"), $("#groups"));
 
+// Options: the budgets of the NEXT run, each from 1 up to the server's hard ceiling (config/search.yaml
+// `limits`). Only values that differ from the defaults are sent; the run records what it used.
+// Remembered per browser (a convenience: it may be lost, and nothing depends on it).
+const OPTION_FIELDS = [
+  // [key, label, hint, agentOnly]
+  ["max_agent_tool_calls", "Tool calls", "Every tool call the LLM agent makes counts.", true],
+  ["max_agent_turns", "Model turns", "Each turn is one model reply; it may issue several tool calls.", true],
+  ["max_provider_requests", "Expansions", "Entities whose statements are fetched (get_neighbors).", false],
+  ["max_explored_nodes", "Entities explored", "Size of the explored subgraph.", false],
+  ["max_explored_edges", "Statements explored", "", false],
+  ["max_edges_per_expansion", "Statements per expansion", "More than this and the expansion is cut (truncated).", false],
+  ["wall_time_seconds", "Time limit (s)", "", false],
+];
+const OPTIONS_KEY = "sixdegrees.options";
+let optionValues = {};  // key -> number, only keys the presenter changed
+try { optionValues = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "{}") || {}; } catch { optionValues = {}; }
+
+function optionDefaults() {
+  const b = health?.budgets;
+  return b ? { ...b, max_agent_turns: health.agent_max_turns } : null;
+}
+function saveOptions() { try { localStorage.setItem(OPTIONS_KEY, JSON.stringify(optionValues)); } catch { /* private window */ } }
+
+function renderOptions() {
+  const defs = optionDefaults(), lim = health?.limits;
+  if (!defs || !lim) {
+    $("#options").replaceChildren(el("div", { class: "menu-sep" }, "Options load when the server is online."));
+    return;
+  }
+  // Drop remembered values the server no longer allows (or that equal the default).
+  for (const [k, v] of Object.entries(optionValues)) if (!(k in lim) || v > lim[k] || v < 1 || v === defs[k]) delete optionValues[k];
+  const rows = OPTION_FIELDS.map(([k, text, hint, agentOnly]) => {
+    const input = el("input", { type: "number", min: "1", max: String(lim[k]), step: k === "wall_time_seconds" ? "5" : "1",
+      value: String(optionValues[k] ?? defs[k]), "data-option": k,
+      on: { change: (e) => {
+        const v = Math.round(Number(e.target.value));
+        if (!Number.isFinite(v) || v < 1) { e.target.value = String(optionValues[k] ?? defs[k]); return; }
+        const clamped = Math.min(v, lim[k]);
+        e.target.value = String(clamped);
+        if (clamped === defs[k]) delete optionValues[k]; else optionValues[k] = clamped;
+        saveOptions(); syncOptions();
+      } } });
+    return el("label", { class: "opt-row", title: `${hint ? hint + " " : ""}Default ${defs[k]}, at most ${lim[k]}.` },
+      el("span", { class: "opt-name" }, text, agentOnly ? el("small", {}, " LLM agent") : null),
+      input, el("span", { class: "opt-def", "data-default-for": k }, `default ${defs[k]}`));
+  });
+  $("#options").replaceChildren(
+    el("div", { class: "menu-sep" }, "Budgets for the next run"),
+    ...rows,
+    el("div", { class: "opt-note" }, "A run that reaches a budget stops and shows what it found (a partial result). "
+      + "Replays keep the budgets they were recorded with."),
+    el("button", { class: "mini", id: "options-reset", type: "button", on: { click: () => {
+      optionValues = {}; saveOptions(); renderOptions(); } } }, "Back to defaults"));
+  syncOptions();
+}
+/** The button shows how many options differ from the defaults; changed rows are marked. */
+function syncOptions() {
+  const n = Object.keys(optionValues).length;
+  $("#options-count").hidden = !n;
+  $("#options-count").textContent = n ? String(n) : "";
+  $("#options-btn").classList.toggle("changed", n > 0);
+  for (const input of document.querySelectorAll("#options input[data-option]")) {
+    input.closest(".opt-row").classList.toggle("changed", input.dataset.option in optionValues);
+  }
+}
+/** The request fields for the chosen options (only what differs from the defaults). */
+function optionRequest() {
+  const budgets = Object.fromEntries(Object.entries(optionValues).filter(([k]) => k !== "max_agent_turns"));
+  return { ...(Object.keys(budgets).length ? { budgets } : {}),
+           ...("max_agent_turns" in optionValues ? { max_turns: optionValues.max_agent_turns } : {}) };
+}
+dropdown($("#options-btn"), $("#options"));
+renderOptions();
+
 // Mode: a two-way switch. It also follows the run on screen (a replay of an agent run shows "AI agent").
 function getMode() { return $("#mode .on")?.dataset.mode || "deterministic"; }
 function setMode(mode) {
@@ -88,6 +163,7 @@ async function refreshHealth() {
   try {
     health = await api.health();
     graph.maxVisible = health.ui?.max_visible_nodes || graph.maxVisible;
+    if (!optionsFromServer && health.limits) { optionsFromServer = true; renderOptions(); }  // once, like the groups
     if (!groupsFromPolicy && Array.isArray(health.groups) && health.groups.length) {
       groupsFromPolicy = true;  // once: later polls must not reset the presenter's toggles
       renderGroups(health.groups.map((g) => [g.id, g.label, g.enabled_by_default, `${g.label} / ${g.label_es}`]));
@@ -174,7 +250,8 @@ async function start(replayCase) {
     if (!pickSource.value || !pickTarget.value) { setStatus("error", "Pick both people from the suggestions first."); return; }
     const groups = enabledGroups();
     if (!groups.length) { setStatus("error", "Enable at least one relation group."); return; }
-    body = { source_qid: pickSource.value.qid, target_qid: pickTarget.value.qid, mode: getMode(), groups };
+    body = { source_qid: pickSource.value.qid, target_qid: pickTarget.value.qid, mode: getMode(), groups, ...optionRequest() };
+    if (body.mode !== "agent") delete body.max_turns;  // model turns only apply to the LLM agent
   }
   setStatus("busy", replayCase ? "Loading replay…" : "Starting…");
   try {
@@ -199,6 +276,7 @@ function setRunning(on) {
   $("#mode").classList.toggle("locked", on);
   $("#mode").title = on ? "The strategy of the run on screen (Reset or wait for the end to change it)" : "Who decides what to explore next";
   $("#groups-btn").disabled = on;
+  $("#options-btn").disabled = on;
   $("#go").textContent = on ? "Stop" : "Explore";
   $("#go").classList.toggle("primary", !on);
   $("#go").title = on ? "Stop this run (what was found so far stays on screen)" : "Start exploring between the two people";

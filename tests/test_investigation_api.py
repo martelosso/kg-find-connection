@@ -137,6 +137,9 @@ def test_cancel_endpoint(api, service):
     ({"source_qid": "x", "target_qid": "Q2"}, 400, "invalid_request"),
     ({"source_qid": A, "target_qid": B, "groups": ["nonsense"]}, 400, "invalid_request"),
     ({"source_qid": A, "target_qid": B, "budgets": {"bogus": 1}}, 400, "invalid_request"),
+    ({"source_qid": A, "target_qid": B, "budgets": {"max_agent_tool_calls": 10_000}}, 400, "invalid_request"),
+    ({"source_qid": A, "target_qid": B, "budgets": {"max_provider_requests": 0}}, 400, "invalid_request"),
+    ({"source_qid": A, "target_qid": B, "max_turns": 10_000}, 400, "invalid_request"),
     ({"source_qid": A, "target_qid": B, "mode": "telepathy"}, 400, "unsupported_mode"),
     ({"source_qid": A, "target_qid": B, "mode": "agent"}, 503, "agent_unavailable"),
     ({"mode": "replay", "case_id": "missing"}, 404, "unknown_case"),
@@ -192,3 +195,21 @@ def test_sse_resumes_after_a_dropped_connection(api):
         rest = parse_sse(api.get(f"/api/investigations/{inv}/events", headers={"Last-Event-ID": str(cut)}).get_data(as_text=True))
         assert [i for i, _, _ in rest] == list(range(cut + 1, len(full) + 1))
     assert parse_sse(api.get(f"/api/investigations/{inv}/events?after=junk").get_data(as_text=True))[0][0] == 1
+
+
+def test_options_can_raise_budgets_up_to_the_limits_and_the_run_records_them(api, service):
+    """The Options menu: a run may set budgets above the defaults (up to config limits); the run uses
+    and records exactly those, and /api/health tells the UI the defaults and the ceilings."""
+    health = api.get("/api/health").get_json()
+    lim, defaults = health["limits"], health["budgets"]
+    assert health["agent_max_turns"] == service.search.agent.max_turns
+    assert all(lim[k] >= defaults[k] for k in defaults) and lim["max_agent_turns"] >= health["agent_max_turns"]
+    raised = {"max_provider_requests": lim["max_provider_requests"], "max_agent_tool_calls": defaults["max_agent_tool_calls"] + 1}
+    res = api.post("/api/investigations", json={"source_qid": A, "target_qid": B, "budgets": raised})
+    assert res.status_code in (200, 201, 202), res.get_json()
+    inv = res.get_json()["investigation_id"]
+    wait_done(api, inv)
+    data = next(d for _, typ, d in parse_sse(api.get(f"/api/investigations/{inv}/events").get_data(as_text=True))
+                if typ == "investigation.started")
+    budgets = data.get("payload", data)["budgets"]
+    assert {k: budgets[k] for k in raised} == raised

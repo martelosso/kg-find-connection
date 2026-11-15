@@ -383,3 +383,12 @@ def test_clip_summary_ends_at_a_sentence_or_word_never_mid_word():
     out = clip_summary(one, 30)
     assert out.endswith("…") and len(out) <= 30 and one.startswith(out[:-1]) and not out[:-1].endswith(" ")
     assert out[:-1] in ("A single long sentence", "A single long sentence without")
+
+
+def test_agent_turn_limit_option_is_used_and_recorded(provider):
+    """Options menu: a per-run turn limit replaces agent.max_turns for that run and is recorded."""
+    search = SEARCH.with_agent_turns(2)
+    state = run(provider, FakeChat(lambda m: call("get_search_status", "Look around.")), search=search)
+    started = state.events.events[0].payload
+    assert started["max_turns"] == 2
+    assert state.stop_reason in ("max_turns", "no_progress") and sum(e.type == "agent.decision" for e in state.events.events) <= 3

@@ -154,6 +154,8 @@ Tip: a deep link pre-fills a pair, for example `http://localhost:5000/?source=Qâ
 
 Before the workshop, check on Wikidata: Charles III's and Bohr's "Trinity College" are the same item, and Coelho's "employer: United Nations".
 
+**Options â–¾ (next to Relations):** the budgets of the next run. Each shows its default; raise or lower them within the ceilings (tool calls up to 80, model turns 60, expansions 80, entities 4,000, statements 14,000, statements per expansion 200, time 300 s). Use it when the agent runs out of tool calls on a hard pair: a run that reaches any budget stops and shows a partial result. **Back to defaults** resets; the button shows how many are changed. Replays ignore it (they keep their recorded budgets). Bigger budgets mean longer runs and, for the LLM agent, more API calls.
+
 ## If something goes wrong
 
 | Symptom | What to do |

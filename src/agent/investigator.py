@@ -122,7 +122,7 @@ def run_agent(
 ) -> InvestigationState:
     state.strategy = "agent"
     try:
-        if not begin(state, provider, policy, search, extra={"model": getattr(chat, "model", None)}):
+        if not begin(state, provider, policy, search, extra={"model": getattr(chat, "model", None), "max_turns": search.agent.max_turns}):
             return state
         tools = Toolbox(state, provider, policy, search)
         source, target = state.graph.node(state.source_qid), state.graph.node(state.target_qid)

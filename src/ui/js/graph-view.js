@@ -18,6 +18,11 @@ const PING_REST = 500;
 const RANK_SWEEP = 1800, RANK_STAGGER = 140, RANK_POP = 380;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+/** A #rrggbb colour at alpha `a` (the soft tints of the frontier sweep). */
+const tint = (hex, a) => {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
+  return m ? `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${a})` : hex;
+};
 
 export class GraphView {
   /** A step's new nodes are all labelled up to STORY_LABELS_ALL; beyond that only the top STORY_LABELS. */
@@ -838,9 +843,10 @@ export class GraphView {
   }
 
   /**
-   * get_search_status: a radar beam sweeps around each person and lights, in soft green, exactly the
-   * candidates the backend ranks (rank_frontier): reached through expanded nodes, not expanded
-   * themselves, not hubs, under the hop limit, and with links still unknown.
+   * get_search_status: ONE sweep, as the backend runs one rank_frontier pass over both sides. The beam
+   * turns around both people at once and lights, faintly and in that person's colour (teal / orange),
+   * exactly the candidates the backend ranks: reached through expanded nodes, not expanded themselves,
+   * not hubs, under the hop limit, links still unknown, each on the side it is cheaper to reach from.
    * With `ranked` (the suggestions the agent was shown, recorded in the tool.completed event) the beam
    * sweeps once and the graph then settles on the ranking: the suggested nodes stand out, brightest
    * at #1, each with a "#k" pill. Without it (older recordings) the sweep loops until the next step.
@@ -861,7 +867,11 @@ export class GraphView {
       cands.push(id);
     }
     const ids = [...new Set([...cands, source, target])];
-    const ring = this.colors.fresh, fill = this.colors.freshSoft, tail = 1.1, lit = new Set();
+    // Each side in its person's colour, faint: many candidates light up, so the sweep stays a soft
+    // tint and the bright highlight is kept for the ranked few that follow.
+    const side = { [source]: [this.colors.source, tint(this.colors.source, 0.3)],
+                   [target]: [this.colors.target, tint(this.colors.target, 0.3)] };
+    const tail = 1.1, lit = new Set();
     const once = Array.isArray(ranked);
     const frame = (t, ms) => {
       const pos = this.network.getPositions(ids);
@@ -874,7 +884,8 @@ export class GraphView {
         const st = this._nodeStyle(this.nodes.get(id));
         if (behind >= 0 && behind < tail) {
           const glow = 1 - behind / tail;  // brightest right under the beam, fading behind it (comet tail)
-          updates.push({ id, opacity: Math.max(st.opacity, 0.35 + 0.65 * glow), borderWidth: 1.5 + 3.5 * glow, size: st.size + 5 * glow,
+          const [ring, fill] = side[root.get(id)];
+          updates.push({ id, opacity: Math.max(st.opacity, 0.3 + 0.45 * glow), borderWidth: 1.5 + 2 * glow, size: st.size + 2.5 * glow,
                          color: { ...st.color, border: ring, background: glow > 0.35 ? fill : st.color.background } });
           lit.add(id);
         } else if (lit.has(id)) {

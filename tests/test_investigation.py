@@ -190,6 +190,20 @@ def test_live_state_cannot_be_used_for_replay(provider):
         replay_into(live, {"events": live.events.events})
 
 
+def test_run_options_stay_within_the_config_limits():
+    b, lim = SEARCH.budgets, SEARCH.limits
+    assert b.within({"max_agent_tool_calls": lim.max_agent_tool_calls}, lim).max_agent_tool_calls == lim.max_agent_tool_calls
+    assert b.within({"max_agent_tool_calls": 3}, lim).max_agent_tool_calls == 3
+    assert b.within(None, lim) == b
+    for bad in ({"max_agent_tool_calls": lim.max_agent_tool_calls + 1}, {"bogus": 1}, {"max_provider_requests": 0}):
+        with pytest.raises(ValueError):
+            b.within(bad, lim)
+    assert SEARCH.with_agent_turns(None) is SEARCH
+    assert SEARCH.with_agent_turns(lim.max_agent_turns).agent.max_turns == lim.max_agent_turns
+    with pytest.raises(ValueError):
+        SEARCH.with_agent_turns(lim.max_agent_turns + 1)
+
+
 def test_budget_overrides_can_only_lower():
     b = SEARCH.budgets
     assert b.lowered({"max_provider_requests": 10_000}).max_provider_requests == b.max_provider_requests

@@ -3,7 +3,8 @@
 # These are PROPOSED safeguards, not measured optima. Hitting any cap ends the investigation with
 # a PARTIAL result that states the reason. The hop limit lives in relationships.yaml
 # (pathfinding.max_hops) because the path engine enforces it.
-# An investigation request may LOWER these values, never raise them.
+# A run may set each budget anywhere up to the hard ceilings under `limits` (the workbench's Options
+# menu). The defaults below apply when it sets nothing.
 
 version: 3
 # v3 (2026-11-13, step 4): frontier rewards well-connected nodes (degree_weight 0.15 -> -0.5) and the
@@ -26,6 +27,20 @@ budgets:
   max_provider_requests: 40
   max_agent_tool_calls: 30
   wall_time_seconds: 90
+
+# Hard ceilings for per-run overrides (Options menu, POST /api/investigations "budgets" and
+# "max_turns"). Added 2026-11-14 so a presenter can give the agent more room on a hard pair (e.g.
+# Neymar-Snoop ran out of tool calls 3 times out of 3) without editing this file. Every run stays
+# bounded: the UI still draws at most ui.max_visible_nodes, and hitting any budget ends the run as a
+# partial result. 300 s matches the longest recorded run (lula-snoop-agent with reasoning on).
+limits:
+  max_explored_nodes: 4000
+  max_explored_edges: 14000
+  max_edges_per_expansion: 200
+  max_provider_requests: 80
+  max_agent_tool_calls: 80
+  wall_time_seconds: 300
+  max_agent_turns: 60
 
 frontier:
   # rank_frontier score = weighted path cost from the node's side endpoint
