@@ -4,8 +4,11 @@
 // Visible-node cap: beyond `maxVisible`, the least important nodes are hidden (endpoints, path
 // nodes, expanded nodes and nodes linking 2+ visible nodes are always kept). "Show all" lifts it.
 
-import { MOTION, easeInOut } from "./motion.js";
-import { orderBadge } from "./steps.js";
+import { MOTION, REDUCED, easeInOut, easeOutBack } from "./motion.js";
+import { drawEntity, mix, shapePath } from "./glyphs.js";
+
+const FONT = '"Nunito Sans", -apple-system, "Segoe UI", system-ui, sans-serif';
+const clamp01 = (t) => Math.min(1, Math.max(0, t));
 
 /** compute_paths ping: each edge's ping leaves up to this fraction of a hop late, at random. */
 const PING_JITTER = 0.3;
@@ -18,10 +21,10 @@ const PING_REST = 500;
 const RANK_SWEEP = 1800, RANK_STAGGER = 140, RANK_POP = 380;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-/** A #rrggbb colour at alpha `a` (the soft tints of the frontier sweep). */
-const tint = (hex, a) => {
-  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
-  return m ? `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${a})` : hex;
+/** "r,g,b" of a #rrggbb colour (for rgba() overlays); a neutral grey when it can't be parsed. */
+const hexRgb = (hex) => {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec((hex || "").trim());
+  return m ? [1, 2, 3].map((i) => parseInt(m[i], 16)).join(",") : "128,128,128";
 };
 
 export class GraphView {
@@ -47,7 +50,15 @@ export class GraphView {
       work: css("--c-work"), place: css("--c-place"),
       edge: css("--c-edge"), dim: css("--c-dim"), shortest: css("--c-shortest"), strongest: css("--c-strongest"),
       fresh: css("--c-fresh"), freshSoft: css("--c-fresh-soft"), sandbox: css("--c-sandbox"), select: css("--c-select"),
+      land: css("--bg"), surface: css("--surface"), text: css("--text"), muted: css("--muted"),
+      road: css("--road"), roadMid: css("--road-mid"), roadDim: css("--road-dim"), rim: css("--highway-rim"),
     };
+    // Per-node drawing facts the custom renderer needs beyond vis's own style (kind, label font, order
+    // tag, last drawn radius), refreshed by _nodeStyle; pop-in and ripple start times.
+    this.look = new Map();
+    this.pop = new Map();
+    this.ripples = new Map();
+    this.pairs = new Map();   // "a|b" -> Set of edge ids: parallel statements get their own gentle curve
     this.nodesDS = new vis.DataSet();
     this.edgesDS = new vis.DataSet();
     this.nodes = new Map();   // id -> payload
@@ -64,14 +75,18 @@ export class GraphView {
     // Step-through "story": the exploration trail (endpoints, expanded nodes in order, paths) stays in
     // colour, the current step's new nodes/edges are green, and everything else is greyed out.
     this.story = null;        // {current:Set, currentEdges:Set, order:Map qid->n, active:Set}
+    // Flat, toy-like look (docs/visual-design.md): entities are drawn by _renderNode (shape + pictogram
+    // + label), edges are thick straight "roads" with round joins and no arrowheads (the direction is
+    // in the relation label, the tooltip and the Turtle).
     this.network = new vis.Network(container, { nodes: this.nodesDS, edges: this.edgesDS }, {
-      nodes: { shape: "dot", size: 10, borderWidth: 1.5,
-               font: { size: 13, color: css("--text"), strokeWidth: 3, strokeColor: css("--bg") } },
-      edges: { arrows: { to: { enabled: true, scaleFactor: 0.45 } }, width: 1.2,
-               color: { color: this.colors.edge, highlight: this.colors.select, hover: this.colors.select },
-               font: { size: 10, color: css("--muted"), strokeWidth: 3, strokeColor: css("--bg"), align: "middle" },
-               smooth: { type: "continuous" }, selectionWidth: 2 },
-      physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -70, springLength: 120, avoidOverlap: 0.4, damping: 0.6 },
+      nodes: { shape: "custom", ctxRenderer: (args) => this._renderNode(args), size: 12, borderWidth: 1 },
+      edges: { arrows: { to: { enabled: false } }, width: 4,
+               color: { color: this.colors.roadMid, highlight: this.colors.select, hover: this.colors.select },
+               font: { face: FONT, size: 11, color: this.colors.muted, strokeWidth: 4, strokeColor: this.colors.land, align: "middle" },
+               smooth: false, selectionWidth: 0, hoverWidth: 0,
+               // a selected road gets a cream casing so it reads apart from the asphalt trail
+               chosen: { edge: (v, id, selected) => { if (selected) { v.background = true; v.backgroundColor = this.colors.land; v.backgroundSize = v.width + 8; } } } },
+      physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -70, springLength: 150, avoidOverlap: 0.4, damping: 0.6 },
                  // Calm physics: new nodes drift out from their parent instead of being flung ("popcorn").
                  stabilization: { enabled: false }, maxVelocity: 5, minVelocity: 0.5 },
       interaction: { hover: true, tooltipDelay: 120, multiselect: true },
@@ -81,7 +96,9 @@ export class GraphView {
     // The presenter's own mouse always wins over the step camera.
     this.network.on("dragStart", () => this.stopCamera());
     this.network.on("zoom", () => this.stopCamera());
-    this.network.on("afterDrawing", (ctx) => { this._drawPing(ctx); this._drawRanks(ctx); });  // effect overlays
+    // Round caps and joins for every road (vis only sets them for dashed lines; save/restore keeps ours).
+    this.network.on("beforeDrawing", (ctx) => { ctx.lineCap = "round"; ctx.lineJoin = "round"; this._drawSweep(ctx); });
+    this.network.on("afterDrawing", (ctx) => { this._drawPathRoads(ctx); this._drawPave(ctx); this._drawPing(ctx); this._drawRanks(ctx); });  // overlays
   }
 
   reset() {
@@ -97,6 +114,8 @@ export class GraphView {
     this.pathEdges = { shortest: new Set(), strongest: new Set(), sandbox: new Set() };
     if (this._straightRaf) cancelAnimationFrame(this._straightRaf);
     this._straightRaf = null; this.targets = new Map();
+    this._stopPave(); this._sweep = null;
+    this.look.clear(); this.pop.clear(); this.ripples.clear(); this.pairs.clear();
     this.pathNodes = new Set(); this.prevPath = new Set(); this.focus = null; this.story = null; this.labelZoom = 1; this.endpoints = { source: null, target: null };
   }
 
@@ -108,7 +127,10 @@ export class GraphView {
     const before = this.story;
     this.story = story ? { current: new Set(story.current || []), currentEdges: new Set(story.currentEdges || []),
                            active: new Set(story.active || []), order: new Map((story.order || []).map((q, i) => [q, i + 1])),
-                           planned: new Set(story.planned || []) } : null;
+                           planned: new Set(story.planned || []),
+                           // Spotlight (a path moment, the result): only the path and the two people stay
+                           // in full; everything else recedes to faint roads and plain pale dots, unnamed.
+                           spotlight: !!story.spotlight } : null;
     // A big expansion (100 new nodes) cannot label everything legibly: label its best-connected new
     // nodes, people first, so the audience can still read who arrived (the rest stay unlabelled dots).
     // On a path moment (`calm`) only the path and the trail keep labels: the path is the story there.
@@ -117,7 +139,10 @@ export class GraphView {
     const now = performance.now();
     for (const id of this.story?.planned || []) {
       const wasLit = before && (this._onTrail(id) || before.current.has(id) || before.planned?.has(id));
-      if (!wasLit && !this._onTrail(id)) this.rising.set(id, now);
+      if (!wasLit && !this._onTrail(id)) {
+        this.rising.set(id, now);
+        if (!REDUCED && !this.expanded.has(id)) this.ripples.set(id, now);  // one ring spreads out from it
+      }
     }
     if (this.rising.size) this._runFade();
     this.restyleAll();
@@ -157,10 +182,14 @@ export class GraphView {
     return n.kind in this.colors ? n.kind : "other";
   }
 
+  /** Spotlight is on (and not overridden by a clicked selection). */
+  _spot() { return !!this.story?.spotlight && !this.focus; }
+
   _nodeStyle(n) {
     const role = this._role(n), big = role === "source" || role === "target";
     const c = this.colors[role];
     const st = this.story;
+    if (this._spot()) return this._spotStyle(n, role, big, c);
     const current = !!st?.current.has(n.id), active = !!st?.active.has(n.id);
     const planned = !!st?.planned.has(n.id);
     const lit = this.focus ? this.focus.nodes.has(n.id) || this.pathNodes.has(n.id) || big
@@ -174,50 +203,181 @@ export class GraphView {
     // order badge, so 25 overlapping names don't bury the path. The last few expansions stay named.
     const badgeOnly = !!rank && this.nodes.size > this.labelThreshold && rank <= st.order.size - GraphView.NAMED_RECENT
       && !big && !this.pathNodes.has(n.id) && !active && !planned && !current && !this.focus?.nodes.has(n.id);
+    // Dimmed entities are drawn in a solid pale colour (not see-through), so overlaps stay flat and clean.
     const fill = lit ? c : this.colors.dim;
-    // A planned node (the agent's next call) pulses once as it lights up, then keeps a dashed ring.
+    // A planned node (the agent's next call) sends out one ripple as it lights up, then keeps a dashed ring.
     const next = planned && !this.expanded.has(n.id);
-    const pulse = next && this.rising.has(n.id) ? 9 * Math.sin(Math.PI * this._rise(n.id)) : 0;
     const sug = this._ranks?.get(n.id);
     if (sug) return this._rankedStyle(n, sug, name, rank, c);
+    // While stepping the camera frames the whole trail, so trail labels are drawn larger to stay legible.
+    const fontSize = st && lit ? (big ? 18 : active ? 17 : this._onTrail(n.id) || planned ? 15 : 12.5) * this.labelZoom : big ? 17 : active ? 16 : 13;
+    this.look.set(n.id, { ...this.look.get(n.id), kind: big ? role : n.kind, dim: !lit, plain: false, halo: false, above: false, font: fontSize, bold: big || active,
+                          caps: !big && n.kind !== "person", badge: showLabel && rank ? rank : null });
     return {
-      label: !showLabel ? "" : badgeOnly ? orderBadge(rank) : rank ? `${orderBadge(rank)} ${name}` : name,
-      color: { background: fill, border: active || next ? this.colors.fresh : big ? css("--text") : "#ffffff",
+      label: !showLabel || badgeOnly ? "" : name,
+      color: { background: fill, border: active || next ? this.colors.fresh : fill,
                highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
-      borderWidth: active ? 5 : next ? 3 : 1.5,
-      shapeProperties: { borderDashes: next ? [4, 3] : false },
-      shape: n.kind === "person" || big ? "dot" : "square",
-      size: (big ? 24 : n.kind === "person" ? 10 : 8 + Math.min(9, Math.log1p(n.degree || 0))) + (active ? 6 : next ? 3 : 0) + pulse,
-      // While stepping the camera frames the whole trail, so trail labels are drawn larger to stay legible.
-      font: { size: st && lit ? (big ? 18 : active ? 17 : this._onTrail(n.id) || planned ? 15 : 12) * this.labelZoom : big ? 17 : active ? 16 : 13,
-              bold: big || active ? { color: css("--text") } : undefined },
-      opacity: (lit ? 0.18 + 0.82 * this._rise(n.id) : st ? 0.18 : 0.25) * this._fade(n.id),
+      borderWidth: active ? 4 : next ? 3 : 1,
+      shapeProperties: { borderDashes: next ? [5, 4] : false },
+      size: (big ? 26 : n.kind === "person" ? 13 : 11 + Math.min(7, 0.9 * Math.log1p(n.degree || 0))) + (active ? 3 : 0),
+      font: { size: fontSize },
+      opacity: (lit ? 0.7 + 0.3 * this._rise(n.id) : 1) * this._fade(n.id),
     };
+  }
+
+  /**
+   * Spotlight style: the path's entities and the two people are shown large and named (no order tags,
+   * they are clutter here); everything else is a small plain pale dot without pictogram or name.
+   */
+  _spotStyle(n, role, big, c) {
+    const on = big || this.pathNodes.has(n.id);
+    const name = n.label_en || n.label_es || n.id;
+    const z = Math.max(1, this.labelZoom);
+    if (on) {
+      const font = (big ? 19 : 15) * z;
+      // names alternate below / above the line along the path, so neighbours never run into each other
+      const i = big ? 0 : [...this.pathNodes].indexOf(n.id);
+      this.look.set(n.id, { ...this.look.get(n.id), kind: big ? role : n.kind, dim: false, plain: false, font, bold: true,
+                            caps: !big && n.kind !== "person", badge: null, halo: true, above: i % 2 === 1 });
+      return { label: name, color: { background: c, border: c, highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
+               borderWidth: 1, shapeProperties: { borderDashes: false },
+               size: big ? 28 : n.kind === "person" ? 16 : 15, font: { size: font }, opacity: this._fade(n.id) };
+    }
+    this.look.set(n.id, { ...this.look.get(n.id), kind: n.kind, dim: true, plain: true, font: 12, bold: false, caps: false, badge: null, halo: false, above: false });
+    return { label: "", color: { background: this.colors.dim, border: this.colors.dim, highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
+             borderWidth: 1, shapeProperties: { borderDashes: false },
+             size: n.kind === "person" ? 6 : 5.5, font: { size: 12 }, opacity: 0.7 * this._fade(n.id) };
+  }
+
+  /**
+   * vis-network custom shape: a flat entity (circle for people, rounded square otherwise) with its
+   * pictogram, a darker toy "lip", and a ring for state (active, planned, ranked, selected). The
+   * size pops in with a small overshoot when the node arrives; a planned node sends out one ripple.
+   */
+  _renderNode({ ctx, id, x, y, state, style, label }) {
+    const look = this.look.get(id) || { kind: "other" };
+    const now = performance.now();
+    const p0 = this.pop.get(id);
+    const s = p0 === undefined || REDUCED ? 1 : 0.6 + 0.4 * easeOutBack(clamp01((now - p0) / MOTION.pop));
+    const r = Math.max(2, (style.size || 12) * s);
+    look.r = r;
+    const sel = state.selected || state.hover;
+    return {
+      drawNode: () => {
+        ctx.save();
+        ctx.globalAlpha = style.opacity ?? 1;
+        const q0 = this.ripples.get(id);
+        if (q0 !== undefined) {
+          const t = clamp01((now - q0) / MOTION.ripple);
+          if (t < 1) {
+            ctx.save();
+            ctx.globalAlpha *= 0.55 * (1 - t);
+            ctx.strokeStyle = this.colors.fresh;
+            ctx.lineWidth = 3;
+            shapePath(ctx, look.kind === "person" || look.kind === "source" || look.kind === "target", x, y, r + 4 + r * 1.1 * (1 - Math.pow(1 - t, 3)));
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        const ringOn = (style.borderWidth || 0) >= 2.5 || state.selected;
+        drawEntity(ctx, {
+          kind: look.kind, x, y, r, fill: style.color,
+          glyph: look.plain ? null : look.dim ? mix(style.color, "#ffffff", 0.5) : "#ffffff",
+          lip: !look.dim,
+          ring: ringOn ? (state.selected ? this.colors.select : style.borderColor) : sel ? this.colors.select : null,
+          ringWidth: ringOn && !state.selected ? Math.min(4, style.borderWidth * 0.85) : 2,
+          ringGap: 3,
+          ringDash: Array.isArray(style.borderDashes) ? style.borderDashes : null,
+        });
+        ctx.restore();
+      },
+      drawExternalLabel: () => this._drawLabel(ctx, look, x, y, r, label, style.opacity ?? 1),
+      nodeDimensions: { width: 2 * r, height: 2 * r },
+    };
+  }
+
+  /** The entity's name under it (map-label style for non-people), and its exploration-order tag. */
+  _drawLabel(ctx, look, x, y, r, label, opacity) {
+    if (!label && !look.badge) return;
+    const size = look.font || 13;
+    ctx.globalAlpha = opacity;
+    ctx.lineJoin = "round";
+    if (label) {
+      const fs = look.caps ? size * 0.82 : size;
+      const text = look.caps ? label.toUpperCase() : label;
+      ctx.font = `${look.bold ? 800 : 700} ${fs}px ${FONT}`;
+      if ("letterSpacing" in ctx) ctx.letterSpacing = look.caps ? `${(fs * 0.07).toFixed(2)}px` : "0px";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      const ty = look.above ? y - r - 6 - fs
+        : y + r + 5 + (look.dim ? 0 : Math.max(1.5, r * 0.16));
+      ctx.strokeStyle = this.colors.land;
+      ctx.lineWidth = Math.max(3, fs * (look.halo ? 0.5 : 0.34));  // spotlight names get a wider halo
+      ctx.strokeText(text, x, ty);
+      ctx.fillStyle = look.dim ? this.colors.muted : this.colors.text;
+      ctx.fillText(text, x, ty);
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+    }
+    if (look.badge) {  // exploration order: a small rounded asphalt tag at the shape's top-right corner
+      const fs = Math.max(9, size * 0.72), text = String(look.badge);
+      ctx.font = `800 ${fs}px ${FONT}`;
+      const h = fs * 1.45, w = Math.max(h, ctx.measureText(text).width + fs * 0.9);
+      const cx = x + r * 0.78 + w * 0.28, cy = y - r * 0.78 - h * 0.15;
+      ctx.fillStyle = this.colors.road;
+      ctx.beginPath();
+      ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h * 0.42);
+      ctx.fill();
+      ctx.strokeStyle = this.colors.land;
+      ctx.lineWidth = Math.max(1.5, fs * 0.16);
+      ctx.stroke();
+      ctx.fillStyle = this.colors.land;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, cx, cy + fs * 0.05);
+    }
   }
 
   _edgeStyle(e) {
     const { shortest, strongest } = this.pathEdges;
     const showS = this.mode === "both" || this.mode === "shortest";
     const showW = this.mode === "both" || this.mode === "strongest";
-    let color = this.colors.edge, width = 1.2, dashes = false;
-    if (e.origin === "sandbox") { color = this.colors.sandbox; dashes = [6, 4]; width = 2; }
-    if (showW && strongest.has(e.id)) { color = this.colors.strongest; width = 4; }
-    if (showS && shortest.has(e.id)) { color = this.colors.shortest; width = strongest.has(e.id) && showW ? 5 : 4; }
+    if (this._spot()) {
+      // Spotlight: the path (drawn on top by _drawPathRoads) and the replaced path (dashed) only;
+      // every other road is a faint thin line without a name. Sandbox roads keep their pink dashes.
+      const fade = Math.min(this._fade(e.subject), this._fade(e.object));
+      const hidden = { color: "rgba(0,0,0,0)", strokeWidth: 0 };
+      const label = e.origin === "sandbox" ? `${e.label} (sandbox)` : e.label || e.predicate;
+      if ((showW && strongest.has(e.id)) || (showS && shortest.has(e.id)))
+        return { color: { color: this.colors.strongest, highlight: this.colors.select, hover: this.colors.select, opacity: fade }, width: 10, dashes: false, label, font: hidden };
+      if (e.origin === "sandbox")
+        return { color: { color: this.colors.sandbox, highlight: this.colors.select, hover: this.colors.select, opacity: fade }, width: 4, dashes: [9, 7], label, font: hidden };
+      if (this.prevPath.has(e.id))
+        return { color: { color: this.colors.strongest, highlight: this.colors.select, hover: this.colors.select, opacity: 0.7 * fade }, width: 4, dashes: [7, 9], label, font: hidden };
+      return { color: { color: this.colors.roadDim, highlight: this.colors.select, hover: this.colors.select, opacity: 0.55 * fade }, width: 2, dashes: false, label, font: hidden };
+    }
+    // Roads: normal = mid, trail = asphalt, new/next = mint, path = a wide gold "highway" on an
+    // asphalt rim, unexplored/dimmed = pale and thin. Sandbox stays pink and dashed.
+    let color = this.colors.roadMid, width = 4, dashes = false, rim = false;
+    if (e.origin === "sandbox") { color = this.colors.sandbox; dashes = [9, 7]; width = 4; }
+    if (showW && strongest.has(e.id)) { color = this.colors.strongest; width = 10; rim = true; }
+    if (showS && shortest.has(e.id)) { color = this.colors.shortest; width = 10; rim = true; }
     // A sandbox edge never takes a path colour: it stays pink and dashed so it can't pass for Wikidata.
-    if (e.origin === "sandbox") color = this.colors.sandbox;
+    if (e.origin === "sandbox") { color = this.colors.sandbox; rim = false; }
     const onPath = (showS && shortest.has(e.id)) || (showW && strongest.has(e.id));
     const replaced = !onPath && this.prevPath.has(e.id) && e.origin !== "sandbox";
-    if (replaced) { color = this.colors.strongest; width = 2; dashes = [5, 6]; }
+    if (replaced) { color = this.colors.strongest; width = 4; dashes = [7, 9]; }
     const st = this.focus ? null : this.story;
     const current = !!st?.currentEdges.has(e.id);
-    if (current && !onPath && e.origin !== "sandbox") { color = this.colors.fresh; width = 2.5; }
-    if (this.focus?.edges.has(e.id)) { color = this.colors.select; width = Math.max(width, 3.5); }
+    // a big step (dozens of new roads) gets thinner new roads, so the fan doesn't turn into a green blot
+    if (current && !onPath && e.origin !== "sandbox") { color = this.colors.fresh; width = st.current.size > GraphView.STORY_LABELS_ALL ? 3.5 : 6; }
+    if (this.focus?.edges.has(e.id)) { color = this.colors.select; width = Math.max(width, 7); rim = false; }
     // Story: an edge between two trail nodes (e.g. Beyoncé → her sister, both expanded) is part of the
     // exploration's skeleton and stays; leaves fetched in earlier steps fade.
     // A planned branch (trail node → node the agent will expand next) shows too, but nothing beyond it.
     const branch = !!st && ((this._onTrail(e.subject) && st.planned.has(e.object)) || (st.planned.has(e.subject) && this._onTrail(e.object)));
     const trail = !!st && ((this._onTrail(e.subject) && this._onTrail(e.object)) || branch);
-    if (branch && !onPath && !current) { color = this.colors.fresh; width = 2.5; }
+    if (branch && !onPath && !current) { color = this.colors.fresh; width = 6; }
+    else if (trail && !onPath && !current && !replaced && e.origin !== "sandbox" && !this.focus?.edges.has(e.id)) { color = this.colors.road; width = 5; }
     const lit = onPath || replaced || this.focus?.edges.has(e.id) || e.origin === "sandbox" || current || trail;
     const dimmed = (this.focus || st || (this.mode !== "none" && (shortest.size || strongest.size))) && !lit;
     const fade = Math.min(this._fade(e.subject), this._fade(e.object)) * (branch ? 0.25 + 0.75 * Math.min(this._rise(e.subject), this._rise(e.object)) : 1)
@@ -228,11 +388,13 @@ export class GraphView {
     // A plain trail edge (two expanded nodes, not on the path) stays visible but unnamed: its label sat
     // mid-canvas on long pale edges and read as a word floating in empty space.
     const unnamed = !!st && !onPath && !replaced && !current && !branch && !this.focus?.edges.has(e.id) && e.origin !== "sandbox";
-    return { color: { color: dimmed ? this.colors.dim : color, highlight: this.colors.select, hover: this.colors.select, opacity: fade },
-             width, dashes, label: e.origin === "sandbox" ? `${e.label} (sandbox)` : e.label || e.predicate,
-             // A hidden label also drops its white outline (vis draws it even for transparent text,
-             // which left white gaps along the edges).
-             font: dimmed || crowded || unnamed ? { color: "rgba(0,0,0,0)", strokeWidth: 0 } : { color: css("--muted"), strokeWidth: 2 } };
+    return { color: { color: dimmed ? this.colors.roadDim : color, highlight: this.colors.select, hover: this.colors.select, opacity: fade },
+             width: dimmed ? 3 : width, dashes,
+             label: e.origin === "sandbox" ? `${e.label} (sandbox)` : e.label || e.predicate,
+             // A hidden label also drops its outline (vis draws it even for transparent text, which
+             // left gaps along the edges). Path roads and their names are drawn on top by _drawPathRoads.
+             font: dimmed || crowded || unnamed || (rim && !this.focus?.edges.has(e.id)) ? { color: "rgba(0,0,0,0)", strokeWidth: 0 }
+               : { color: this.colors.muted, strokeWidth: 4, size: 11 } };
   }
 
   /**
@@ -257,6 +419,7 @@ export class GraphView {
         Object.assign(place, { x: at.x + dx * 0.05, y: at.y + dy * 0.05, physics: false });
         this.growing.push({ id: n.id, origin, dx, dy, start });
         this.fading.set(n.id, start);
+        this.pop.set(n.id, start);  // and pops to full size with a little overshoot
         i += 1;
       }
       add.push({ id: n.id,
@@ -278,7 +441,14 @@ export class GraphView {
       if (this.edges.has(e.id)) continue;
       this.edges.set(e.id, e);
       const style = this._edgeStyle(e);
-      if (fresh && e.origin !== "sandbox") { style.color = { ...style.color, color: this.colors.fresh }; style.width = 2.5; }
+      if (fresh && e.origin !== "sandbox") { style.color = { ...style.color, color: this.colors.fresh }; style.width = 6; }
+      // Roads are straight; a second (third…) statement between the same two entities bends gently
+      // to alternate sides so parallel predicates stay visible as separate roads.
+      const key = e.subject < e.object ? `${e.subject}|${e.object}` : `${e.object}|${e.subject}`;
+      if (!this.pairs.has(key)) this.pairs.set(key, new Set());
+      const twins = this.pairs.get(key), k = twins.size;
+      twins.add(e.id);
+      if (k) style.smooth = { enabled: true, type: (k % 2) === (e.subject < e.object ? 1 : 0) ? "curvedCW" : "curvedCCW", roundness: 0.14 * Math.ceil(k / 2) };
       add.push({ id: e.id, from: e.subject, to: e.object, title: `${e.label || e.predicate} (${e.predicate})${e.origin === "sandbox" ? " · SANDBOX, not Wikidata" : ""}`, ...style });
     }
     if (add.length) {
@@ -322,7 +492,7 @@ export class GraphView {
     const span = full ? 2 * Math.PI : n <= 2 ? 0.5 * Math.PI : n <= 6 ? 0.9 * Math.PI : 1.4 * Math.PI;
     return Array.from({ length: n }, (_, i) => {
       const a = full ? base + (2 * Math.PI * i) / n : base - span / 2 + (span * (i + 0.5)) / n;
-      const r = 130 + (n > 24 ? 45 * (i % 3) : 0);  // big bursts: three rings
+      const r = 150 + (n > 24 ? 50 * (i % 3) : 0);  // big bursts: three rings
       return { dx: r * Math.cos(a), dy: r * Math.sin(a) };
     });
   }
@@ -363,13 +533,21 @@ export class GraphView {
       for (const map of [this.fading, this.rising]) {
         for (const [id, t0] of map) if (now - t0 >= this.fadeMs || !this.nodes.has(id)) map.delete(id);
       }
-      this._fadeRaf = this.fading.size || this.rising.size ? requestAnimationFrame(tick) : null;
+      for (const [id, t0] of this.pop) if (now - t0 >= MOTION.pop) this.pop.delete(id);
+      for (const [id, t0] of this.ripples) if (now - t0 >= MOTION.ripple || !this.nodes.has(id)) this.ripples.delete(id);
+      // pops and ripples are drawn by the node renderer: keep frames coming while they run
+      if (this.ripples.size || this.pop.size) this.network.redraw();
+      this._fadeRaf = this.fading.size || this.rising.size || this.ripples.size || this.pop.size ? requestAnimationFrame(tick) : null;
     };
     this._fadeRaf = requestAnimationFrame(tick);
   }
 
   removeEdges(ids) {
-    for (const id of ids) this.edges.delete(id);
+    for (const id of ids) {
+      const e = this.edges.get(id);
+      if (e) this.pairs.get(e.subject < e.object ? `${e.subject}|${e.object}` : `${e.object}|${e.subject}`)?.delete(id);
+      this.edges.delete(id);
+    }
     this.edgesDS.remove(ids);
   }
 
@@ -381,7 +559,7 @@ export class GraphView {
     const dropEdges = [...this.edges.keys()].filter((id) => !edgeIds.has(id) && this.edges.get(id).origin !== "sandbox");
     const dropNodes = [...this.nodes.keys()].filter((id) => !nodeIds.has(id));
     this.removeEdges(dropEdges);
-    for (const id of dropNodes) { this.nodes.delete(id); this.hidden.delete(id); }
+    for (const id of dropNodes) { this.nodes.delete(id); this.hidden.delete(id); this.look.delete(id); this.pop.delete(id); this.ripples.delete(id); }
     this.nodesDS.remove(dropNodes);
     this.expanded = new Set(expanded);
     this.focus = null;
@@ -422,9 +600,10 @@ export class GraphView {
   }
 
   setPaths(comparison, sandboxComparison = null) {
-    clearTimeout(this._traceTimer);
+    this._stopPave();
     const ids = (o) => new Set(o?.result ? o.result.hops.map((h) => h.edge_id) : []);
     const cmp = sandboxComparison || comparison;
+    this._hopLabels(cmp);
     // Demo choice: only the strongest path is shown (the backend still computes both).
     this.pathEdges = { shortest: new Set(), strongest: ids(cmp?.strongest), sandbox: new Set() };
     this.pathNodes = new Set(cmp?.strongest?.result ? cmp.strongest.result.nodes.map((n) => n.qid) : []);
@@ -432,26 +611,154 @@ export class GraphView {
   }
 
   /**
-   * Like setPaths, but the new paths are DRAWN: one hop every MOTION.trace ms, from the people
-   * towards the middle (strongest path only). Used when a path first appears or improves.
+   * Like setPaths, but the new path is PAVED: a gold band runs continuously along each hop, one hop
+   * every MOTION.pave ms, from the first person to the other (strongest path only). As a hop is
+   * finished its real path style is committed. Used when a path first appears or improves.
    */
   revealPaths(comparison) {
-    clearTimeout(this._traceTimer);
+    this._stopPave();
     const r = comparison?.strongest?.result;
     const st = r ? r.hops.map((h) => h.edge_id) : [], stN = r ? r.nodes.map((n) => n.qid) : [];
     const total = st.length;
-    if (!total) { this.setPaths(comparison); return; }
-    let k = 0;
-    const draw = () => {
-      k += 1;
-      this.pathEdges = { shortest: new Set(), strongest: new Set(st.slice(0, k)), sandbox: new Set() };
-      this.pathNodes = new Set(stN.slice(0, k + 1));
-      this.restyleAll();
-      if (k < total) this._traceTimer = setTimeout(draw, MOTION.trace);
-    };
+    if (!total || REDUCED) { this.setPaths(comparison); return; }
+    this._hopLabels(comparison);
     this.pathEdges = { shortest: new Set(), strongest: new Set(), sandbox: new Set() };
     this.pathNodes = new Set();
-    this._traceTimer = setTimeout(draw, MOTION.trace);
+    this.restyleAll();
+    this._pave = { edges: st, nodes: stN, t0: performance.now(), done: 0 };
+    const tick = (now) => {
+      const p = this._pave;
+      if (!p) return;
+      const k = Math.min(total, Math.floor((now - p.t0) / MOTION.pave));
+      if (k > p.done) {
+        p.done = k;
+        this.pathEdges = { shortest: new Set(), strongest: new Set(st.slice(0, k)), sandbox: new Set() };
+        this.pathNodes = new Set(stN.slice(0, k + 1));
+        this.restyleAll();
+      }
+      this.network.redraw();
+      if (k < total) this._paveRaf = requestAnimationFrame(tick);
+      else { this._pave = null; this._paveRaf = null; }
+    };
+    this._paveRaf = requestAnimationFrame(tick);
+  }
+
+  /** Relation names of the path's hops in walking direction ("acted in", not the stored "cast member"), as on the card. */
+  _hopLabels(cmp) {
+    this.hopLabel = new Map();
+    for (const h of cmp?.strongest?.result?.hops || []) if (h.label) this.hopLabel.set(h.edge_id, h.label);
+  }
+
+  /** Stop a path being paved (the next setPaths/revealPaths takes over). */
+  _stopPave() {
+    clearTimeout(this._traceTimer);
+    if (this._paveRaf) cancelAnimationFrame(this._paveRaf);
+    this._paveRaf = null; this._pave = null;
+  }
+
+  /** afterDrawing hook: the hop being paved, a gold band on its asphalt rim growing along the road. */
+  _drawPave(ctx) {
+    const p = this._pave;
+    if (!p || p.done >= p.edges.length) return;
+    const id = p.edges[p.done], near = p.nodes[p.done];
+    if (!this.edges.has(id) || !this.nodesDS.get(near)) return;
+    const frac = clamp01((performance.now() - p.t0) / MOTION.pave - p.done);
+    if (frac <= 0) return;
+    const e = easeInOut(frac), n = Math.max(2, Math.ceil(e * 18)), pts = [];
+    for (let i = 0; i <= n; i++) pts.push(this._edgePoint(id, near, (e * i) / n));
+    ctx.save();
+    this._clipOutNodes(ctx);
+    for (const [color, w] of [[this.colors.rim, 15], [this.colors.strongest, 10]]) {
+      ctx.beginPath();
+      pts.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+      ctx.strokeStyle = color;
+      ctx.lineWidth = w;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * afterDrawing hook: the path's roads drawn again ON TOP of every other road (vis draws edges in
+   * insertion order, so a step's many new roads buried the path), still under the entities, with
+   * their relation names. vis's own copy of these edges keeps their hit area and tooltip.
+   */
+  _drawPathRoads(ctx) {
+    const ids = [...this.pathEdges.strongest, ...this.pathEdges.shortest]
+      .filter((id) => !this.focus?.edges.has(id) && this.edges.get(id)?.origin !== "sandbox");
+    if (!ids.length) return;
+    ctx.save();
+    this._clipOutNodes(ctx);
+    const lines = [];
+    for (const id of ids) {
+      const e = this.edges.get(id);
+      if (!e || this.hidden.has(e.subject) || this.hidden.has(e.object) || !this.nodesDS.get(e.subject) || !this.nodesDS.get(e.object)) continue;
+      const pts = [];
+      for (let i = 0; i <= 16; i++) pts.push(this._edgePoint(id, e.subject, i / 16));
+      lines.push({ e, pts, color: this.pathEdges.strongest.has(id) ? this.colors.strongest : this.colors.shortest });
+    }
+    for (const [key, w] of [["rim", 15], ["fill", 10]]) {
+      for (const { pts, color } of lines) {
+        ctx.beginPath();
+        pts.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+        ctx.strokeStyle = key === "rim" ? this.colors.rim : color;
+        ctx.lineWidth = w;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+    // Relation names as small signs ON the road (a cream pill with a gold outline), upright, sized like
+    // the entity names (scaled against the camera zoom, so they stay readable when it zooms out).
+    ctx.save();
+    const z = Math.max(1, this.labelZoom), fs = 12.5 * z;
+    ctx.font = `800 ${fs}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const { e, pts } of lines) {
+      const a = pts[7], b = pts[9], m = pts[8];
+      let ang = Math.atan2(b.y - a.y, b.x - a.x);
+      if (ang > Math.PI / 2) ang -= Math.PI; else if (ang < -Math.PI / 2) ang += Math.PI;
+      const text = this.hopLabel?.get(e.id) || e.label || e.predicate;
+      const w = ctx.measureText(text).width + fs * 1.1, h = fs * 1.75;
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(ang);
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, h / 2);
+      ctx.fillStyle = this.colors.surface;
+      ctx.fill();
+      ctx.strokeStyle = this.colors.strongest;
+      ctx.lineWidth = 2.5 * z;
+      ctx.stroke();
+      ctx.fillStyle = this.colors.text;
+      ctx.fillText(text, 0, fs * 0.06);
+      ctx.restore();
+    }
+    ctx.restore();
+    // the path's entities keep their names above the path roads
+    for (const id of this.pathNodes) {
+      const bn = this.network.body.nodes[id], look = this.look.get(id);
+      if (!bn || bn.options.hidden || !look?.r) continue;
+      ctx.save();
+      this._drawLabel(ctx, look, bn.x, bn.y, look.r, bn.options.label || "", bn.options.opacity ?? 1);
+      ctx.restore();
+    }
+  }
+
+  /** Clip drawing to everything outside the visible nodes, so overlays pass under them. */
+  _clipOutNodes(ctx) {
+    ctx.beginPath();
+    ctx.rect(-1e7, -1e7, 2e7, 2e7);
+    for (const bn of Object.values(this.network.body.nodes)) {
+      if (bn.options.hidden || !this.nodes.has(bn.id)) continue;
+      const rad = (this.look.get(bn.id)?.r || bn.options.size || 10) * 1.18 + 2;  // covers rounded-square corners
+      ctx.moveTo(bn.x + rad, bn.y);
+      ctx.arc(bn.x, bn.y, rad, 0, 2 * Math.PI);
+    }
+    ctx.clip("evenodd");
   }
 
   setMode(mode) { this.mode = mode; this.restyleAll(); }
@@ -576,16 +883,29 @@ export class GraphView {
   straightenPath(qids, { bow = 0, duration = MOTION.camera } = {}) {
     const ids = qids.filter((id) => this.nodesDS.get(id));
     if (ids.length < 3) return;
-    const a = this.network.getPosition(ids[0]), b = this.network.getPosition(ids[ids.length - 1]);
-    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, px = -dy / len, py = dx / len;
+    let a = this.network.getPosition(ids[0]), b = this.network.getPosition(ids[ids.length - 1]);
     const n = ids.length - 1;
-    const moves = ids.slice(1, -1).map((id, i) => {
+    // Every hop needs room for its relation sign and the names around it: when the people are too
+    // close for that, they glide apart (about their midpoint) until each hop gets MIN_HOP units.
+    const MIN_HOP = 190, ends = [];
+    {
+      const l0 = Math.hypot(b.x - a.x, b.y - a.y);
+      if (l0 < n * MIN_HOP) {
+        const ux = l0 ? (b.x - a.x) / l0 : 1, uy = l0 ? (b.y - a.y) / l0 : 0, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, h = (n * MIN_HOP) / 2;
+        const na = { x: mx - ux * h, y: my - uy * h }, nb = { x: mx + ux * h, y: my + uy * h };
+        ends.push({ id: ids[0], from: a, to: na }, { id: ids[ids.length - 1], from: b, to: nb });
+        a = na; b = nb;
+      }
+    }
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, px = -dy / len, py = dx / len;
+    const mids = ids.slice(1, -1).map((id, i) => {
       const k = (i + 1) / n, arc = bow * Math.sin(Math.PI * k);
       return { id, from: this._finalPosition(id), to: { x: a.x + dx * k + px * arc, y: a.y + dy * k + py * arc } };
     });
+    const moves = [...mids, ...ends];
     // Entities that merely sit on the line would read as part of the path ("Paulo → ③ → UN"): they
     // glide off it, sideways, to CLEAR canvas units from the nearest segment.
-    const CLEAR = 70, pts = [a, ...moves.map((m) => m.to), b], onPath = new Set(ids);
+    const CLEAR = 70, pts = [a, ...mids.map((m) => m.to), b], onPath = new Set(ids);
     for (const id of this.nodes.keys()) {
       if (onPath.has(id) || this.hidden.has(id) || !this.nodesDS.get(id)) continue;
       const q = this._finalPosition(id);
@@ -658,7 +978,7 @@ export class GraphView {
     if (this._fxRaf) cancelAnimationFrame(this._fxRaf);
     if (this._rankRaf) cancelAnimationFrame(this._rankRaf);
     this._fxRaf = null; this._rankRaf = null;
-    this._ping = null; this._ranks = null;
+    this._ping = null; this._ranks = null; this._sweep = null;
     if (!had) return;
     this.restyleAll();
     this.network.redraw();
@@ -790,18 +1110,9 @@ export class GraphView {
     const p = this._ping;
     if (!p) return;
     const now = performance.now() - p.t0;
-    const scale = this.network.getScale(), r = 2.4 / scale;
+    const scale = this.network.getScale();
     ctx.save();
-    // clip: a huge rectangle minus every visible node's disc (even-odd rule)
-    ctx.beginPath();
-    ctx.rect(-1e7, -1e7, 2e7, 2e7);
-    for (const bn of Object.values(this.network.body.nodes)) {
-      if (bn.options.hidden || !this.nodes.has(bn.id)) continue;
-      const rad = Math.max(bn.shape?.width || 0, bn.shape?.height || 0) / 2 || bn.options.size || 10;
-      ctx.moveTo(bn.x + rad + 1.5, bn.y);
-      ctx.arc(bn.x, bn.y, rad + 1.5, 0, 2 * Math.PI);
-    }
-    ctx.clip("evenodd");
+    this._clipOutNodes(ctx);  // trails and pellets pass under the entities
     ctx.lineCap = "round";
     const span = 1 - PING_JITTER;  // every ping takes the same time over its edge
     const dots = [];
@@ -821,23 +1132,52 @@ export class GraphView {
           const pt = this._edgePoint(g.id, g.near, (frac * i) / n);
           i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y);
         }
-        ctx.strokeStyle = `rgba(${p.rgb},${(0.45 * alpha).toFixed(3)})`;
-        ctx.lineWidth = Math.max(2, bw + 0.8);
+        ctx.strokeStyle = `rgba(${p.rgb},${(0.55 * alpha).toFixed(3)})`;
+        ctx.lineWidth = Math.max(3, bw);
         ctx.stroke();
       }
       if (frac < 1) dots.push([g, frac]);
     }
-    for (const [g, frac] of dots) {  // dots on top of all trails, with a short comet tail
-      for (let k = 2; k >= 0; k--) {
-        const f = Math.max(0, frac - k * 0.035);
-        const pt = this._edgePoint(g.id, g.near, f);
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(${p.rgb},${k ? 0.45 - k * 0.13 : 1})`;
-        if (!k) { ctx.shadowColor = `rgba(${p.rgb},0.6)`; ctx.shadowBlur = 6; }
-        ctx.arc(pt.x, pt.y, r * (1 - k * 0.2), 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
+    // Flat pellets on top of the painted trails: a short gold capsule aligned with its road, with a
+    // thin land-coloured edge so it reads on asphalt and on pale roads alike. No glow, no comet.
+    const len = 9 / scale, w = 5 / scale;
+    for (const [g, frac] of dots) {
+      const head = this._edgePoint(g.id, g.near, frac);
+      const back = this._edgePoint(g.id, g.near, Math.max(0, frac - 0.02));
+      let dx = head.x - back.x, dy = head.y - back.y;
+      const l = Math.hypot(dx, dy);
+      if (l < 1e-6) { dx = 1; dy = 0; } else { dx /= l; dy /= l; }
+      const tail = { x: head.x - dx * len, y: head.y - dy * len };
+      ctx.beginPath();
+      ctx.moveTo(tail.x, tail.y);
+      ctx.lineTo(head.x, head.y);
+      ctx.strokeStyle = this.colors.land;
+      ctx.lineWidth = w + 2.5 / scale;
+      ctx.stroke();
+      ctx.strokeStyle = `rgb(${p.rgb})`;
+      ctx.lineWidth = w;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * beforeDrawing hook: the get_search_status beam, a flat translucent wedge in each person's colour
+   * turning around that person, under the roads and entities.
+   */
+  _drawSweep(ctx) {
+    const s = this._sweep;
+    if (!s) return;
+    ctx.save();
+    for (const r of s.roots) {
+      const c = this.network.getPosition(r.id);
+      if (!c || !Number.isFinite(c.x)) continue;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.arc(c.x, c.y, r.radius, s.beam - s.tail, s.beam);
+      ctx.closePath();
+      ctx.fillStyle = r.fill;
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -867,26 +1207,35 @@ export class GraphView {
       cands.push(id);
     }
     const ids = [...new Set([...cands, source, target])];
-    // Each side in its person's colour, faint: many candidates light up, so the sweep stays a soft
-    // tint and the bright highlight is kept for the ranked few that follow.
-    const side = { [source]: [this.colors.source, tint(this.colors.source, 0.3)],
-                   [target]: [this.colors.target, tint(this.colors.target, 0.3)] };
+    // Each side in its person's colour, as solid pale tints: many candidates light up, so the sweep
+    // stays soft and the strong highlight is kept for the ranked few that follow.
+    const side = { [source]: [this.colors.source, mix(this.colors.source, this.colors.land, 0.5)],
+                   [target]: [this.colors.target, mix(this.colors.target, this.colors.land, 0.5)] };
     const tail = 1.1, lit = new Set();
     const once = Array.isArray(ranked);
+    // the beam's wedge reaches just past each person's farthest candidate
+    const pos0 = this.network.getPositions(ids), reach = { [source]: 160, [target]: 160 };
+    for (const id of cands) {
+      const c = pos0[root.get(id)], p = pos0[id];
+      if (c && p) reach[root.get(id)] = Math.max(reach[root.get(id)], Math.hypot(p.x - c.x, p.y - c.y) + 60);
+    }
+    const roots = [source, target].filter((id) => this.nodesDS.get(id))
+      .map((id) => ({ id, radius: reach[id], fill: `rgba(${hexRgb(this.colors[id === source ? "source" : "target"])},0.09)` }));
     const frame = (t, ms) => {
       const pos = this.network.getPositions(ids);
       // once: a single turn plus the tail, so the last candidates fade before the ranking appears
       const beam = once ? t * (2 * Math.PI + tail) : ((ms / period) * 2 * Math.PI) % (2 * Math.PI);
+      this._sweep = once && t >= 1 ? null : { beam, tail: 0.7, roots };
       const updates = [];
       for (const id of cands) {
         let behind = beam - this._angle(pos, root.get(id), pos[id]);
         behind = once ? behind : (behind + 2 * Math.PI) % (2 * Math.PI);
         const st = this._nodeStyle(this.nodes.get(id));
         if (behind >= 0 && behind < tail) {
-          const glow = 1 - behind / tail;  // brightest right under the beam, fading behind it (comet tail)
+          const glow = 1 - behind / tail;  // strongest right under the beam, easing off behind it
           const [ring, fill] = side[root.get(id)];
-          updates.push({ id, opacity: Math.max(st.opacity, 0.3 + 0.45 * glow), borderWidth: 1.5 + 2 * glow, size: st.size + 2.5 * glow,
-                         color: { ...st.color, border: ring, background: glow > 0.35 ? fill : st.color.background } });
+          updates.push({ id, opacity: Math.max(st.opacity, 0.6 + 0.4 * glow), borderWidth: 1 + 2.6 * glow, size: st.size + 2 * glow,
+                         color: { ...st.color, border: ring, background: glow > 0.3 ? fill : st.color.background } });
           lit.add(id);
         } else if (lit.has(id)) {
           lit.delete(id);
@@ -894,10 +1243,12 @@ export class GraphView {
         }
       }
       if (updates.length) this.nodesDS.update(updates);
+      else this.network.redraw();  // the wedge still moves
     };
     if (!once) { this._runFx(Infinity, frame); return; }
     const shown = ranked.filter((s) => this.nodes.has(s.qid) && !this.hidden.has(s.qid));
     this._runFx(RANK_SWEEP, frame, 40, () => {
+      this._sweep = null;
       if (!shown.length) return;
       this._ranks = new Map(shown.map((s) => [s.qid, s]));
       this._ranksT0 = performance.now();
@@ -911,49 +1262,58 @@ export class GraphView {
     });
   }
 
-  /** How a ranked suggestion looks: soft green, the higher the rank the bigger and brighter. */
+  /** How a ranked suggestion looks: mint, the higher the rank the bigger and stronger. */
   _rankedStyle(n, sug, name, orderRank, c) {
     const k = Math.max(1, this._ranks.size), strength = 1 - (0.55 * (sug.rank - 1)) / Math.max(1, k - 1);
     const big = this._role(n) === "source" || this._role(n) === "target";
-    const base = big ? 24 : n.kind === "person" ? 10 : 8 + Math.min(9, Math.log1p(n.degree || 0));
+    const base = big ? 26 : n.kind === "person" ? 13 : 11 + Math.min(7, 0.9 * Math.log1p(n.degree || 0));
+    const fontSize = this.story ? 14 * this.labelZoom : 14;
+    this.look.set(n.id, { ...this.look.get(n.id), kind: big ? this._role(n) : n.kind, dim: false, plain: false, halo: false, above: false, font: fontSize,
+                          bold: sug.rank <= 3, caps: !big && n.kind !== "person", badge: orderRank || null });
     return {
-      label: orderRank ? `${orderBadge(orderRank)} ${name}` : name,
-      color: { background: this.colors.freshSoft, border: this.colors.fresh,
+      label: name,
+      color: { background: mix(this.colors.fresh, this.colors.land, 0.45 * (1 - strength)), border: this.colors.fresh,
                highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
-      borderWidth: 2 + 2.5 * strength,
+      borderWidth: 2.6 + 1.4 * strength,
       shapeProperties: { borderDashes: false },
-      shape: n.kind === "person" || big ? "dot" : "square",
-      size: base + 2 + 4 * strength,
-      font: { size: (this.story ? 14 * this.labelZoom : 14), bold: sug.rank <= 3 ? { color: css("--text") } : undefined },
-      opacity: 0.55 + 0.45 * strength,
+      size: base + 1 + 3 * strength,
+      font: { size: fontSize },
+      opacity: 0.75 + 0.25 * strength,
     };
   }
 
-  /** afterDrawing hook: the "#k" pills on ranked suggestions (constant size on screen). */
+  /** afterDrawing hook: the "#k" tags on ranked suggestions (constant size on screen), popping in. */
   _drawRanks(ctx) {
     if (!this._ranks) return;
     const scale = this.network.getScale(), now = performance.now();
-    const px = 11 / scale, padX = 4 / scale, h = 15 / scale;
+    const px = 11.5 / scale, padX = 5 / scale, h = 17 / scale;
     ctx.save();
-    ctx.font = `600 ${px}px system-ui, sans-serif`;
+    ctx.font = `800 ${px}px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const [id, sug] of this._ranks) {
       const bn = this.network.body.nodes[id];
       if (!bn || bn.options.hidden) continue;
-      const a = Math.min(1, Math.max(0, (now - this._ranksT0 - (sug.rank - 1) * RANK_STAGGER) / RANK_POP));
+      const a = REDUCED ? 1 : clamp01((now - this._ranksT0 - (sug.rank - 1) * RANK_STAGGER) / RANK_POP);
       if (a <= 0) continue;
-      const e = easeInOut(a), text = `#${sug.rank}`;
-      const rad = Math.max(bn.shape?.width || 0, bn.shape?.height || 0) / 2 || bn.options.size || 10;
+      const e = easeOutBack(a), text = `#${sug.rank}`;
+      const rad = this.look.get(id)?.r || bn.options.size || 12;
       const w = ctx.measureText(text).width + 2 * padX;
-      const x = bn.x + rad * 0.8 + w / 2, y = bn.y - rad * 0.8 - (4 / scale) * e;
-      ctx.globalAlpha = e;
-      ctx.fillStyle = this.colors.fresh;
+      const x = bn.x + rad * 0.85 + w / 2, y = bn.y - rad * 0.85;
+      ctx.globalAlpha = Math.min(1, a * 1.6);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(e, e);
       ctx.beginPath();
-      ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+      ctx.roundRect(-w / 2, -h / 2, w, h, h * 0.42);
+      ctx.fillStyle = this.colors.fresh;
       ctx.fill();
+      ctx.strokeStyle = this.colors.land;
+      ctx.lineWidth = 2 / scale;
+      ctx.stroke();
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(text, x, y + 0.5 / scale);
+      ctx.fillText(text, 0, 0.5 / scale);
+      ctx.restore();
     }
     ctx.restore();
   }

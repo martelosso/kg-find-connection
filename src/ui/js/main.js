@@ -4,6 +4,7 @@
 
 import { api, streamEvents } from "./api.js";
 import { $, el, wikidataLink } from "./dom.js";
+import { entityIcon } from "./glyphs.js";
 import { GraphView } from "./graph-view.js";
 import { InvestigationModel, label } from "./investigation.js";
 import { PathComparison } from "./path-comparison.js";
@@ -36,6 +37,15 @@ const book = new StepBook();
 
 // ---- views ----------------------------------------------------------------------------------
 const graph = new GraphView($("#network"), { onSelect: onGraphSelect });
+// The canvas draws its labels in the bundled Nunito Sans: redraw once the font has loaded.
+document.fonts?.load('700 13px "Nunito Sans"').then(() => graph.network.redraw()).catch(() => {});
+
+/** An entity's fill colour by role or kind (the same tokens the graph reads). */
+const KIND_VAR = { source: "--c-source", target: "--c-target", person: "--c-person", organization: "--c-org",
+                   work: "--c-work", place: "--c-place", position: "--c-position", other: "--c-other" };
+const kindColor = (kind) => getComputedStyle(document.documentElement).getPropertyValue(KIND_VAR[kind] || "--c-other").trim();
+// Legend: the same flat shapes and pictograms as the graph.
+for (const item of document.querySelectorAll("#legend [data-icon]")) item.prepend(entityIcon(item.dataset.icon, kindColor(item.dataset.icon), 15, { lip: true }));
 const timeline = new Timeline($("#timeline"), { onSelectRow: onTimelineRow });
 const paths = new PathComparison($("#paths"), { onShow: showPaths });
 const editor = new TurtleEditor($("#cm-wrap"), {
@@ -409,7 +419,9 @@ function afterStep() {
   const live = now && step.kind !== "tail";  // the tail's arrivals stay greyed: they led nowhere better
   graph.setPreviousPath(d.pathEvent === "improved" && d.prevPath ? d.prevPath.hops.map((h) => h.edge_id) : []);
   graph.setStory({ order: [...model.expanded], current: live ? d.nodeIds : [], currentEdges: live ? d.edgeIds : [],
-                   active: live ? d.expandedQids : [], planned, calm: !!d.pathEvent });
+                   active: live ? d.expandedQids : [], planned, calm: !!d.pathEvent,
+                   // the connection moments: the path in the spotlight, everything else recedes
+                   spotlight: (!!d.pathEvent || step.kind === "result") && !!model.comparison?.strongest?.result });
   timeline.markCurrent(step.events.map((e) => e.event_id));
   renderStepCard();
   // Camera: frame the trail plus what this step added, beside the step card (a column at the top left),
@@ -849,7 +861,13 @@ function chainBlock(ch, title = "Strongest connection", faded = false) {
         title: `${rel.pid} · ${rel.group}${rel.word ? ` · ${rel.word} link (strength ${rel.strength})` : ""}` }, rel.label, " →"));
     }
     const chip = wikidataLink(n.qid, n.label);
-    chip.className = `node k-${n.role || n.kind}`;
+    const kind = n.role || n.kind;
+    chip.className = `node k-${kind}`;
+    // The chip carries the entity's own shape and pictogram; the two people's chips are filled, so
+    // their icon is inverted (white shape, coloured pictogram).
+    const ends = kind === "source" || kind === "target";
+    chip.prepend(entityIcon(kind in KIND_VAR ? kind : "other", ends ? "#ffffff" : kindColor(kind), 16,
+                            ends ? { glyph: kindColor(kind) } : {}));
     chip.title = `${n.qid} · open in Wikidata`;
     items.push(chip);
   });

@@ -31,6 +31,7 @@ UI_DIR = Path(__file__).parent / "ui"
 # ES modules need a JavaScript MIME type; the Windows registry sometimes maps .js to text/plain.
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("font/woff2", ".woff2")  # the bundled workbench font (src/ui/vendor/fonts/)
 
 app = Flask(__name__, static_folder=str(UI_DIR), static_url_path="")
 _system_prompt = build_system_prompt()

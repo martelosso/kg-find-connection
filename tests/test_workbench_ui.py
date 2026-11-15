@@ -21,6 +21,17 @@ def test_workbench_is_served_at_root_with_local_assets(client, root):
             assert res.mimetype == "text/css", ref
 
 
+def test_workbench_font_is_bundled_and_served_as_a_font(client, root):
+    css = (root / UI / "css" / "workbench.css").read_text(encoding="utf-8")
+    urls = re.findall(r'url\("([^"]+)"\)', css)
+    assert urls and all(u.startswith("/vendor/fonts/") for u in urls), urls  # offline: no font CDN
+    for url in set(urls):
+        res = client.get(url)
+        assert res.status_code == 200, url
+        assert res.mimetype == "font/woff2", url
+    assert (root / UI / "vendor" / "fonts" / "OFL.txt").is_file()
+
+
 def test_every_module_import_resolves(root):
     js_dir = root / UI / "js"
     for path in js_dir.glob("*.js"):
