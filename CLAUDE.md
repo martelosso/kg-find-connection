@@ -13,6 +13,8 @@ It also shows the live graph growth, an investigation timeline, and the exact Tu
 
 **`IMPLEMENTATION_PLAN.md` is the full specification.** Read the section that covers your task before you start: §3 data semantics, §4 Wikidata acquisition, §5 pathfinding, §6 agent, §7 API/events, §8 UI, §10 milestones, §11 tests, §12 budgets. This file is a summary. Where the two differ, the plan wins.
 
+**Who it is for:** part two (the live demo) of the workshop "Knowledge Graphs and Knowledge Graphs for Agentic AI", for a mixed audience with no KG background. The demo is the "unknown number of hops" question, the same shape as finding a fraud ring. `docs/workshop-context.md` has the session description, the takeaways, how the demo shows each one, and what that implies for design choices. Check new features against it.
+
 Core principle: **the LLM decides what to explore next. Deterministic code does graph queries, pathfinding, ranking and validation.**
 
 ## Current state of the repo (as of 2026-11-13)
