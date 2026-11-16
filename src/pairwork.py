@@ -101,6 +101,9 @@ def demo_pair_row(ctx: Context, source: str, target: str, *, max_hops: int) -> d
     short, strong = exact.shortest.result, exact.strongest.result
     if short is None or short.hop_count < 2 or short.hop_count > max_hops:
         return None
+    strongest_status = exact.strongest.status
+    if strong is None:  # the weighted search gave up (work caps); report the shortest path instead
+        strong = short
     nodes = {n.qid: n for r in (short, strong) for n in r.nodes}
     provider = ctx.provider()
     state = InvestigationState(source, target, ctx.policy.default_groups, ctx.search.budgets,
@@ -113,7 +116,7 @@ def demo_pair_row(ctx: Context, source: str, target: str, *, max_hops: int) -> d
         "source_label": ctx.graph.node(source).label(), "target_label": ctx.graph.node(target).label(),
         "shortest_hops": short.hop_count, "strongest_hops": strong.hop_count,
         "shortest_cost": round(short.total_cost, 3), "strongest_cost": round(strong.total_cost, 3),
-        "divergent": not exact.same_path,
+        "divergent": not exact.same_path, "strongest_status": strongest_status,
         "interpersonal_hops": sum(h.relation_group in INTERPERSONAL for h in strong.hops),
         "unlabeled_nodes": sum(1 for n in nodes.values() if not n.label_en),
         "strongest_route": " → ".join(n.label_en or n.qid for n in strong.nodes),
