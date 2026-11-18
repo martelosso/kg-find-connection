@@ -35,7 +35,7 @@ This is strictly an **aesthetic reference**, not a thematic one. Do not introduc
 The goal is to capture the game's **graphic design, not its subject matter**.
 ---
 
-### Implemented as (branch `visual-experiment`, 2026-11-15)
+### Implemented as (2026-11-15, on branch `visual-experiment`, since merged into `master`)
 
 Decided with the user: dark asphalt roads on a cream ground, no arrowheads (direction stays in the hop label, the tooltip and the Turtle), Nunito Sans bundled offline, and the whole workbench in scope (graph, chrome, motion). Colour *meanings* did not change; only their values did.
 
