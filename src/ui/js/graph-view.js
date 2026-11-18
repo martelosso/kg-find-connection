@@ -33,8 +33,26 @@ export class GraphView {
   static STORY_LABELS = 14;
   /** In a dense story, only the latest NAMED_RECENT expanded nodes keep their names (as in the card's trail line). */
   static NAMED_RECENT = 7;
-  constructor(container, { maxVisible = 250, onSelect } = {}) {
+  /** The two people stand out from everyone else; on the first step (only the two of them) they are larger still. */
+  static ENDPOINT_SIZE = 34;
+  static ENDPOINT_SPOT_SIZE = 36;
+  static ENDPOINT_INTRO_SIZE = 60;
+
+  /**
+   * An entity's size (not one of the two people). While stepping, entities in focus (the trail, what
+   * this step added, the planned branches, a clicked selection) are larger than the greyed-out rest;
+   * without a story every entity has the plain size. Organizations, works and places grow a little
+   * with their degree.
+   */
+  static entitySize(n, focus = null) {
+    const grow = (k, cap) => Math.min(cap, k * Math.log1p(n.degree || 0));
+    if (focus === true) return n.kind === "person" ? 19 : 15 + grow(0.9, 6);
+    if (focus === false) return n.kind === "person" ? 11 : 9 + grow(0.6, 4);
+    return n.kind === "person" ? 13 : 11 + grow(0.9, 7);
+  }
+  constructor(container, { maxVisible = 250, onSelect, images = null } = {}) {
     this.maxVisible = maxVisible;
+    this.images = images;     // ImageStore (images.js): entity pictures, drawn when loaded, else the pictogram
     this.container = container;
     this.labelZoom = 1;       // story labels are scaled by 1/zoom so they stay readable on screen
     this.fading = new Map();  // node id -> fade-in start time (new nodes and their edges fade in)
@@ -56,6 +74,7 @@ export class GraphView {
     // Per-node drawing facts the custom renderer needs beyond vis's own style (kind, label font, order
     // tag, last drawn radius), refreshed by _nodeStyle; pop-in and ripple start times.
     this.look = new Map();
+    this.sizes = new Map();   // node id -> {from, to, start}: size changes glide (MOTION.resize) instead of jumping
     this.pop = new Map();
     this.ripples = new Map();
     this.pairs = new Map();   // "a|b" -> Set of edge ids: parallel statements get their own gentle curve
@@ -117,6 +136,7 @@ export class GraphView {
     this._stopPave(); this._sweep = null;
     this.look.clear(); this.pop.clear(); this.ripples.clear(); this.pairs.clear();
     this.pathNodes = new Set(); this.prevPath = new Set(); this.focus = null; this.story = null; this.labelZoom = 1; this.endpoints = { source: null, target: null };
+    this.sizes.clear();
   }
 
   /**
@@ -130,7 +150,9 @@ export class GraphView {
                            planned: new Set(story.planned || []),
                            // Spotlight (a path moment, the result): only the path and the two people stay
                            // in full; everything else recedes to faint roads and plain pale dots, unnamed.
-                           spotlight: !!story.spotlight } : null;
+                           spotlight: !!story.spotlight,
+                           // The first step: only the two people are on screen, shown large.
+                           intro: !!story.intro } : null;
     // A big expansion (100 new nodes) cannot label everything legibly: label its best-connected new
     // nodes, people first, so the audience can still read who arrived (the rest stay unlabelled dots).
     // On a path moment (`calm`) only the path and the trail keep labels: the path is the story there.
@@ -210,7 +232,8 @@ export class GraphView {
     const sug = this._ranks?.get(n.id);
     if (sug) return this._rankedStyle(n, sug, name, rank, c);
     // While stepping the camera frames the whole trail, so trail labels are drawn larger to stay legible.
-    const fontSize = st && lit ? (big ? 18 : active ? 17 : this._onTrail(n.id) || planned ? 15 : 12.5) * this.labelZoom : big ? 17 : active ? 16 : 13;
+    const intro = big && !!st?.intro;
+    const fontSize = intro ? 24 * this.labelZoom : st && lit ? (big ? 18 : active ? 17 : this._onTrail(n.id) || planned ? 15 : 12.5) * this.labelZoom : big ? 17 : active ? 16 : 13;
     this.look.set(n.id, { ...this.look.get(n.id), kind: big ? role : n.kind, dim: !lit, plain: false, halo: false, above: false, font: fontSize, bold: big || active,
                           caps: !big && n.kind !== "person", badge: showLabel && rank ? rank : null });
     return {
@@ -219,7 +242,8 @@ export class GraphView {
                highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
       borderWidth: active ? 4 : next ? 3 : 1,
       shapeProperties: { borderDashes: next ? [5, 4] : false },
-      size: (big ? 26 : n.kind === "person" ? 13 : 11 + Math.min(7, 0.9 * Math.log1p(n.degree || 0))) + (active ? 3 : 0),
+      size: (intro ? GraphView.ENDPOINT_INTRO_SIZE : big ? GraphView.ENDPOINT_SIZE
+        : GraphView.entitySize(n, st ? lit : null)) + (active ? 3 : 0),
       font: { size: fontSize },
       opacity: (lit ? 0.7 + 0.3 * this._rise(n.id) : 1) * this._fade(n.id),
     };
@@ -241,7 +265,7 @@ export class GraphView {
                             caps: !big && n.kind !== "person", badge: null, halo: true, above: i % 2 === 1 });
       return { label: name, color: { background: c, border: c, highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
                borderWidth: 1, shapeProperties: { borderDashes: false },
-               size: big ? 28 : n.kind === "person" ? 16 : 15, font: { size: font }, opacity: this._fade(n.id) };
+               size: big ? GraphView.ENDPOINT_SPOT_SIZE : n.kind === "person" ? 20 : 18, font: { size: font }, opacity: this._fade(n.id) };
     }
     this.look.set(n.id, { ...this.look.get(n.id), kind: n.kind, dim: true, plain: true, font: 12, bold: false, caps: false, badge: null, halo: false, above: false });
     return { label: "", color: { background: this.colors.dim, border: this.colors.dim, highlight: { background: c, border: this.colors.select }, hover: { background: c, border: this.colors.select } },
@@ -259,7 +283,7 @@ export class GraphView {
     const now = performance.now();
     const p0 = this.pop.get(id);
     const s = p0 === undefined || REDUCED ? 1 : 0.6 + 0.4 * easeOutBack(clamp01((now - p0) / MOTION.pop));
-    const r = Math.max(2, (style.size || 12) * s);
+    const r = Math.max(2, this._glideSize(id, style.size || 12, now) * s);
     look.r = r;
     const sel = state.selected || state.hover;
     return {
@@ -280,8 +304,10 @@ export class GraphView {
           }
         }
         const ringOn = (style.borderWidth || 0) >= 2.5 || state.selected;
+        // The entity's Wikidata image, once loaded; plain background dots stay dots.
+        const photo = look.plain ? null : this.images?.get(id) || null;
         drawEntity(ctx, {
-          kind: look.kind, x, y, r, fill: style.color,
+          kind: look.kind, x, y, r, fill: style.color, photo, photoGrey: !!look.dim,
           glyph: look.plain ? null : look.dim ? mix(style.color, "#ffffff", 0.5) : "#ffffff",
           lip: !look.dim,
           ring: ringOn ? (state.selected ? this.colors.select : style.borderColor) : sel ? this.colors.select : null,
@@ -294,6 +320,40 @@ export class GraphView {
       drawExternalLabel: () => this._drawLabel(ctx, look, x, y, r, label, style.opacity ?? 1),
       nodeDimensions: { width: 2 * r, height: 2 * r },
     };
+  }
+
+  /**
+   * The size to draw now: when a node's target size changes (the first step's large people shrinking,
+   * an entity coming into or leaving focus), it glides there over MOTION.resize with the UI's
+   * ease-in-out, starting from wherever it is, so a change mid-glide never jumps.
+   */
+  _glideSize(id, target, now) {
+    if (REDUCED) return target;
+    const t = this.sizes.get(id);
+    if (!t) { this.sizes.set(id, { from: target, to: target, start: -Infinity }); return target; }
+    if (t.to !== target) {
+      t.from = this._sizeAt(t, now); t.to = target; t.start = now;
+      this._runResize();
+    }
+    return this._sizeAt(t, now);
+  }
+
+  _sizeAt(t, now) {
+    const k = clamp01((now - t.start) / MOTION.resize);
+    return t.from + (t.to - t.from) * easeInOut(k);
+  }
+
+  /** Keep frames coming while any size glide runs (the renderer reads the glide on every draw). */
+  _runResize() {
+    if (this._resizeRaf) return;
+    const tick = () => {
+      const now = performance.now();
+      this.network?.redraw();
+      let busy = false;
+      for (const t of this.sizes.values()) if (now - t.start < MOTION.resize) { busy = true; break; }
+      this._resizeRaf = busy ? requestAnimationFrame(tick) : null;
+    };
+    this._resizeRaf = requestAnimationFrame(tick);
   }
 
   /** The entity's name under it (map-label style for non-people), and its exploration-order tag. */
@@ -429,10 +489,17 @@ export class GraphView {
     if (add.length) {
       const crossed = this.nodes.size > this.labelThreshold && this.nodes.size - add.length <= this.labelThreshold;
       this.nodesDS.add(add);
+      this.images?.want(add.map((a) => a.id));
       if (crossed) this.nodesDS.update([...this.nodes.values()].map((n) => ({ id: n.id, label: this._nodeStyle(n).label })));
     }
     if (i) { this._runFade(); this._runGrow(); }
     return add.length;
+  }
+
+  /** A picture finished loading: redraw once for all that arrive within 120 ms. */
+  pictureReady() {
+    if (this._pictureTimer) return;
+    this._pictureTimer = setTimeout(() => { this._pictureTimer = null; this.network?.redraw(); }, 120);
   }
 
   addEdges(list, { fresh = false } = {}) {
@@ -1266,7 +1333,7 @@ export class GraphView {
   _rankedStyle(n, sug, name, orderRank, c) {
     const k = Math.max(1, this._ranks.size), strength = 1 - (0.55 * (sug.rank - 1)) / Math.max(1, k - 1);
     const big = this._role(n) === "source" || this._role(n) === "target";
-    const base = big ? 26 : n.kind === "person" ? 13 : 11 + Math.min(7, 0.9 * Math.log1p(n.degree || 0));
+    const base = big ? GraphView.ENDPOINT_SIZE : GraphView.entitySize(n, this.story ? true : null);
     const fontSize = this.story ? 14 * this.labelZoom : 14;
     this.look.set(n.id, { ...this.look.get(n.id), kind: big ? this._role(n) : n.kind, dim: false, plain: false, halo: false, above: false, font: fontSize,
                           bold: sug.rank <= 3, caps: !big && n.kind !== "person", badge: orderRank || null });

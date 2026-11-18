@@ -474,3 +474,47 @@ console.log(JSON.stringify(data.map(associationNote)));
         "Through N1, N3: a shared film or record is an association, not proof that they met.",
         "Through N1, N3: a shared organisation, work or place is an association, not proof that they met.",
         None, None]
+
+
+def test_image_store_draws_only_pictures_that_load(root, tmp_path):
+    """images.js: a picture is drawable only once it loaded; "no image", a broken file and an
+    unreachable server all leave the entity without one (it keeps its pictogram)."""
+    script = """
+const { ImageStore } = await mod('images.js');
+const timers = [], asked = [], ready = [];
+const schedule = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+const tick = async () => { while (timers.length) await timers.shift().fn(); };
+let down = false;
+const store = new ImageStore({
+  schedule, batch: 2, maxRetries: 2,
+  fetchImages: async (qids) => {
+    asked.push(qids);
+    if (down) throw new Error('offline');
+    const table = { Q1: { file: 'a.jpg', thumb: 'ok:a', page: 'p:a' }, Q2: null, Q3: { file: 'b.jpg', thumb: 'broken', page: 'p:b' } };
+    return { images: Object.fromEntries(qids.filter((q) => q in table).map((q) => [q, table[q]])),
+             pending: qids.filter((q) => !(q in table)) };
+  },
+  loadImage: async (url) => { if (url === 'broken') throw new Error('404'); return { naturalWidth: 10, url }; },
+  onReady: (q) => ready.push(q),
+});
+store.want(['Q1', 'Q2', 'Q3', 'Q4', 'Q1']);
+await tick();
+const first = { asked: asked.map((a) => a.join(',')), ready: [...ready],
+  q1: store.get('Q1')?.url ?? null, q2: store.get('Q2'), q3: store.get('Q3'), q4: store.get('Q4'),
+  info: store.info('Q1'), status3: store.state.get('Q3')?.status };
+// Q4 was pending: it was retried once more (maxRetries 2), then given up.
+store.want(['Q1']);  // known: no new request
+down = true;
+store.want(['Q5']);
+await tick();
+const after = { asked: asked.map((a) => a.join(',')), q5: store.get('Q5'), q5known: store.state.has('Q5') };
+console.log(JSON.stringify({ first, after }));
+"""
+    out = run_node(root, tmp_path, script, {})
+    first, after = out["first"], out["after"]
+    assert first["asked"] == ["Q1,Q2", "Q3,Q4", "Q4"]  # batches of 2, one retry for the pending Q4
+    assert first["ready"] == ["Q1"] and first["q1"] == "ok:a"
+    assert first["q2"] is None and first["q3"] is None and first["q4"] is None
+    assert first["status3"] == "failed" and first["info"] == {"file": "a.jpg", "page": "p:a"}
+    assert after["asked"][3:] == ["Q5", "Q5"]  # server down: no picture, retried, nothing drawn
+    assert after["q5"] is None and after["q5known"] is False

@@ -83,12 +83,39 @@ export function shapePath(ctx, round, x, y, r) {
   ctx.roundRect(x - r, y - r, 2 * r, 2 * r, k);
 }
 
+/** Draw `img` cropped to fill the entity shape of half-size r (centre crop, like CSS object-fit: cover). */
+function drawPhoto(ctx, img, round, x, y, r, grey) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if (!w || !h) return false;
+  const side = Math.min(w, h);
+  // Portraits: crop towards the top, where the face usually is; landscapes: the centre.
+  const sx = (w - side) / 2, sy = h > w ? (h - side) * 0.2 : (h - side) / 2;
+  ctx.save();
+  shapePath(ctx, round, x, y, r);
+  ctx.clip();
+  if (grey) {  // a greyed-out entity: a washed-out grey photo over its grey disc, so it stays in the background
+    if ("filter" in ctx) ctx.filter = "grayscale(1)";
+    ctx.globalAlpha *= 0.45;
+  }
+  try {
+    ctx.drawImage(img, sx, sy, side, side, x - r, y - r, 2 * r, 2 * r);
+  } catch {
+    ctx.restore();
+    return false;
+  }
+  ctx.restore();
+  return true;
+}
+
 /**
  * Draw a flat entity: an optional darker "lip" under it, the solid shape, its pictogram, and an
  * optional ring (state: active, planned, selected). No shadows, gradients or outlines otherwise.
+ * With `photo` (the entity's Wikidata image, loaded), the picture replaces the pictogram inside a
+ * rim of the entity's colour, so kind, side and path colours keep their meaning.
  */
 export function drawEntity(ctx, { kind, x, y, r, fill, glyph = "#ffffff", glyphScale = 0.62, lip = true,
-                                  ring = null, ringWidth = 3, ringGap = 3, ringDash = null }) {
+                                  ring = null, ringWidth = 3, ringGap = 3, ringDash = null,
+                                  photo = null, photoGrey = false }) {
   const round = isRound(kind);
   if (lip) {
     ctx.fillStyle = darken(fill, 0.16);
@@ -98,6 +125,8 @@ export function drawEntity(ctx, { kind, x, y, r, fill, glyph = "#ffffff", glyphS
   ctx.fillStyle = fill;
   shapePath(ctx, round, x, y, r);
   ctx.fill();
+  const rim = Math.max(1.5, r * 0.14);
+  if (photo && drawPhoto(ctx, photo, round, x, y, r - rim, photoGrey)) glyph = null;
   if (glyph) {
     ctx.save();
     ctx.translate(x, y);

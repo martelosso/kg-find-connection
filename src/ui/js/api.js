@@ -26,6 +26,7 @@ export const api = {
   health: () => request("GET", "/api/health"),
   ontology: () => request("GET", "/api/people-ontology"),
   demoCases: () => request("GET", "/api/demo-cases"),
+  images: (qids) => request("GET", `/api/images?qids=${encodeURIComponent(qids.join(","))}`),
   searchPeople: (q, limit = 8) => request("GET", `/api/people/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   start: (body) => request("POST", "/api/investigations", body),
   get: (id) => request("GET", `/api/investigations/${id}`),

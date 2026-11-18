@@ -184,6 +184,18 @@ class UiPolicy(_Frozen):
     max_visible_nodes: int = Field(ge=10)
 
 
+class ImagePolicy(_Frozen):
+    """Entity pictures in the graph (src/wikidata/images.py): Wikidata P18 looked up live, cached on disk."""
+    enabled: bool = True
+    thumb_width: int = Field(default=160, ge=16, le=1024)
+    batch_size: int = Field(default=150, ge=1, le=500)
+    max_per_request: int = Field(default=400, ge=1)
+    timeout_seconds: float = Field(default=10, gt=0)
+    max_retries: int = Field(default=2, ge=0, le=5)
+    max_retry_after_seconds: float = Field(default=30, ge=0)
+    offline_backoff_seconds: float = Field(default=60, ge=0)
+
+
 class SearchConfig(_Frozen):
     version: int
     budgets: SearchBudgets
@@ -191,6 +203,7 @@ class SearchConfig(_Frozen):
     frontier: FrontierPolicy
     agent: AgentPolicy
     ui: UiPolicy
+    images: ImagePolicy = ImagePolicy()
 
     @model_validator(mode="after")
     def _limits_cover_defaults(self) -> "SearchConfig":

@@ -136,6 +136,24 @@ def api_people_search():
     return jsonify({"query": q, "matches": [m.model_dump() for m in matches]})
 
 
+@app.get("/api/images")
+def api_images():
+    """Entity pictures for the graph: ``?qids=Q1,Q2`` → ``{images: {qid: {file, thumb, page} | null},
+    pending: [...]}`` from the Wikidata P18 resolver (src/wikidata/images.py, live + disk cache).
+    ``null`` means Wikidata records no image; ``pending`` QIDs could not be looked up right now."""
+    resolver = current_app.config.get("IMAGES")
+    if resolver is None:
+        from .wikidata.images import ImageResolver
+
+        resolver = ImageResolver(_service().search.images)
+        current_app.config["IMAGES"] = resolver
+    qids = [q.strip() for q in request.args.get("qids", "").split(",") if q.strip()]
+    if len(qids) > resolver.policy.max_per_request:
+        return jsonify({"error": {"code": "invalid_request",
+                                  "message": f"at most {resolver.policy.max_per_request} QIDs per request"}}), 400
+    return jsonify(resolver.describe(qids))
+
+
 @app.get("/api/demo-cases")
 def api_demo_cases():
     return jsonify(_service().demo_cases.model_dump())

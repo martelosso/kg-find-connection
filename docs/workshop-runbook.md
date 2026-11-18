@@ -168,7 +168,7 @@ Before the workshop, check on Wikidata: Charles III's and Bohr's "Trinity Colleg
 | Symptom | What to do |
 |---|---|
 | The LLM agent is slow, errors, the mode is greyed out ("no API key"), or the result says the language model **could not be reached** | Switch the mode to **Baseline** and click **Explore**, or use **Demo replays…**. Both work offline. |
-| No internet at the venue | Replay and deterministic exploration are fully local. Only AI-agent mode needs the LLM provider. |
+| No internet at the venue | Replay and deterministic exploration are fully local. Only AI-agent mode needs the LLM provider. Entity photos need Wikidata and Wikimedia Commons: offline, entities keep their pictograms (photos already looked up stay cached in `data/wikidata/cache/images.json`, but the pictures themselves load from Commons). |
 | Status bar says **Server offline** | In the terminal: `uv run python -m src.server`, then reload the page. The previous result stays on screen until a new run starts. |
 | "Could not start: …" | Read the message. Usually the people weren't picked from the suggestions (pick them from the list), or no relationship group is on. |
 | The result says **Partial result** | That is honest behaviour: a budget (time, requests, nodes) ran out. Say so; show the explored graph and any path found so far, or use the prepared replay. |

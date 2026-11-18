@@ -6,6 +6,7 @@ import { api, streamEvents } from "./api.js";
 import { $, el, wikidataLink } from "./dom.js";
 import { entityIcon } from "./glyphs.js";
 import { GraphView } from "./graph-view.js";
+import { ImageStore } from "./images.js";
 import { InvestigationModel, label, verbatimTitle } from "./investigation.js";
 import { ruleFor, rulesFor, shortGroup } from "./ontology.js";
 import { OntologyView } from "./ontology-view.js";
@@ -38,7 +39,9 @@ let stepIndex = -1;          // last revealed step (-1 = none yet)
 const book = new StepBook();
 
 // ---- views ----------------------------------------------------------------------------------
-const graph = new GraphView($("#network"), { onSelect: onGraphSelect });
+// Entity pictures (Wikidata P18 via /api/images): drawn once loaded; otherwise the pictogram stays.
+const pictures = new ImageStore({ fetchImages: (qids) => api.images(qids), onReady: () => graph.pictureReady() });
+const graph = new GraphView($("#network"), { onSelect: onGraphSelect, images: pictures });
 // The canvas draws its labels in the bundled Nunito Sans: redraw once the font has loaded.
 document.fonts?.load('700 13px "Nunito Sans"').then(() => graph.network.redraw()).catch(() => {});
 
@@ -432,6 +435,7 @@ function afterStep() {
   graph.setPreviousPath(d.pathEvent === "improved" && d.prevPath ? d.prevPath.hops.map((h) => h.edge_id) : []);
   graph.setStory({ order: [...model.expanded], current: live ? d.nodeIds : [], currentEdges: live ? d.edgeIds : [],
                    active: live ? d.expandedQids : [], planned, calm: !!d.pathEvent,
+                   intro: step.kind === "setup",  // only the two people so far: draw them large
                    // the connection moments: the path in the spotlight, everything else recedes
                    spotlight: (!!d.pathEvent || step.kind === "result") && !!model.comparison?.strongest?.result });
   timeline.markCurrent(step.events.map((e) => e.event_id));
@@ -992,6 +996,13 @@ function inspectorHead(text) {
     el("button", { class: "x", title: "Close", on: { click: () => { box.hidden = true; } } }, "×"));
 }
 
+/** The credit for a drawn entity picture: its Commons file page holds the author and license. */
+function pictureCredit(qid) {
+  const pic = pictures.info(qid);
+  return pic ? el("div", { class: "small muted" }, "Picture: Wikidata image (P18), ",
+    wikidataLink(pic.page, "Wikimedia Commons"), " (author and license on the file page)") : null;
+}
+
 function showInspector({ nodes, edges }) {
   const box = $("#inspector");
   box.hidden = false;
@@ -1016,7 +1027,8 @@ function showInspector({ nodes, edges }) {
       el("div", {}, el("b", {}, label(n)), " ", wikidataLink(n.id, n.id)),
       n.label_es && n.label_es !== n.label_en ? el("div", { class: "small muted" }, `es: ${n.label_es}`) : null,
       el("div", { class: "small muted" }, `${n.degree} statements in the snapshot (degree) · ${known} in the explored subgraph`
-        + `${model.expanded.has(n.id) ? " · expanded" : ""}`)].filter(Boolean));
+        + `${model.expanded.has(n.id) ? " · expanded" : ""}`),
+      pictureCredit(n.id)].filter(Boolean));
   }
 }
 

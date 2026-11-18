@@ -11,6 +11,7 @@ export const MOTION = {
   trace: 420,    // ms per hop: legacy stepped trace (kept for callers that time against it)
   pave: 380,     // ms per hop: the path's gold band drawn continuously along each road
   pop: 420,      // ms: a new entity pops from 60% to full size with a gentle overshoot
+  resize: 700,   // ms: an entity gliding to a new size (the two people after the first step, focus changes)
   ripple: 1200,  // ms: one ring spreading out from a node the agent plans to expand
   fresh: 1500,   // ms: a just-fetched edge stays highlighted before taking its story style
   easing: "easeInOutCubic",  // vis-network's name for the curve the camera uses
