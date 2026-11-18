@@ -454,14 +454,15 @@ function afterStep() {
     graph.straightenPath([r.hops[0].from_qid, ...r.hops.map((h) => h.to_qid)], { bow: prior ? (prior % 2 ? -170 : 170) : 0 });
   }
   const focus = cameraFocus(step, d, planned);
-  if (focus.center.size || focus.around.size) graph.frameStory(focus, inset);
-  // Tools that do not touch the graph get an effect that depicts what they do.
+  // Tools that do not touch the graph get an effect that depicts what they do. Started before the
+  // camera moves: the frontier scan un-hides its candidates and suggestions, so the camera sees them.
   graph.stopFx();
   const tool = step.kind === "call" ? d.tools[0]?.tool : null;
   // Both follow the backend's own rules (hub cap, hop limit) so only what is really computed moves.
   const rules = { isHub: isHubNode, maxHops: model.meta?.max_hops ?? 6 };
   if (tool === "compute_paths" || tool === "inspect_path") graph.fxPathSearch(rules);
   else if (tool === "get_search_status") graph.fxFrontierScan(rules, d.tools[0]?.suggestions ?? null);
+  if (focus.center.size || focus.around.size) graph.frameStory(focus, inset);
   if (step.kind !== "result") {
     // The card already says which step this is; the status bar only adds the keys.
     setStatus("busy", "Keys: → or Space = next step · ← = back");

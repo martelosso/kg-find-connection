@@ -128,7 +128,7 @@ export class GraphView {
     this.stopCamera();
     if (this._fxRaf) cancelAnimationFrame(this._fxRaf);
     if (this._rankRaf) cancelAnimationFrame(this._rankRaf);
-    this._fxRaf = null; this._ping = null; this._ranks = null; this._rankRaf = null;
+    this._fxRaf = null; this._ping = null; this._ranks = null; this._rankRaf = null; this._fxKeep = null;
     if (this._fadeRaf) cancelAnimationFrame(this._fadeRaf);
     if (this._growRaf) cancelAnimationFrame(this._growRaf);
     this._fadeRaf = null; this._growRaf = null; this.fading.clear(); this.rising.clear(); this.growing = [];
@@ -157,6 +157,7 @@ export class GraphView {
                            spotlight: !!story.spotlight,
                            // The first step: only the two people are on screen, shown large.
                            intro: !!story.intro } : null;
+    this._fxKeep = null;  // what the previous step's tool effect needed on screen
     // A big expansion (100 new nodes) cannot label everything legibly: label its best-connected new
     // nodes, people first, so the audience can still read who arrived (the rest stay unlabelled dots).
     // On a path moment (`calm`) only the path and the trail keep labels: the path is the story there.
@@ -877,7 +878,7 @@ export class GraphView {
       if (this.story) {
         // Stepping: what the step is about is always drawn; the greyed-out rest is only context, so
         // just a few stay: connectors first (they join parts of the story), then the latest arrivals.
-        const lit = (n) => keep(n) || this._storyLit(n.id) || !!this._ranks?.has(n.id);
+        const lit = (n) => keep(n) || this._storyLit(n.id) || !!this._ranks?.has(n.id) || !!this._fxKeep?.has(n.id);
         const arrival = new Map([...this.nodes.keys()].map((id, i) => [id, i]));
         const grey = all.filter((n) => !lit(n))
           .sort((a, b) => connector(b) - connector(a) || arrival.get(b.id) - arrival.get(a.id));
@@ -1297,11 +1298,15 @@ export class GraphView {
     for (const id of new Set([...ds.keys(), ...dt.keys()])) {
       const a = ds.get(id) ?? Infinity, b = dt.get(id) ?? Infinity, hops = Math.min(a, b);
       const n = this.nodes.get(id);
-      if (!n || this.hidden.has(id) || this.expanded.has(id) || id === source || id === target) continue;
+      if (!n || this.expanded.has(id) || id === source || id === target) continue;
       if (hops >= rules.maxHops || rules.isHub(n) || (known.get(id) || 0) >= (n.degree || 0)) continue;
       root.set(id, a <= b ? source : target);
       cands.push(id);
     }
+    // The cap never hides what this step is about: every candidate the sweep lights and every
+    // suggestion the agent was shown stay drawn for the whole step.
+    this._fxKeep = new Set([...cands, ...(Array.isArray(ranked) ? ranked.map((s) => s.qid) : [])]);
+    this.applyCap();
     const ids = [...new Set([...cands, source, target])];
     // Each side in its person's colour, as solid pale tints: many candidates light up, so the sweep
     // stays soft and the strong highlight is kept for the ranked few that follow.
