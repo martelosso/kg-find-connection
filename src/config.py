@@ -182,6 +182,7 @@ class AgentPolicy(_Frozen):
 
 class UiPolicy(_Frozen):
     max_visible_nodes: int = Field(ge=10)
+    max_greyed_nodes: int = Field(default=40, ge=0)
 
 
 class ImagePolicy(_Frozen):

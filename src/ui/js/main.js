@@ -185,6 +185,7 @@ async function refreshHealth() {
     health = await api.health();
     if (!onto) loadOntology();
     graph.maxVisible = health.ui?.max_visible_nodes || graph.maxVisible;
+    graph.maxGreyed = health.ui?.max_greyed_nodes ?? graph.maxGreyed;
     if (!optionsFromServer && health.limits) { optionsFromServer = true; renderOptions(); }  // once, like the groups
     if (!groupsFromPolicy && Array.isArray(health.groups) && health.groups.length) {
       groupsFromPolicy = true;  // once: later polls must not reset the presenter's toggles

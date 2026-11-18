@@ -1,8 +1,10 @@
 // vis-network adapter. ONE vis.Network for the page's lifetime: events only add to / update its
 // DataSets, so positions, selection and camera survive every update (plan §8).
 //
-// Visible-node cap: beyond `maxVisible`, the least important nodes are hidden (endpoints, path
-// nodes, expanded nodes and nodes linking 2+ visible nodes are always kept). "Show all" lifts it.
+// Visible-node caps. While stepping, every entity in focus is drawn and only `maxGreyed` of the
+// greyed-out rest stay (connectors, then the latest arrivals). Without a story, beyond `maxVisible`
+// the least important nodes are hidden (endpoints, path nodes and expanded nodes always stay).
+// Hidden nodes and their statements also leave the physics simulation. "Show all" lifts both caps.
 
 import { MOTION, REDUCED, easeInOut, easeOutBack } from "./motion.js";
 import { drawEntity, mix, shapePath } from "./glyphs.js";
@@ -50,8 +52,10 @@ export class GraphView {
     if (focus === false) return n.kind === "person" ? 11 : 9 + grow(0.6, 4);
     return n.kind === "person" ? 13 : 11 + grow(0.9, 7);
   }
-  constructor(container, { maxVisible = 250, onSelect, images = null } = {}) {
+  constructor(container, { maxVisible = 250, maxGreyed = 40, onSelect, images = null } = {}) {
     this.maxVisible = maxVisible;
+    this.maxGreyed = maxGreyed;
+    this.offEdges = new Set();  // edges taken out of the physics because an end is hidden
     this.images = images;     // ImageStore (images.js): entity pictures, drawn when loaded, else the pictogram
     this.container = container;
     this.labelZoom = 1;       // story labels are scaled by 1/zoom so they stay readable on screen
@@ -136,7 +140,7 @@ export class GraphView {
     this._stopPave(); this._sweep = null;
     this.look.clear(); this.pop.clear(); this.ripples.clear(); this.pairs.clear();
     this.pathNodes = new Set(); this.prevPath = new Set(); this.focus = null; this.story = null; this.labelZoom = 1; this.endpoints = { source: null, target: null };
-    this.sizes.clear();
+    this.sizes.clear(); this.offEdges.clear();
   }
 
   /**
@@ -579,7 +583,8 @@ export class GraphView {
         if (t >= 1) { done.push(g.id); return false; }
         return true;
       });
-      if (done.length) this.nodesDS.update(done.map((id) => ({ id, physics: true })));
+      // back to the physics, unless the cap hid the node meanwhile (hidden nodes are not simulated)
+      if (done.length) this.nodesDS.update(done.map((id) => ({ id, physics: !this.hidden.has(id) })));
       this._growRaf = this.growing.length ? requestAnimationFrame(tick) : null;
     };
     this._growRaf = requestAnimationFrame(tick);
@@ -614,6 +619,7 @@ export class GraphView {
       const e = this.edges.get(id);
       if (e) this.pairs.get(e.subject < e.object ? `${e.subject}|${e.object}` : `${e.object}|${e.subject}`)?.delete(id);
       this.edges.delete(id);
+      this.offEdges.delete(id);
     }
     this.edgesDS.remove(ids);
   }
@@ -626,7 +632,7 @@ export class GraphView {
     const dropEdges = [...this.edges.keys()].filter((id) => !edgeIds.has(id) && this.edges.get(id).origin !== "sandbox");
     const dropNodes = [...this.nodes.keys()].filter((id) => !nodeIds.has(id));
     this.removeEdges(dropEdges);
-    for (const id of dropNodes) { this.nodes.delete(id); this.hidden.delete(id); this.look.delete(id); this.pop.delete(id); this.ripples.delete(id); }
+    for (const id of dropNodes) { this.nodes.delete(id); this.hidden.delete(id); this.look.delete(id); this.pop.delete(id); this.ripples.delete(id); this.sizes.delete(id); }
     this.nodesDS.remove(dropNodes);
     this.expanded = new Set(expanded);
     this.focus = null;
@@ -854,30 +860,53 @@ export class GraphView {
     this.applyCap();
   }
 
-  /** Hide low-priority nodes beyond the cap. Returns the number of hidden nodes. */
+  /** Hide low-priority nodes beyond the caps. Returns the number of hidden nodes. */
   applyCap() {
     const all = [...this.nodes.values()];
     let hide = new Set();
-    if (!this.showAll && all.length > this.maxVisible) {
-      const linkCount = new Map();
+    if (!this.showAll) {
+      const linkCount = new Map(), sandbox = new Set();
       for (const e of this.edges.values()) {
         linkCount.set(e.subject, (linkCount.get(e.subject) || 0) + 1);
         linkCount.set(e.object, (linkCount.get(e.object) || 0) + 1);
+        if (e.origin === "sandbox") { sandbox.add(e.subject); sandbox.add(e.object); }
       }
       const keep = (n) => n.id === this.endpoints.source || n.id === this.endpoints.target || this.pathNodes.has(n.id)
-        || this.expanded.has(n.id) || this.focus?.nodes.has(n.id)
-        || [...this.edges.values()].some((e) => e.origin === "sandbox" && (e.subject === n.id || e.object === n.id));
-      const ranked = all.map((n) => ({ n, rank: keep(n) ? 0 : (linkCount.get(n.id) || 0) >= 2 ? 1 : 2, order: n.order ?? 0 }))
-        .sort((a, b) => a.rank - b.rank || a.order - b.order);
-      hide = new Set(ranked.slice(this.maxVisible).filter((r) => r.rank > 0).map((r) => r.n.id));
+        || this.expanded.has(n.id) || this.focus?.nodes.has(n.id) || sandbox.has(n.id);
+      const connector = (n) => ((linkCount.get(n.id) || 0) >= 2 ? 1 : 0);
+      if (this.story) {
+        // Stepping: what the step is about is always drawn; the greyed-out rest is only context, so
+        // just a few stay: connectors first (they join parts of the story), then the latest arrivals.
+        const lit = (n) => keep(n) || this._storyLit(n.id) || !!this._ranks?.has(n.id);
+        const arrival = new Map([...this.nodes.keys()].map((id, i) => [id, i]));
+        const grey = all.filter((n) => !lit(n))
+          .sort((a, b) => connector(b) - connector(a) || arrival.get(b.id) - arrival.get(a.id));
+        hide = new Set(grey.slice(this.maxGreyed).map((n) => n.id));
+      } else if (all.length > this.maxVisible) {
+        const ranked = all.map((n) => ({ n, rank: keep(n) ? 0 : connector(n) ? 1 : 2, order: n.order ?? 0 }))
+          .sort((a, b) => a.rank - b.rank || a.order - b.order);
+        hide = new Set(ranked.slice(this.maxVisible).filter((r) => r.rank > 0).map((r) => r.n.id));
+      }
     }
+    const growing = new Set(this.growing.map((g) => g.id));  // _runGrow hands these back to the physics itself
     const changes = [];
     for (const n of all) {
       const was = this.hidden.has(n.id), now = hide.has(n.id);
-      if (was !== now) changes.push({ id: n.id, hidden: now });
+      if (was !== now) changes.push(growing.has(n.id) ? { id: n.id, hidden: now } : { id: n.id, hidden: now, physics: !now });
     }
-    if (changes.length) this.nodesDS.update(changes);
     this.hidden = hide;
+    if (changes.length) this.nodesDS.update(changes);
+    // A statement with a hidden end leaves the physics too, or its spring would keep pulling the
+    // visible end towards a node that no longer moves.
+    const edgeChanges = [];
+    for (const e of this.edges.values()) {
+      const off = hide.has(e.subject) || hide.has(e.object);
+      if (off !== this.offEdges.has(e.id)) {
+        edgeChanges.push({ id: e.id, physics: !off });
+        if (off) this.offEdges.add(e.id); else this.offEdges.delete(e.id);
+      }
+    }
+    if (edgeChanges.length) this.edgesDS.update(edgeChanges);
     return hide.size;
   }
 
