@@ -103,6 +103,8 @@ The demo teaches two fields, so use their terms, on screen and out loud.
 uv run python -m src.server        # http://localhost:5000
 ```
 
+On macOS, port 5000 belongs to the AirPlay Receiver (the browser shows "Access to 127.0.0.1 was denied", HTTP 403): set `PORT=5050` in `.env` and use http://localhost:5050 everywhere below.
+
 Open **http://localhost:5000** in Chrome. Check the status bar at the bottom right:
 - **Server online**;
 - the data source and snapshot date.

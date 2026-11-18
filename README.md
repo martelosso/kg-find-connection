@@ -24,6 +24,8 @@ uv run python -m src.server
 
 Open http://localhost:5000, choose a case in **Demo replays…**, and step through it with **Next** / **Back** (or the → and ← keys). The badge reads **REPLAY**, with the time of the recording.
 
+**macOS:** the AirPlay Receiver already listens on port 5000, and the browser then shows "Access to 127.0.0.1 was denied" (HTTP 403). Start the server on another port with `PORT=5050 uv run python -m src.server` (or put `PORT=5050` in `.env`) and open http://localhost:5050. Turning off System Settings → General → AirDrop & Handoff → AirPlay Receiver frees 5000 too.
+
 Without the people graph you can only play the recorded cases. The status bar says so, and `uv run python -m src.preflight` reports **NOT READY** because the people graph is missing.
 
 ### 2. Live searches between any two people: add the people graph

@@ -11,7 +11,7 @@ Checks (✓ ok, ! warning, ✗ failure → non-zero exit):
 - the people graph (if installed) opens, has label search indexes and answers a search;
 - workbench assets are vendored locally (no CDN), so the UI works without internet;
 - an LLM key is configured (optional: replay and deterministic mode work without one);
-- port 5000 is free.
+- the workbench port (PORT, default 5000) is free.
 """
 
 from __future__ import annotations
@@ -176,7 +176,8 @@ def _checks_llm(out: list[Check], online: bool) -> None:
         out.append(Check("fail", "LLM", f"{settings.provider} call failed: {type(exc).__name__}: {str(exc)[:200]}"))
 
 
-def _checks_port(out: list[Check], port: int = 5000) -> None:
+def _checks_port(out: list[Check], port: int | None = None) -> None:
+    port = port or int(os.environ.get("PORT") or 5000)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         busy = s.connect_ex(("127.0.0.1", port)) == 0
     out.append(Check("warn" if busy else "ok", "port", f"{port} is {'already in use (server running?)' if busy else 'free'}"))

@@ -3,12 +3,14 @@
 Usage:
     uv run python -m src.server
 
-Then open http://localhost:5000. The legacy /api/ask route requires OPENROUTER_API_KEY in .env;
+Then open http://localhost:5000 (or the port in PORT, e.g. on macOS, where the AirPlay Receiver
+holds 5000). The legacy /api/ask route requires OPENROUTER_API_KEY in .env;
 the investigation API runs offline (people graph or case fixtures; replay needs neither).
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import json
@@ -275,7 +277,14 @@ def api_overlay(inv_id: str):
 
 
 def main() -> None:
-    app.run(port=5000, debug=False)
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    # PORT overrides 5000: on macOS the AirPlay Receiver holds port 5000 and answers 403
+    # ("Access to 127.0.0.1 was denied") to anything meant for the workbench.
+    port = int(os.environ.get("PORT") or 5000)
+    print(f"Workbench: http://localhost:{port}/")
+    app.run(port=port, debug=False)
 
 
 if __name__ == "__main__":
