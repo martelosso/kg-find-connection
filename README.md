@@ -9,6 +9,54 @@ This repository is being extended into **Six Degrees of Knowledge**, an agentic 
 - **Milestone 0 (baseline) is complete:** dependencies, test suite, an offline live editor and `.env.example`.
 - The retail/supermarket assets below are **legacy examples**. They still work, but new features are not built on them.
 
+## How to run the demo
+
+### 1. On a fresh clone: recorded demos only, no data needed
+
+The recorded demo runs (replays) need only files that are in the repo: `data/fixtures/` and `config/demo_cases.yaml`. You don't need the people graph or an API key.
+
+```bash
+git clone https://github.com/martelosso/kg-find-connection.git
+cd kg-find-connection
+uv sync
+uv run python -m src.server
+```
+
+Open http://localhost:5000, choose a case in **Demo replays…**, and step through it with **Next** / **Back** (or the → and ← keys). The badge reads **REPLAY**, with the time of the recording.
+
+Without the people graph you can only play the recorded cases. The status bar says so, and `uv run python -m src.preflight` reports **NOT READY** because the people graph is missing.
+
+### 2. Live searches between any two people: add the people graph
+
+The people graph (`data/wikidata/`) is gitignored because it is too big for git. To get it, do one of the following:
+
+- **Copy it** from a machine that has it: `data/wikidata/people_graph.sqlite` (about 2.5 GB). The server needs only this file. The `people_graph.sqlite.adjacency/` folder next to it is a speed index used by the prep scripts (`find_demo_pairs.py`, `benchmark_investigations.py`). They rebuild it themselves if it is missing.
+- **Build it** from the Wikidata dump: about 72 GB to download, then about 19 minutes of processing. Run these in Git Bash:
+
+  ```bash
+  scripts/download_wikidata_dump.sh                       # → data/wikidata/raw/wikidata-20261104-truthy-BETA.nt.gz
+  scripts/extract_people_slice.sh data/wikidata/raw/wikidata-20261104-truthy-BETA.nt.gz
+  uv run python scripts/build_people_graph.py data/wikidata/slice/slice.nt \
+      --out data/wikidata/people_graph.sqlite \
+      --dump-meta data/wikidata/raw/wikidata-20261104-truthy-BETA.nt.gz.meta.json
+  ```
+
+  See [`docs/wikidata-ingestion-decision.md`](docs/wikidata-ingestion-decision.md) for details. To use a build stored elsewhere, set `PEOPLE_GRAPH_PATH` to its path.
+
+With the people graph present, pick any two people and click **Explore** in **Baseline** mode, which uses no LLM.
+
+### 3. LLM agent mode: add an API key
+
+```bash
+cp .env.example .env    # then set DEEPSEEK_API_KEY or OPENROUTER_API_KEY
+```
+
+The agent explores the people graph live, so it needs both the key and step 2. Without a key, the **LLM agent** option is disabled and you can still use Baseline mode and the replays.
+
+### Before a workshop
+
+Run `uv run python -m src.preflight --online` until it says **READY**, then follow [`docs/workshop-runbook.md`](docs/workshop-runbook.md).
+
 ## Project contents
 
 | Path | What it is |
@@ -31,8 +79,8 @@ cp .env.example .env    # then fill in the values
 
 `.env` is gitignored. It holds:
 
-- `OPENROUTER_API_KEY`: needed for the LLM assistant.
-- `OPENROUTER_MODEL`: optional model override.
+- `DEEPSEEK_API_KEY` or `OPENROUTER_API_KEY`: needed for the LLM agent (and the legacy retail assistant, which uses OpenRouter). `LLM_PROVIDER` picks one when both are set.
+- `DEEPSEEK_MODEL` / `OPENROUTER_MODEL`: optional model overrides.
 - `WIKIDATA_USER_AGENT`: needed later for live Wikidata requests. Use the format `name/version (contact)`.
 
 Do not commit or share your API key.
