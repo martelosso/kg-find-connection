@@ -1,6 +1,6 @@
 # Workshop context: who the demo is for and what it has to prove
 
-This file records the session that *Six Degrees of Knowledge* is built for. Use it to judge design choices: a feature earns its place if it helps the audience below take away the points below. For the click-by-click flow see [`workshop-runbook.md`](workshop-runbook.md); for the full specification see `IMPLEMENTATION_PLAN.md`.
+This file records the session that *KG Workshop: Connection Finder* is built for. Use it to judge design choices: a feature earns its place if it helps the audience below take away the points below. For the click-by-click flow see [`workshop-runbook.md`](workshop-runbook.md); for the full specification see `IMPLEMENTATION_PLAN.md`.
 
 ## The workshop
 

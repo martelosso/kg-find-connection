@@ -1,7 +1,7 @@
 [project]
 name = "knowledge-graph-workshop"
 version = "0.1.0"
-description = "Knowledge-graph workshop: Six Degrees of Knowledge, an agentic Wikidata connection explorer"
+description = "Knowledge-graph workshop: Connection Finder, an agentic Wikidata connection explorer"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

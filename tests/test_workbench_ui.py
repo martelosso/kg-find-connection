@@ -9,7 +9,7 @@ UI = "src/ui"
 
 def test_workbench_is_served_at_root_with_local_assets(client, root):
     html = client.get("/").get_data(as_text=True)
-    assert "<title>Six Degrees of Knowledge</title>" in html
+    assert "<title>KG Workshop: Connection Finder</title>" in html
     refs = re.findall(r'(?:src|href)="([^"]+)"', html)
     assert refs and all(r.startswith("/") for r in refs), refs  # no CDN / external URLs
     for ref in refs:

@@ -1,4 +1,4 @@
-"""Flask app: Six Degrees investigation API (plan §7) plus the legacy retail assistant routes.
+"""Flask app: Connection Finder investigation API (plan §7) plus the legacy retail assistant routes.
 
 Usage:
     uv run python -m src.server
@@ -43,7 +43,7 @@ _client: OpenAI | None = None
 
 @app.get("/")
 def index():
-    """Six Degrees of Knowledge workbench."""
+    """KG Workshop: Connection Finder workbench."""
     return send_from_directory(UI_DIR, "index.html")
 
 
@@ -90,7 +90,7 @@ def api_ask():
     return jsonify(result)
 
 
-# ---- Six Degrees investigation API ------------------------------------------------------------
+# ---- Connection Finder investigation API --------------------------------------------------------
 
 
 def _service() -> InvestigationService:

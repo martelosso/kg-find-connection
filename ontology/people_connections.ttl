@@ -1,4 +1,4 @@
-# People connections: the small teaching ontology of Six Degrees of Knowledge.
+# People connections: the small teaching ontology of the KG Workshop Connection Finder.
 #
 # What this file is: the MEANING of the people graph. Which kinds of things exist (classes),
 # which Wikidata properties connect them (and between which kinds), and how each relation
@@ -13,7 +13,7 @@
 # Domains and ranges describe THIS people graph (statements are kept when their subject is a
 # person, or for works and "founded by" when their object is), not Wikidata as a whole.
 #
-# Owner: the Six Degrees project. Change it on purpose, bump owl:versionInfo, and keep
+# Owner: the Connection Finder project. Change it on purpose, bump owl:versionInfo, and keep
 # config/relationships.yaml in step.
 
 @prefix ex:   <https://example.org/six-degrees/ontology#> .
@@ -24,7 +24,7 @@
 
 <https://example.org/six-degrees/ontology> a owl:Ontology ;
     rdfs:label "People connections"@en ;
-    rdfs:comment "Classes, relation groups and Wikidata properties of the Six Degrees people graph. A mapping layer over Wikidata, not a replacement."@en ;
+    rdfs:comment "Classes, relation groups and Wikidata properties of the Connection Finder people graph. A mapping layer over Wikidata, not a replacement."@en ;
     owl:versionInfo "1" .
 
 # ---------------------------------------------------------------------------------------------

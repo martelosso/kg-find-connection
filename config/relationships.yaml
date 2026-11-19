@@ -1,4 +1,4 @@
-# Relationship policy for Six Degrees of Knowledge.
+# Relationship policy for the KG Workshop Connection Finder.
 #
 # Ranking/search POLICY only — not facts (data/wikidata/) and not ontology semantics
 # (ontology/people_connections.ttl). Bump `version` whenever a value changes; path results

@@ -1,4 +1,6 @@
-# Six Degrees of Knowledge — Implementation Plan
+# KG Workshop: Connection Finder — Implementation Plan
+
+*(The project was called "Six Degrees of Knowledge" when this plan was written; renamed 2026-11-19.)*
 
 > **Audience:** Coding agent implementing the feature in the existing `knowledge-graph-workshop` repository.  
 > **Status:** Implementation specification; Wikidata acquisition strategy intentionally remains a decision point.  
@@ -6,7 +8,7 @@
 
 ## 0. Read this first: objectives and engineering principles
 
-Build **Six Degrees of Knowledge**, an agentic connection explorer. The user chooses two notable people. The system resolves their Wikidata identities, explores a relationship graph, computes candidate paths, and presents:
+Build **KG Workshop: Connection Finder**, an agentic connection explorer. The user chooses two notable people. The system resolves their Wikidata identities, explores a relationship graph, computes candidate paths, and presents:
 
 1. **Shortest:** fewest *eligible* edges among the relationships currently explored (or a certified result if the entire configured search space is known).
 2. **Strongest:** lowest weighted cost over eligible edges, where meaningful direct relationships generally score higher than generic associations, with an explicit hop penalty.
@@ -366,7 +368,7 @@ If moving static assets to Flask static hosting, copy/move `graph-view/vis-netwo
 
 ### Implementation requirements
 
-- Preserve original theme/look-and-feel where feasible; update generic branding to **Six Degrees of Knowledge**.
+- Preserve original theme/look-and-feel where feasible; update generic branding to **KG Workshop: Connection Finder**.
 - Build a progressive graph: apply `added_nodes`/`added_edges` deltas; **do not recreate `vis.Network` on each event** (preserve positions, selections and camera).
 - Stable layouts and batched graph updates; initial source/target separated; cap visual node count, with filters for unrelated explored branches.
 - Selection support: graph edge → exact Turtle statement; editor selection → corresponding visible graph elements; agent step → newly retrieved edge IDs; final path → all its edge IDs.

@@ -1,4 +1,4 @@
-# Six Degrees of Knowledge
+# KG Workshop: Connection Finder
 
 An agentic connection explorer built for the workshop *Knowledge Graphs and Knowledge Graphs for Agentic AI*. Pick two notable people. An LLM agent explores a graph of [Wikidata](https://www.wikidata.org/) relationships, deciding which entity to expand next. Deterministic code does the graph queries, path search, ranking and validation. The result is the **strongest path** between the two people. Every hop is a Wikidata statement you can click to see its exact Turtle triple.
 

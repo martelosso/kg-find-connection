@@ -1,4 +1,4 @@
-# Workshop runbook: Six Degrees of Knowledge
+# Workshop runbook: KG Workshop Connection Finder
 
 How to prepare, run and rescue the live demo. Every step is a click or one terminal command. Once the server is running, nothing requires editing code or using the terminal.
 

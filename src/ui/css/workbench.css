@@ -1,4 +1,4 @@
-/* Six Degrees of Knowledge workbench.
+/* KG Workshop: Connection Finder workbench.
    Visual language (docs/visual-design.md): a flat, toy-like transit-map look. Cream ground, dark asphalt
    roads, flat geometric entities with minimal pictograms, one rounded sans, no shadows, gentle easing. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -291,7 +291,7 @@ body.src-min.view-onto #onto-cm { display: none; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 
 /* The toolbar stays on one row on a 1366px projector: the wordmark (also the tab title) goes first. */
-@media (max-width: 1480px) { .wordmark, .wordmark + .sep { display: none; } }
+@media (max-width: 1540px) { .wordmark, .wordmark + .sep { display: none; } }
 @media (max-width: 1200px) { #side { width: 330px; } .picker input { width: 160px; } }
 
 /* ---- step-through presentation (plan §2) ---- */

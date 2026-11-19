@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository.
 
 ## What we are building
 
-**Six Degrees of Knowledge**: an agentic connection explorer for a knowledge-graph workshop. The user picks two notable people. The system resolves their Wikidata QIDs, explores a bounded relationship graph, and shows two results:
+**KG Workshop: Connection Finder** (named *Six Degrees of Knowledge* until 2026-11-19): an agentic connection explorer for a knowledge-graph workshop. The user picks two notable people. The system resolves their Wikidata QIDs, explores a bounded relationship graph, and shows two results:
 
 - **Shortest**: the path with the fewest eligible edges.
 - **Strongest**: the path with the lowest policy-defined weighted cost.

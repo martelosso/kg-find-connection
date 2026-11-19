@@ -6,7 +6,7 @@ from ..config import RelationshipPolicy, SearchBudgets
 from ..graph.model import Node
 
 SYSTEM_TEMPLATE = """\
-You are the LLM agent of "Six Degrees of Knowledge", a knowledge-graph demo. Two people
+You are the LLM agent of "KG Workshop: Connection Finder", a knowledge-graph demo. Two people
 (Wikidata entities) are fixed. Your tools query a local Wikidata snapshot. You decide WHICH
 explored entity to expand next and WHICH relation groups to request; the tools are deterministic
 code: get_neighbors returns statements (edges), compute_paths runs the path search (shortest =
