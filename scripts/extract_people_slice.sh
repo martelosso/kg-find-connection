@@ -8,7 +8,8 @@
 # Usage: scripts/extract_people_slice.sh <dump.nt.gz|filtered.nt> [OUT_DIR]
 # Output: OUT_DIR/slice.nt   (default OUT_DIR: data/wikidata/slice)
 #
-# Pure text filtering (gzip/grep/awk): N-Triples is one statement per line, so no RDF parser is
+# Runs on Linux, WSL, Git Bash (Windows) and macOS (bash 3.2+, gzip, grep, perl, uv).
+# Pure text filtering (gzip/grep/perl): N-Triples is one statement per line, so no RDF parser is
 # needed at this stage. Python (scripts/build_people_graph.py) parses and validates the result.
 # NOTE: this property list is the *extraction* superset; ranking/eligibility policy lives in
 # config/relationships.yaml (Milestone 2). Adding a property here requires re-running extraction.
@@ -39,19 +40,29 @@ filter() {
 # The file is cut at member boundaries (scripts/gzip_members.py) and JOBS pipelines run on the
 # ranges. A cut that is not a real boundary makes gzip fail (truncated member / CRC), and any
 # failure aborts the run. JOBS=1 (or a single-member file) runs the original sequential path.
-JOBS="${JOBS:-$(nproc)}"
+JOBS="${JOBS:-$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
+
+# Copy `len` bytes of the input from byte `off`. GNU dd does it directly; elsewhere (macOS: BSD
+# dd has no byte-count flags) tail seeks and head cuts. A short or wrong range cannot slip
+# through: gzip checks every member's length and CRC.
+if dd --version >/dev/null 2>&1; then
+  byte_range() { dd if="$IN" bs=4M iflag=skip_bytes,count_bytes skip="$1" count="$2" status=none; }
+else
+  byte_range() { { tail -c +"$(( $1 + 1 ))" "$IN" 2>/dev/null || true; } | head -c "$2"; }
+fi
 TMP_OUT="${OUT_DIR}/slice.nt.partial"
 
 start=$(date +%s)
 case "$IN" in
   *.gz)
-    mapfile -t RANGES < <(uv run --project "$ROOT" python "${ROOT}/scripts/gzip_members.py" "$IN" "$JOBS" | tr -d '\r')
+    RANGES=()   # no mapfile: macOS ships bash 3.2
+    while IFS= read -r line; do [[ -n "$line" ]] && RANGES+=("$line"); done < <(uv run --project "$ROOT" python "${ROOT}/scripts/gzip_members.py" "$IN" "$JOBS" | tr -d '\r')
     [[ ${#RANGES[@]} -ge 1 ]] || { echo "could not split $IN" >&2; exit 1; }
     echo "decompressing ${#RANGES[@]} member-aligned range(s) in parallel" >&2
     pids=()
     for i in "${!RANGES[@]}"; do
       read -r off len <<< "${RANGES[$i]}"
-      ( dd if="$IN" bs=4M iflag=skip_bytes,count_bytes skip="$off" count="$len" status=none \
+      ( byte_range "$off" "$len" \
           | gzip -dc | filter > "${TMP_OUT}.$(printf '%03d' "$i")" ) &
       pids+=($!)
     done
@@ -73,7 +84,7 @@ esac
 mv -f "$TMP_OUT" "${OUT_DIR}/slice.nt"
 end=$(date +%s)
 
-lines=$(wc -l < "${OUT_DIR}/slice.nt")
+lines=$(wc -l < "${OUT_DIR}/slice.nt" | tr -d ' ')
 printf '{"input": "%s", "lines": %s, "elapsed_s": %s, "jobs": %s, "properties": "%s"}\n' \
   "$(basename "$IN")" "$lines" "$((end - start))" "${JOBS}" "${PROPS[*]}" > "${OUT_DIR}/slice.meta.json"
 cat "${OUT_DIR}/slice.meta.json"

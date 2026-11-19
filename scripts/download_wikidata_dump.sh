@@ -5,6 +5,11 @@
 # Output: data/wikidata/raw/wikidata-<DATE>-truthy-BETA.nt.gz   (gitignored, ~72 GB)
 #
 # Safe to re-run: curl resumes a partial file (-C -); a completed file is only re-verified.
+#
+# Wikimedia keeps only recent dumps. If the date is gone, pick a newer one from
+# https://dumps.wikimedia.org/wikidatawiki/entities/ (a folder named YYYYMMDD that contains
+# wikidata-YYYYMMDD-truthy-BETA.nt.gz) and pass it as DUMP_DATE.
+# Runs on Linux, WSL, Git Bash (Windows) and macOS (needs curl; md5sum or md5).
 set -euo pipefail
 
 DATE="${1:-20261104}"
@@ -18,14 +23,21 @@ MAX_ATTEMPTS="${MAX_ATTEMPTS:-30}"
 
 mkdir -p "$OUT_DIR"
 
-expected_md5="$(curl -fsS -A "$UA" "${BASE}/wikidata-${DATE}-md5sums.txt" | awk -v n="$NAME" '$2==n {print $1}')"
-expected_size="$(curl -fsSI -A "$UA" "${BASE}/${NAME}" | tr -d '\r' | awk 'tolower($1)=="content-length:" {print $2}')"
-[[ -n "$expected_md5" && -n "$expected_size" ]] || { echo "could not read md5/size for $NAME" >&2; exit 1; }
+file_size() { wc -c < "$1" 2>/dev/null | tr -d ' ' || echo 0; }
+md5_of() { if command -v md5sum >/dev/null; then md5sum "$1" | awk '{print $1}'; else md5 -q "$1"; fi; }
+
+expected_md5="$(curl -fsS -A "$UA" "${BASE}/wikidata-${DATE}-md5sums.txt" | awk -v n="$NAME" '$2==n {print $1}' || true)"
+expected_size="$(curl -fsSI -A "$UA" "${BASE}/${NAME}" | tr -d '\r' | awk 'tolower($1)=="content-length:" {print $2}' || true)"
+if [[ -z "$expected_md5" || -z "$expected_size" ]]; then
+  echo "could not read md5/size for $NAME: the ${DATE} dump is probably no longer online." >&2
+  echo "Pick a newer date at https://dumps.wikimedia.org/wikidatawiki/entities/ and run: $0 YYYYMMDD" >&2
+  exit 1
+fi
 echo "target: $NAME  size=${expected_size}  md5=${expected_md5}"
 
 attempt=0
 while :; do
-  have=$(stat -c %s "$OUT" 2>/dev/null || echo 0)
+  have=$( [[ -f "$OUT" ]] && file_size "$OUT" || echo 0 )
   [[ "$have" -ge "$expected_size" ]] && break
   attempt=$((attempt + 1))
   [[ "$attempt" -le "$MAX_ATTEMPTS" ]] || { echo "giving up after $MAX_ATTEMPTS attempts" >&2; exit 1; }
@@ -36,7 +48,7 @@ while :; do
 done
 
 echo "$(date '+%F %T') download complete; verifying md5 ..."
-actual_md5="$(md5sum "$OUT" | awk '{print $1}')"
+actual_md5="$(md5_of "$OUT")"
 if [[ "$actual_md5" != "$expected_md5" ]]; then
   echo "MD5 MISMATCH: expected $expected_md5 got $actual_md5" >&2
   exit 2

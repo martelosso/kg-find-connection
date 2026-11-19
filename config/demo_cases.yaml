@@ -107,13 +107,3 @@ cases:
     trace: data/fixtures/event_traces/lula-snoop-agent.json
     notes: "Recorded AI agent run (re-recorded 2026-11-14: the trace carries the ranking and the improvement leads the tools gave the agent) with DeepSeek reasoning ON (DEEPSEEK_THINKING=enabled) and a 300 s wall-time budget for this recording; without reasoning the agent did not find this pair in 10 runs."
     verified_on: "20261104"
-  - id: uribe-epstein-agent
-    title: "Álvaro Uribe and Jeffrey Epstein (AI agent)"
-    source_qid: Q187413
-    source_label: "Álvaro Uribe Vélez"
-    target_qid: Q2904131
-    target_label: "Jeffrey Epstein"
-    fixture: data/fixtures/cases/uribe-epstein-agent.json
-    trace: data/fixtures/event_traces/uribe-epstein-agent.json
-    notes: "Recorded AI agent run (2026-11-18, deepseek-flash, reasoning off, default budgets; ended partial on the tool-call budget with a path). Route via St Antony's College, Balliol College and Ghislaine Maxwell: shared-institution associations, not contact."
-    verified_on: "20261104"
